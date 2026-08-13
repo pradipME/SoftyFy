@@ -1,0 +1,74 @@
+# ===========================================================================
+# SoftyFy — Render blueprint (preparation only, NOT yet deployed)
+#
+# This file describes the intended production architecture:
+#   - backend  : Java 21 + Spring Boot Web Service
+#   - frontend : React/Vite Static Site
+#   - database : managed PostgreSQL 16
+#
+# IMPORTANT:
+#   - Nothing here has been deployed or verified on Render yet.
+#   - Build/start commands and the Java runtime + rootDir interaction MUST be
+#     re-validated during the deployment phase before pushing to production.
+#   - Secrets are NOT defined here; Render injects them at deploy time.
+# ===========================================================================
+
+services:
+  # --- Backend: Spring Boot web service -------------------------------------
+  - type: web
+    name: softyfy-backend
+    runtime: java
+    rootDir: backend
+    plan: free
+    buildCommand: ./mvnw -B clean package -DskipTests
+    startCommand: java -jar target/softyfy-backend-0.0.1-SNAPSHOT.jar
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: SOFTYFY_PROFILE
+        value: prod
+      - key: SOFTYFY_DB_HOST
+        fromDatabase:
+          name: softyfy-db
+          property: host
+      - key: SOFTYFY_DB_PORT
+        fromDatabase:
+          name: softyfy-db
+          property: port
+      - key: SOFTYFY_DB_NAME
+        fromDatabase:
+          name: softyfy-db
+          property: database
+      - key: SOFTYFY_DB_USER
+        fromDatabase:
+          name: softyfy-db
+          property: user
+      - key: SOFTYFY_DB_PASSWORD
+        fromDatabase:
+          name: softyfy-db
+          property: password
+
+  # --- Frontend: React/Vite static site -------------------------------------
+  - type: web
+    name: softyfy-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    envVars:
+      # Public URL of the backend, consumed at build time.
+      # Update to the real backend URL before deploying.
+      - key: VITE_API_BASE_URL
+        value: https://softyfy-backend.onrender.com
+    routes:
+      # Forward API calls to the backend so the frontend can use same-origin
+      # /api requests in production.
+      - type: rewrite
+        source: /api/*
+        destination: https://softyfy-backend.onrender.com/api/*
+
+# --- PostgreSQL database ------------------------------------------------------
+databases:
+  - name: softyfy-db
+    databaseName: softyfy
+    user: softyfy
+    plan: free
