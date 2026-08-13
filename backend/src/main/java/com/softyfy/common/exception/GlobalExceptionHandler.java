@@ -4,6 +4,7 @@ import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
@@ -76,6 +77,16 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
                 .body(problemDetail(HttpStatus.PAYLOAD_TOO_LARGE, ErrorCode.FILE_TOO_LARGE,
                         "The uploaded file exceeds the configured size limit", null));
+    }
+
+    @ExceptionHandler(InvalidRangeException.class)
+    public ResponseEntity<Void> handleInvalidRange(InvalidRangeException ex) {
+        // Media response: 416 carries Content-Range but intentionally no JSON body,
+        // so browsers and <audio> clients receive a standards-compliant response.
+        return ResponseEntity.status(HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE)
+                .header(HttpHeaders.ACCEPT_RANGES, "bytes")
+                .header(HttpHeaders.CONTENT_RANGE, "bytes */" + ex.getTotalSize())
+                .build();
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)

@@ -4,6 +4,7 @@ import type { SongSummary } from '../../types/song'
 import { Badge } from '../ui/Badge'
 import { ListMusicIcon, PlayIcon } from '../ui/icons'
 import { AlbumArt } from '../album/AlbumArt'
+import { TestPlayButton } from '../player/TestPlayButton'
 
 interface SongListProps {
   songs: Song[]
@@ -15,6 +16,8 @@ export function SongList({ songs, onAddToPlaylist }: SongListProps) {
     return <p className="py-10 text-center text-sm text-muted">No songs yet.</p>
   }
 
+  const showPlayColumn = songs.some((song) => song.audioFiles.length > 0)
+
   return (
     <div className="overflow-hidden rounded-xl border border-line">
       <table className="w-full border-collapse">
@@ -25,6 +28,7 @@ export function SongList({ songs, onAddToPlaylist }: SongListProps) {
             <th className="hidden px-2 py-2.5 font-medium md:table-cell">Album</th>
             <th className="hidden px-2 py-2.5 font-medium sm:table-cell">Format</th>
             <th className="w-20 px-3 py-2.5 text-right font-medium sm:px-4">Time</th>
+            {showPlayColumn ? <th className="w-12 px-2 py-2.5 font-medium sm:px-3" /> : null}
             {onAddToPlaylist ? <th className="w-12 px-2 py-2.5 font-medium sm:px-3" /> : null}
           </tr>
         </thead>
@@ -61,6 +65,15 @@ export function SongList({ songs, onAddToPlaylist }: SongListProps) {
                 <td className="px-3 py-2.5 text-right text-sm text-muted sm:px-4">
                   {formatDuration(song.durationSeconds)}
                 </td>
+                {showPlayColumn ? (
+                  <td className="px-2 py-2.5 text-right sm:px-3">
+                    {song.audioFiles.length > 0 ? (
+                      <TestPlayButton songId={song.id} title={song.title} />
+                    ) : (
+                      <span className="text-xs text-dim">–</span>
+                    )}
+                  </td>
+                ) : null}
                 {onAddToPlaylist ? (
                   <td className="px-2 py-2.5 sm:px-3">
                     <button

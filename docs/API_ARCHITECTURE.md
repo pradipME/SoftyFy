@@ -36,7 +36,7 @@ REST API served by the Spring Boot backend at `/api`. All responses are JSON.
 
   | Code | HTTP | Meaning |
   | --- | --- | --- |
-  | `SONG_NOT_FOUND` / `ARTIST_NOT_FOUND` / `ALBUM_NOT_FOUND` / `PLAYLIST_NOT_FOUND` | 404 | Entity missing |
+  | `SONG_NOT_FOUND` / `ARTIST_NOT_FOUND` / `ALBUM_NOT_FOUND` / `PLAYLIST_NOT_FOUND` / `AUDIO_NOT_FOUND` | 404 | Entity missing |
   | `INVALID_REORDER_REQUEST` | 400 | Reorder body is not an exact permutation |
   | `VALIDATION_FAILED` | 400 | Bean validation or malformed input; `errors` maps field → message |
   | `INVALID_SORT` | 400 | Unknown `sort` value |
@@ -44,6 +44,7 @@ REST API served by the Spring Boot backend at `/api`. All responses are JSON.
   | `UNSUPPORTED_MEDIA_TYPE` | 415 | Missing multipart part or unsupported content type |
   | `FILE_TOO_LARGE` | 413 | Upload exceeds the configured size limit |
   | `STORAGE_ERROR` | 500 | Underlying storage write/delete failure |
+  | `INVALID_RANGE` | 416 | Unsatisfiable byte range (media response, no JSON body) |
   | `CONFLICT` | 409 | Data integrity violation |
   | `INTERNAL_ERROR` | 500 | Unhandled exception (logged, detail hidden) |
 
@@ -74,7 +75,11 @@ REST API served by the Spring Boot backend at `/api`. All responses are JSON.
 | POST | `/api/favorites/{songId}` | Favorite a song by path (idempotent) |
 | DELETE | `/api/favorites/{songId}` | Remove favorite (idempotent, 204) |
 | POST | `/api/songs/upload` | Upload an audio file (multipart `file`, optional `title`/`artist`/`album` overrides); 201 = new song, 200 = already imported. Body: `{"song": {...}, "created": bool}` |
+| GET | `/api/songs/{id}/stream` | Stream audio with HTTP Range support: 200 full, 206 partial, 416 unsatisfiable |
+| HEAD | `/api/songs/{id}/stream` | Headers only (size, type, `Accept-Ranges: bytes`), no body |
 | DELETE | `/api/songs/{id}` | Delete a song and its stored audio objects (204) |
+
+Streaming behavior is documented in `docs/AUDIO_STREAMING.md`.
 
 ### Create song example
 
@@ -93,5 +98,6 @@ REST API served by the Spring Boot backend at `/api`. All responses are JSON.
 - `PATCH /api/songs`, `PATCH`/`DELETE /api/playlists`
   (request DTOs exist).
 - Free-text query params and `/api/search`.
-- Audio streaming endpoints.
-- Upload / object storage providers (`AudioStorage` is only a boundary interface).
+- Upload / object storage providers beyond local disk (`AudioStorage` is the
+  boundary interface; streaming already reads through it via
+  `info` / `openStream`).

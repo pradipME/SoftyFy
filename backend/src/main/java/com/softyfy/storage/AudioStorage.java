@@ -29,6 +29,26 @@ public interface AudioStorage {
     void delete(String key) throws IOException;
 
     /**
+     * Returns metadata about the object stored under the given key.
+     *
+     * @throws IOException if the object is missing or the operation fails
+     */
+    AudioObjectInfo info(String key) throws IOException;
+
+    /**
+     * Opens a streaming view of the object stored under the given key,
+     * positioned at {@code offset} bytes from the start of the object.
+     *
+     * <p>When {@code length} is {@code >= 0}, the returned stream yields at most
+     * {@code length} bytes and then reports end-of-stream; when negative it
+     * yields through the end of the object. The object is never loaded fully
+     * into memory - only the requested range is ever read.
+     *
+     * @throws IOException if the object is missing or the operation fails
+     */
+    InputStream openStream(String key, long offset, long length) throws IOException;
+
+    /**
      * Returns a resolvable URL for the object stored under the given key.
      */
     String resolveUrl(String key);

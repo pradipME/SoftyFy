@@ -13,6 +13,7 @@ export type ErrorCode =
   | 'ARTIST_NOT_FOUND'
   | 'ALBUM_NOT_FOUND'
   | 'PLAYLIST_NOT_FOUND'
+  | 'AUDIO_NOT_FOUND'
   | 'INVALID_REORDER_REQUEST'
   | 'VALIDATION_FAILED'
   | 'INVALID_SORT'
@@ -20,6 +21,7 @@ export type ErrorCode =
   | 'INVALID_FILE'
   | 'FILE_TOO_LARGE'
   | 'STORAGE_ERROR'
+  | 'INVALID_RANGE'
   | 'CONFLICT'
   | 'INTERNAL_ERROR'
 
