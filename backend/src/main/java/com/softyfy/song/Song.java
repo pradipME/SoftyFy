@@ -88,4 +88,16 @@ public class Song extends AuditableEntity {
     public List<AudioFile> getAudioFiles() {
         return audioFiles;
     }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public void setDurationSeconds(Integer durationSeconds) {
+        this.durationSeconds = durationSeconds;
+    }
+
+    public void setTrackNumber(Integer trackNumber) {
+        this.trackNumber = trackNumber;
+    }
 }

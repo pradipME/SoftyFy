@@ -56,4 +56,12 @@ public class Playlist extends AuditableEntity {
     public List<PlaylistSong> getSongs() {
         return songs;
     }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
 }

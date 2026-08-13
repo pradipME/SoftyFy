@@ -18,6 +18,8 @@ import java.util.UUID;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -92,5 +94,58 @@ class SongControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
                 .andExpect(jsonPath("$.errors.title").exists());
+    }
+
+    @Test
+    void updateReturns200WithPatchedFields() throws Exception {
+        UUID id = UUID.randomUUID();
+        SongDto dto = new SongDto(id, "Renamed", 200, null, null, List.of(), List.of(), null, null);
+        when(songService.update(eq(id), org.mockito.ArgumentMatchers.any()))
+                .thenReturn(dto);
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/api/songs/{id}", id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"title": "Renamed", "durationSeconds": 200}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.title").value("Renamed"))
+                .andExpect(jsonPath("$.durationSeconds").value(200));
+    }
+
+    @Test
+    void updateWithBlankTitleReturns400() throws Exception {
+        UUID id = UUID.randomUUID();
+        when(songService.update(eq(id), org.mockito.ArgumentMatchers.any()))
+                .thenThrow(new ValidationException(ErrorCode.VALIDATION_FAILED, "title must not be blank"));
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/api/songs/{id}", id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"title": "   "}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
+    }
+
+    @Test
+    void deleteReturns204() throws Exception {
+        UUID id = UUID.randomUUID();
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete("/api/songs/{id}", id))
+                .andExpect(status().isNoContent());
+
+        verify(songService).delete(id);
+    }
+
+    @Test
+    void deleteUnknownSongReturns404() throws Exception {
+        UUID id = UUID.randomUUID();
+        doThrow(new NotFoundException(ErrorCode.SONG_NOT_FOUND, "Song not found: " + id))
+                .when(songService).delete(id);
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete("/api/songs/{id}", id))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("SONG_NOT_FOUND"));
     }
 }

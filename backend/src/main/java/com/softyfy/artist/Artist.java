@@ -1,12 +1,16 @@
 package com.softyfy.artist;
 
 import com.softyfy.common.entity.AuditableEntity;
+import com.softyfy.song.Song;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.Table;
 import org.hibernate.annotations.UuidGenerator;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -21,6 +25,9 @@ public class Artist extends AuditableEntity {
     @Column(name = "name", nullable = false, length = 200)
     private String name;
 
+    @ManyToMany(mappedBy = "artists")
+    private List<Song> songs = new ArrayList<>();
+
     protected Artist() {
     }
 
@@ -34,5 +41,9 @@ public class Artist extends AuditableEntity {
 
     public String getName() {
         return name;
+    }
+
+    public List<Song> getSongs() {
+        return songs;
     }
 }

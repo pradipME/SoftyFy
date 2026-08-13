@@ -9,6 +9,7 @@ import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -52,6 +53,13 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest()
                 .body(problemDetail(HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_FAILED,
                         "Malformed request: " + ex.getMessage(), null));
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ProblemDetail> handleMissingParameter(MissingServletRequestParameterException ex) {
+        return ResponseEntity.badRequest()
+                .body(problemDetail(HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_FAILED,
+                        "Missing required parameter: " + ex.getParameterName(), null));
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)

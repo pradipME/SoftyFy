@@ -1,7 +1,7 @@
 package com.softyfy.artist;
 
 import com.softyfy.artist.dto.ArtistDetailDto;
-import com.softyfy.artist.dto.ArtistSummaryDto;
+import com.softyfy.artist.dto.ArtistListItemDto;
 import com.softyfy.common.api.PageResponse;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -22,7 +22,7 @@ public class ArtistController {
     }
 
     @GetMapping
-    public PageResponse<ArtistSummaryDto> findAll(
+    public PageResponse<ArtistListItemDto> findAll(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         return artistService.findAll(page, size);

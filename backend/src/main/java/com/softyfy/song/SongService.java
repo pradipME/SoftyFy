@@ -10,6 +10,7 @@ import com.softyfy.common.exception.NotFoundException;
 import com.softyfy.common.exception.ValidationException;
 import com.softyfy.song.dto.CreateSongRequest;
 import com.softyfy.song.dto.SongDto;
+import com.softyfy.song.dto.SongPatchRequest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -74,6 +75,39 @@ public class SongService {
         Song song = new Song(request.title(), album, artists);
         songRepository.save(song);
         return SongMapper.toDto(song);
+    }
+
+    @Transactional
+    public SongDto update(UUID id, SongPatchRequest patch) {
+        Song song = getSongOrThrow(id);
+        if (patch.title() != null) {
+            if (patch.title().isBlank()) {
+                throw new ValidationException(ErrorCode.VALIDATION_FAILED, "title must not be blank");
+            }
+            song.setTitle(patch.title().trim());
+        }
+        if (patch.durationSeconds() != null) {
+            song.setDurationSeconds(patch.durationSeconds());
+        }
+        if (patch.trackNumber() != null) {
+            song.setTrackNumber(patch.trackNumber());
+        }
+        songRepository.save(song);
+        return SongMapper.toDto(song);
+    }
+
+    @Transactional
+    public void delete(UUID id) {
+        if (!songRepository.existsById(id)) {
+            throw new NotFoundException(ErrorCode.SONG_NOT_FOUND, "Song not found: " + id);
+        }
+        songRepository.deleteById(id);
+    }
+
+    private Song getSongOrThrow(UUID id) {
+        return songRepository.findByIdWithGraph(id).stream()
+                .findFirst()
+                .orElseThrow(() -> new NotFoundException(ErrorCode.SONG_NOT_FOUND, "Song not found: " + id));
     }
 
     private List<Artist> resolveOrCreateArtists(List<String> artistNames) {

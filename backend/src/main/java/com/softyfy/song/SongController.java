@@ -3,9 +3,12 @@ package com.softyfy.song;
 import com.softyfy.common.api.PageResponse;
 import com.softyfy.song.dto.CreateSongRequest;
 import com.softyfy.song.dto.SongDto;
+import com.softyfy.song.dto.SongPatchRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -43,5 +46,16 @@ public class SongController {
     @ResponseStatus(HttpStatus.CREATED)
     public SongDto create(@Valid @RequestBody CreateSongRequest request) {
         return songService.create(request);
+    }
+
+    @PatchMapping("/{id}")
+    public SongDto update(@PathVariable UUID id, @Valid @RequestBody SongPatchRequest request) {
+        return songService.update(id, request);
+    }
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@PathVariable UUID id) {
+        songService.delete(id);
     }
 }

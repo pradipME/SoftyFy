@@ -45,4 +45,23 @@ public interface SongRepository extends JpaRepository<Song, UUID> {
             order by s.trackNumber asc nulls last, lower(s.title) asc
             """)
     List<Song> findByAlbumId(UUID albumId);
+
+    @EntityGraph(attributePaths = {"artists", "album"})
+    @Query("""
+            select s from Song s
+            join s.artists a
+            where a.id = :artistId
+            order by lower(s.title) asc
+            """)
+    List<Song> findByArtistId(UUID artistId);
+
+    @EntityGraph(attributePaths = {"artists", "album", "audioFiles"})
+    @Query("""
+            select distinct s from Song s
+            left join s.artists a
+            where lower(s.title) like lower(concat('%', :term, '%'))
+               or lower(a.name) like lower(concat('%', :term, '%'))
+            order by lower(s.title) asc
+            """)
+    Page<Song> search(String term, Pageable pageable);
 }

@@ -5,6 +5,7 @@ import com.softyfy.common.exception.ErrorCode;
 import com.softyfy.common.exception.NotFoundException;
 import com.softyfy.common.exception.ValidationException;
 import com.softyfy.playlist.dto.PlaylistDetailDto;
+import com.softyfy.playlist.dto.PlaylistPatchRequest;
 import com.softyfy.playlist.dto.PlaylistSummaryDto;
 import com.softyfy.song.Song;
 import com.softyfy.song.SongMapper;
@@ -43,6 +44,28 @@ public class PlaylistService {
     public PlaylistDetailDto create(String name, String description) {
         Playlist playlist = playlistRepository.save(new Playlist(name, description));
         return PlaylistDetailDto.from(playlist, List.of());
+    }
+
+    @Transactional
+    public PlaylistDetailDto update(UUID id, PlaylistPatchRequest patch) {
+        Playlist playlist = getPlaylistWithSongs(id);
+        if (patch.name() != null) {
+            if (patch.name().isBlank()) {
+                throw new ValidationException(ErrorCode.VALIDATION_FAILED, "name must not be blank");
+            }
+            playlist.setName(patch.name().trim());
+        }
+        if (patch.description() != null) {
+            playlist.setDescription(patch.description());
+        }
+        playlistRepository.save(playlist);
+        return PlaylistDetailDto.from(playlist, toSongSummaries(playlist));
+    }
+
+    @Transactional
+    public void delete(UUID id) {
+        Playlist playlist = getPlaylistWithSongs(id);
+        playlistRepository.delete(playlist);
     }
 
     @Transactional(readOnly = true)
