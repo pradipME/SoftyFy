@@ -55,27 +55,27 @@ export function HomePage() {
         description="Everything in one place. Press play on any track to start listening."
         actions={<AddMusicButton />}
       />
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <section className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {sections.map((section) => (
           <Link
             key={section.to}
             to={section.to}
-            className="surface-card group flex items-center gap-4 p-5 transition-colors hover:border-accent/40"
+            className="surface-card group flex flex-col items-center gap-4 p-6 transition-colors hover:border-accent/30 cursor-pointer"
           >
             <span
-              className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br text-white ${section.accent}`}
+              className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${section.accent} text-white`}
             >
               {section.icon}
             </span>
-            <span>
+            <div>
               <span className="block text-lg font-semibold group-hover:text-accent-strong">
                 {section.title}
               </span>
-              <span className="mt-0.5 block text-sm text-muted">{section.description}</span>
-            </span>
+              <span className="mt-1 block text-sm text-muted">{section.description}</span>
+            </div>
           </Link>
         ))}
-      </div>
+      </section>
     </>
   )
 }

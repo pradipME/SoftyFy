@@ -11,33 +11,33 @@ export function Header({ onOpenMobileNav }: HeaderProps) {
   const [searchOpen, setSearchOpen] = useState(false)
 
   return (
-    <header className="flex h-16 shrink-0 items-center gap-3 border-b border-line bg-surface px-4 sm:px-6">
+    <header
+      className="flex h-20 shrink-0 items-center gap-4 border-b border-border bg-surface px-6 sm:px-8 border-t border-border/10"
+      style={{ backgroundColor: 'var(--bg)', color: 'var(--fg)' }}
+    >
       <button
         type="button"
         onClick={onOpenMobileNav}
         aria-label="Open navigation"
-        className="rounded-lg p-2 text-muted hover:bg-elevated hover:text-fg lg:hidden"
+        className="rounded-lg p-2 text-dim hover:bg-surface-elevated hover:text-fg lg:hidden"
       >
         <MenuIcon className="h-5 w-5" />
       </button>
 
-      <button
-        type="button"
-        onClick={() => setSearchOpen(true)}
-        className="flex w-full max-w-md items-center gap-3 rounded-lg border border-line bg-elevated px-3 py-2 text-sm text-dim transition-colors hover:border-accent/40 hover:text-muted"
-      >
-        <SearchIcon className="h-4 w-4" />
-        <span className="flex-1 text-left">Search your library…</span>
-        <kbd className="hidden rounded border border-line px-1.5 py-0.5 text-[0.65rem] text-dim sm:block">
-          ⌘ K
-        </kbd>
-      </button>
-
-      <div className="ml-auto">
-        <AddMusicButton size="sm" />
+      <div className="relative flex flex-1 max-w-md">
+        <SearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} />
+        <button
+          type="button"
+          onClick={() => setSearchOpen(true)}
+          className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full p-2 text-dim hover:bg-surface-elevated hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        >
+          <SearchIcon className="h-4 w-4" />
+        </button>
       </div>
 
-      <SearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} />
+      <div className="ml-auto flex items-center gap-2">
+        <AddMusicButton size="sm" />
+      </div>
     </header>
   )
 }

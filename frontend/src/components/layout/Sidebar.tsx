@@ -34,10 +34,10 @@ function Nav({ onNavigate }: { onNavigate?: () => void }) {
           end={item.to === '/'}
           onClick={onNavigate}
           className={({ isActive }) =>
-            `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+            `flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
               isActive
-                ? 'bg-accent/15 text-accent-strong'
-                : 'text-muted hover:bg-elevated hover:text-fg'
+                ? 'bg-accent/10 text-accent-strong'
+                : 'text-muted hover:bg-surface-elevated hover:text-accent-strong'
             }`
           }
         >
@@ -51,12 +51,16 @@ function Nav({ onNavigate }: { onNavigate?: () => void }) {
 
 export function Sidebar() {
   return (
-    <aside className="hidden w-60 shrink-0 flex-col gap-8 border-r border-line bg-surface p-4 lg:flex">
-      <a href="/" className="flex items-center gap-2.5 px-2 pt-2">
-        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent text-white">
+    <aside className="fixed inset-y-0 left-0 w-64 flex-col border-r border-border lg:flex bg-surface p-6 lg:p-8 shadow-xl z-40">
+      <a
+        href="/"
+        className="flex items-center gap-3 mb-8"
+        style={{ color: 'var(--fg)' }}
+      >
+        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10 text-accent-strong">
           <MusicIcon className="h-5 w-5" />
         </span>
-        <span className="text-lg font-semibold tracking-tight">
+        <span className="text-xl font-semibold tracking-tight">
           Softy<span className="text-accent-strong">Fy</span>
         </span>
       </a>
