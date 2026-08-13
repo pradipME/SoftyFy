@@ -1,10 +1,12 @@
 import { formatAudioQuality, formatDuration } from '../../lib/format'
+import { songSummaryToQueueItem, songToQueueItem } from '../../lib/toQueueItem'
+import { usePlayerApi } from '../../state/PlayerContext'
 import type { Song } from '../../types/song'
 import type { SongSummary } from '../../types/song'
 import { Badge } from '../ui/Badge'
-import { ListMusicIcon, PlayIcon } from '../ui/icons'
+import { ListMusicIcon } from '../ui/icons'
 import { AlbumArt } from '../album/AlbumArt'
-import { TestPlayButton } from '../player/TestPlayButton'
+import { PlayQueueButton } from '../player/PlayQueueButton'
 
 interface SongListProps {
   songs: Song[]
@@ -12,6 +14,9 @@ interface SongListProps {
 }
 
 export function SongList({ songs, onAddToPlaylist }: SongListProps) {
+  const api = usePlayerApi()
+  const queue = songs.map(songToQueueItem)
+
   if (songs.length === 0) {
     return <p className="py-10 text-center text-sm text-muted">No songs yet.</p>
   }
@@ -35,20 +40,33 @@ export function SongList({ songs, onAddToPlaylist }: SongListProps) {
         <tbody>
           {songs.map((song, index) => {
             const primaryFile = song.audioFiles.find((file) => file.primary) ?? song.audioFiles[0]
+            const isCurrent = api.currentSongId === song.id
             return (
               <tr
                 key={song.id}
-                className="group border-b border-line/60 transition-colors last:border-b-0 hover:bg-elevated"
+                className={`group border-b border-line/60 transition-colors last:border-b-0 hover:bg-elevated ${
+                  isCurrent ? 'bg-accent/5' : ''
+                }`}
               >
                 <td className="px-3 py-2.5 sm:px-4">
-                  <span className="text-sm text-dim">{index + 1}</span>
+                  <span className={`text-sm ${isCurrent ? 'font-semibold text-accent-strong' : 'text-dim'}`}>
+                    {index + 1}
+                  </span>
                 </td>
                 <td className="px-3 py-2.5 sm:px-2">
                   <div className="flex items-center gap-3">
                     <AlbumArt title={song.title} className="h-10 w-10" rounded="rounded-md" />
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-fg">{song.title}</p>
-                      <p className="truncate text-xs text-muted">{song.artists.map((artist) => artist.name).join(', ') || 'Unknown artist'}</p>
+                      <p
+                        className={`truncate text-sm font-medium ${
+                          isCurrent ? 'text-accent-strong' : 'text-fg'
+                        }`}
+                      >
+                        {song.title}
+                      </p>
+                      <p className="truncate text-xs text-muted">
+                        {song.artists.map((artist) => artist.name).join(', ') || 'Unknown artist'}
+                      </p>
                     </div>
                   </div>
                 </td>
@@ -68,7 +86,7 @@ export function SongList({ songs, onAddToPlaylist }: SongListProps) {
                 {showPlayColumn ? (
                   <td className="px-2 py-2.5 text-right sm:px-3">
                     {song.audioFiles.length > 0 ? (
-                      <TestPlayButton songId={song.id} title={song.title} />
+                      <PlayQueueButton song={queue[index]} queue={queue} />
                     ) : (
                       <span className="text-xs text-dim">–</span>
                     )}
@@ -103,47 +121,56 @@ interface SongSummaryListProps {
 }
 
 export function SongSummaryList({ songs, onRemove, emptyLabel = 'No songs yet.' }: SongSummaryListProps) {
+  const api = usePlayerApi()
+  const queue = songs.map(songSummaryToQueueItem)
+
   if (songs.length === 0) {
     return <p className="py-10 text-center text-sm text-muted">{emptyLabel}</p>
   }
 
   return (
     <div className="divide-y divide-line/60 rounded-xl border border-line">
-      {songs.map((song, index) => (
-        <div key={song.id} className="flex items-center gap-3 px-3 py-2.5 transition-colors hover:bg-elevated sm:px-4">
-          <span className="w-6 shrink-0 text-sm text-dim">{index + 1}</span>
-          <AlbumArt title={song.title} className="h-10 w-10" rounded="rounded-md" />
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium text-fg">{song.title}</p>
-            <p className="truncate text-xs text-muted">{song.artistNames.join(', ') || 'Unknown artist'}</p>
+      {songs.map((song, index) => {
+        const isCurrent = api.currentSongId === song.id
+        return (
+          <div
+            key={song.id}
+            className={`flex items-center gap-3 px-3 py-2.5 transition-colors hover:bg-elevated sm:px-4 ${
+              isCurrent ? 'bg-accent/5' : ''
+            }`}
+          >
+            <span className={`w-6 shrink-0 text-sm ${isCurrent ? 'font-semibold text-accent-strong' : 'text-dim'}`}>
+              {index + 1}
+            </span>
+            <AlbumArt title={song.title} className="h-10 w-10" rounded="rounded-md" />
+            <div className="min-w-0 flex-1">
+              <p
+                className={`truncate text-sm font-medium ${isCurrent ? 'text-accent-strong' : 'text-fg'}`}
+              >
+                {song.title}
+              </p>
+              <p className="truncate text-xs text-muted">
+                {song.artistNames.join(', ') || 'Unknown artist'}
+              </p>
+            </div>
+            {song.albumTitle ? (
+              <span className="hidden truncate text-sm text-muted md:block">{song.albumTitle}</span>
+            ) : null}
+            <span className="shrink-0 text-sm text-muted">{formatDuration(song.durationSeconds)}</span>
+            <PlayQueueButton song={queue[index]} queue={queue} />
+            {onRemove ? (
+              <button
+                type="button"
+                onClick={() => onRemove(song.id)}
+                aria-label={`Remove ${song.title}`}
+                className="shrink-0 rounded-full p-1.5 text-dim hover:bg-danger/10 hover:text-danger"
+              >
+                ×
+              </button>
+            ) : null}
           </div>
-          {song.albumTitle ? <span className="hidden truncate text-sm text-muted md:block">{song.albumTitle}</span> : null}
-          <span className="shrink-0 text-sm text-muted">{formatDuration(song.durationSeconds)}</span>
-          {onRemove ? (
-            <button
-              type="button"
-              onClick={() => onRemove(song.id)}
-              aria-label={`Remove ${song.title}`}
-              className="shrink-0 rounded-full p-1.5 text-dim hover:bg-danger/10 hover:text-danger"
-            >
-              ×
-            </button>
-          ) : null}
-        </div>
-      ))}
+        )
+      })}
     </div>
-  )
-}
-
-export function SongPlayButton({ disabled }: { disabled?: boolean }) {
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      title={disabled ? 'Playback coming soon' : 'Play'}
-      className="flex h-9 w-9 items-center justify-center rounded-full bg-accent text-white transition-colors hover:bg-accent-strong disabled:cursor-not-allowed disabled:bg-elevated disabled:text-dim"
-    >
-      <PlayIcon className="h-4 w-4" />
-    </button>
   )
 }

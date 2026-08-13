@@ -144,6 +144,41 @@ export const SkipForwardIcon = icon(
   </>,
 )
 
+export const ShuffleIcon = icon(
+  <>
+    <path d="M16 3h5v5" />
+    <path d="M4 20 21 3" />
+    <path d="M21 16v5h-5" />
+    <path d="m15 15 6 6" />
+    <path d="M4 4l5 5" />
+  </>,
+)
+
+export const RepeatIcon = icon(
+  <>
+    <path d="m17 2 4 4-4 4" />
+    <path d="M3 11v-1a4 4 0 0 1 4-4h14" />
+    <path d="m7 22-4-4 4-4" />
+    <path d="M21 13v1a4 4 0 0 1-4 4H3" />
+  </>,
+)
+
+export const VolumeIcon = icon(
+  <>
+    <path d="M11 5 6 9H2v6h4l5 4V5Z" />
+    <path d="M15.5 8.5a5 5 0 0 1 0 7" />
+    <path d="M18.5 5.5a9 9 0 0 1 0 13" />
+  </>,
+)
+
+export const VolumeMuteIcon = icon(
+  <>
+    <path d="M11 5 6 9H2v6h4l5 4V5Z" />
+    <path d="m22 9-6 6" />
+    <path d="m16 9 6 6" />
+  </>,
+)
+
 export const MenuIcon = icon(
   <>
     <path d="M4 6h16" />

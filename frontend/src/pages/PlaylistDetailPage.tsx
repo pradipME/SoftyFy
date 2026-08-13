@@ -8,6 +8,8 @@ import {
 } from '../api/playlists'
 import type { CreatePlaylistPayload, PatchPlaylistPayload } from '../api/playlists'
 import { usePlaylist } from '../hooks/usePlaylists'
+import { songSummaryToQueueItem } from '../lib/toQueueItem'
+import { usePlayerApi } from '../state/PlayerContext'
 import { ErrorState } from '../components/ui/ErrorState'
 import { ListSkeleton } from '../components/ui/Skeleton'
 import { Button } from '../components/ui/Button'
@@ -20,9 +22,11 @@ import {
   ChevronUpIcon,
   EditIcon,
   ListMusicIcon,
+  PlayIcon,
   PlusIcon,
   TrashIcon,
 } from '../components/ui/icons'
+import { PlayQueueButton } from '../components/player/PlayQueueButton'
 import { PlaylistFormModal } from '../components/playlists/PlaylistFormModal'
 import { SongPickerModal } from '../components/playlists/SongPickerModal'
 import type { SongSummary } from '../types/song'
@@ -31,6 +35,7 @@ export function PlaylistDetailPage() {
   const { id = '' } = useParams()
   const navigate = useNavigate()
   const { data, loading, error, reload } = usePlaylist(id)
+  const playerApi = usePlayerApi()
 
   const [songs, setSongs] = useState<SongSummary[]>([])
   const [editOpen, setEditOpen] = useState(false)
@@ -103,6 +108,8 @@ export function PlaylistDetailPage() {
     )
   }
 
+  const queue = songs.map(songSummaryToQueueItem)
+
   return (
     <div className="flex flex-col gap-8">
       <Link to="/playlists" className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-fg">
@@ -126,6 +133,16 @@ export function PlaylistDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            disabled={songs.length === 0}
+            onClick={() => {
+              const queue = songs.map(songSummaryToQueueItem)
+              if (queue.length > 0) playerApi.playSong(queue[0], queue, 0)
+            }}
+          >
+            <PlayIcon className="h-4 w-4" />
+            Play
+          </Button>
           <Button variant="secondary" onClick={() => setPickerOpen(true)}>
             <PlusIcon className="h-4 w-4" />
             Add songs
@@ -170,6 +187,10 @@ export function PlaylistDetailPage() {
                   <p className="truncate text-sm font-medium text-fg">{song.title}</p>
                   <p className="truncate text-xs text-muted">{song.artistNames.join(', ') || 'Unknown artist'}</p>
                 </div>
+                <PlayQueueButton
+                  song={queue[index]}
+                  queue={queue}
+                />
                 <div className="flex shrink-0 items-center gap-1">
                   <IconButton
                     label={`Move ${song.title} up`}

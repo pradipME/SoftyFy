@@ -7,6 +7,7 @@ interface IconButtonProps {
   variant?: ButtonVariant
   disabled?: boolean
   size?: 'sm' | 'md'
+  className?: string
   children: ReactNode
 }
 
@@ -16,6 +17,7 @@ export function IconButton({
   variant = 'ghost',
   disabled,
   size = 'md',
+  className = '',
   children,
 }: IconButtonProps) {
   const padding = size === 'sm' ? 'p-1.5' : 'p-2'
@@ -27,7 +29,7 @@ export function IconButton({
       onClick={onClick}
       variant={variant}
       disabled={disabled}
-      className={`rounded-full ${padding}`}
+      className={`rounded-full ${padding} ${className}`}
     >
       {children}
     </Button>

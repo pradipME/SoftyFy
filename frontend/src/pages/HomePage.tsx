@@ -52,7 +52,7 @@ export function HomePage() {
     <>
       <PageHeader
         title="Your library"
-        description="Everything in one place. Audio playback is coming soon."
+        description="Everything in one place. Press play on any track to start listening."
         actions={<AddMusicButton />}
       />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

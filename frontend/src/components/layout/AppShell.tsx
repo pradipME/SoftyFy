@@ -1,11 +1,15 @@
 import { useState } from 'react'
-import { Outlet } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
 import { Header } from './Header'
 import { MobileNav, Sidebar } from './Sidebar'
 import { PlayerBar } from '../player/PlayerBar'
+import { QueueDrawer } from '../player/QueueDrawer'
 
 export function AppShell() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
+  const [queueOpen, setQueueOpen] = useState(false)
+  const { pathname } = useLocation()
+  const showPlayerBar = pathname !== '/now-playing'
 
   return (
     <div className="flex h-dvh flex-col bg-base text-fg">
@@ -20,7 +24,8 @@ export function AppShell() {
           </main>
         </div>
       </div>
-      <PlayerBar />
+      {showPlayerBar ? <PlayerBar onOpenQueue={() => setQueueOpen(true)} /> : null}
+      <QueueDrawer open={queueOpen} onClose={() => setQueueOpen(false)} />
       <MobileNav open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
     </div>
   )

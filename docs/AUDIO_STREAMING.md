@@ -136,11 +136,13 @@ reason. No other cache-related risk exists in the current architecture.
 
 ## 9. Frontend integration (minimal, Phase 5)
 
-`src/lib/stream.ts` exposes `streamUrl(songId)`, and a per-row `TestPlayButton`
-renders a hidden `<audio>` element hitting the stream endpoint. It is a
-temporary proof that playback and seeking work — the real player (queue,
-shuffle, repeat, volume, global state) is Phase 6 and the existing `PlayerBar`
-stays a disabled placeholder.
+`src/lib/stream.ts` exposes `streamUrl(songId)`. It was first proven by a
+temporary per-row `TestPlayButton` (a hidden `<audio>` element hitting the
+stream endpoint); that button has since been replaced by the full Phase 6
+player. The single global player in `src/state/PlayerContext.tsx` now drives
+one `HTMLAudioElement` whose `src` is built from `streamUrl`, so the streaming
+endpoint, range requests, and seeking are consumed exactly as designed here.
+See `docs/PLAYER_ARCHITECTURE.md` for the player design.
 
 No CORS changes were needed: the `<audio>` element performs a simple (non-
 preflight) GET, and `spring.web.cors.allowed-methods` already includes GET. The
