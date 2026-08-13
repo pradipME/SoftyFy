@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { formatPlaybackTime } from '../player/format'
 import { usePlayerApi, usePlayerState } from '../state/PlayerContext'
 import { AlbumArt } from '../components/album/AlbumArt'
@@ -15,33 +15,8 @@ import {
   ShuffleIcon,
   SkipBackIcon,
   SkipForwardIcon,
-  VolumeIcon,
-  VolumeMuteIcon,
 } from '../components/ui/icons'
-
-function toggleClass(active: boolean) {
-  return active ? 'text-accent-strong' : 'text-dim hover:text-fg'
-}
-
-function SeekBar() {
-  const { currentTime, duration } = usePlayerState()
-  const { seek } = usePlayerApi()
-  const max = Math.max(0, duration)
-  const value = Math.min(currentTime, max)
-  return (
-    <input
-      type="range"
-      min={0}
-      max={max}
-      step={1}
-      value={Number.isFinite(value) ? value : 0}
-      onChange={(event) => seek(Number(event.target.value))}
-      aria-label="Seek"
-      className="h-1.5 w-full cursor-pointer accent-accent"
-      disabled={max === 0}
-    />
-  )
-}
+import { SeekBar, toggleClass, VolumeControl } from '../components/player/controls'
 
 export function NowPlayingPage() {
   const navigate = useNavigate()
@@ -51,7 +26,7 @@ export function NowPlayingPage() {
 
   if (!song) {
     return (
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-6 pb-8">
         <Button variant="ghost" onClick={() => navigate(-1)} className="self-start">
           <ArrowLeftIcon className="h-4 w-4" />
           Back
@@ -60,7 +35,15 @@ export function NowPlayingPage() {
           <span className="flex h-16 w-16 items-center justify-center rounded-full bg-elevated text-dim">
             <MusicIcon className="h-8 w-8" />
           </span>
-          <p className="text-muted">Nothing is playing. Pick a track from your library.</p>
+          <div>
+            <p className="text-lg font-semibold">Nothing is playing</p>
+            <p className="mt-1 text-sm text-muted">Pick a track from your library to get started.</p>
+          </div>
+          <Link to="/songs">
+            <Button variant="secondary" className="mt-2">
+              Browse your songs
+            </Button>
+          </Link>
         </div>
       </div>
     )
@@ -68,28 +51,31 @@ export function NowPlayingPage() {
 
   const isPlaying = state.status === 'playing'
   const isLoading = state.status === 'loading'
+  const isError = state.status === 'error'
   const playToggleLabel = isLoading ? 'Loading' : isPlaying ? 'Pause' : 'Play'
 
   return (
-    <div className="flex flex-col gap-8 pb-8">
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 pb-10">
       <Button variant="ghost" onClick={() => navigate(-1)} className="self-start">
         <ArrowLeftIcon className="h-4 w-4" />
         Back
       </Button>
 
       <div className="flex flex-col items-center gap-8 md:flex-row md:items-start md:justify-center md:gap-12">
-        <div className="flex flex-col items-center gap-6">
+        <div className="flex w-full max-w-sm flex-col items-center gap-6">
           <AlbumArt
             title={song.title}
-            className="h-56 w-56 rounded-2xl shadow-xl sm:h-72 sm:w-72"
+            className="aspect-square w-full rounded-2xl shadow-xl"
             rounded="rounded-2xl"
           />
           <div className="max-w-full text-center">
-            <h1 className="text-2xl font-bold tracking-tight">{song.title}</h1>
-            <p className="mt-1 text-sm text-muted">
+            <h1 className="truncate text-2xl font-bold tracking-tight">{song.title}</h1>
+            <p className="mt-1 truncate text-sm text-muted">
               {song.artistNames.join(', ') || 'Unknown artist'}
-              {song.albumTitle ? ` · ${song.albumTitle}` : ''}
             </p>
+            {song.albumTitle ? (
+              <p className="truncate text-sm text-dim">{song.albumTitle}</p>
+            ) : null}
           </div>
         </div>
 
@@ -100,7 +86,7 @@ export function NowPlayingPage() {
               onClick={api.toggleShuffle}
               title={state.shuffleEnabled ? 'Turn shuffle off' : 'Turn shuffle on'}
               aria-label={state.shuffleEnabled ? 'Turn shuffle off' : 'Turn shuffle on'}
-              className={`rounded-full p-2 transition-colors ${toggleClass(state.shuffleEnabled)}`}
+              className={toggleClass(state.shuffleEnabled)}
             >
               <ShuffleIcon className="h-5 w-5" />
             </button>
@@ -154,7 +140,7 @@ export function NowPlayingPage() {
                     ? 'Repeat all'
                     : 'Repeat one'
               }
-              className={`relative rounded-full p-2 transition-colors ${toggleClass(state.repeatMode !== 'off')}`}
+              className={`relative ${toggleClass(state.repeatMode !== 'off')}`}
             >
               <RepeatIcon className="h-5 w-5" />
               {state.repeatMode === 'one' ? (
@@ -177,30 +163,14 @@ export function NowPlayingPage() {
             </span>
           </div>
 
-          <div className="flex items-center justify-center gap-3">
-            <button
-              type="button"
-              onClick={api.toggleMute}
-              title={state.isMuted ? 'Unmute' : 'Mute'}
-              aria-label={state.isMuted ? 'Unmute' : 'Mute'}
-              className="rounded-full p-2 text-dim transition-colors hover:bg-elevated hover:text-fg"
-            >
-              {state.isMuted || state.volume === 0 ? (
-                <VolumeMuteIcon className="h-5 w-5" />
-              ) : (
-                <VolumeIcon className="h-5 w-5" />
-              )}
-            </button>
-            <input
-              type="range"
-              min={0}
-              max={100}
-              step={1}
-              value={Math.round((state.isMuted ? 0 : state.volume) * 100)}
-              onChange={(event) => api.setVolume(Number(event.target.value) / 100)}
-              aria-label="Volume"
-              className="h-1.5 w-40 cursor-pointer accent-accent"
-            />
+          {isError ? (
+            <p className="rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-center text-sm text-danger">
+              {state.error ?? 'Unable to play this song.'}
+            </p>
+          ) : null}
+
+          <div className="flex items-center justify-center">
+            <VolumeControl />
           </div>
         </div>
       </div>

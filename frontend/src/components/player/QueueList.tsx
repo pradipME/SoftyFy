@@ -2,7 +2,7 @@ import { usePlayerApi, usePlayerState } from '../../state/PlayerContext'
 import { formatPlaybackTime } from '../../player/format'
 import { AlbumArt } from '../album/AlbumArt'
 import { IconButton } from '../ui/IconButton'
-import { ChevronDownIcon, ChevronUpIcon, TrashIcon } from '../ui/icons'
+import { ChevronDownIcon, ChevronUpIcon, ListMusicIcon, TrashIcon } from '../ui/icons'
 
 interface QueueRowProps {
   songId: string
@@ -88,30 +88,67 @@ function QueueRow({
   )
 }
 
+function SectionHeader({ children }: { children: string }) {
+  return (
+    <li aria-hidden="true" className="px-3 pb-1 pt-3 text-[0.7rem] font-semibold uppercase tracking-wider text-dim sm:px-4">
+      {children}
+    </li>
+  )
+}
+
 export function QueueList() {
   const state = usePlayerState()
   const api = usePlayerApi()
   const queue = state.playOrder.map((index) => state.queue[index])
 
   if (queue.length === 0) {
-    return <p className="py-10 text-center text-sm text-muted">The queue is empty.</p>
+    return (
+      <div className="flex flex-col items-center gap-3 py-10 text-center">
+        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-elevated text-dim">
+          <ListMusicIcon className="h-6 w-6" />
+        </span>
+        <div>
+          <p className="text-sm font-semibold">The queue is empty</p>
+          <p className="mt-1 text-xs text-muted">Play a track and it will appear here.</p>
+        </div>
+      </div>
+    )
   }
+
+  const currentPosition = queue.findIndex((item) => item.id === api.currentSongId)
 
   return (
     <ol className="divide-y divide-line/60">
-      {queue.map((item, position) => (
+      {currentPosition >= 0 ? <SectionHeader>Now playing</SectionHeader> : null}
+      {currentPosition >= 0 ? (
         <QueueRow
-          key={item.id}
-          songId={item.id}
-          title={item.title}
-          artistNames={item.artistNames}
-          durationSeconds={item.durationSeconds}
-          position={position}
-          isCurrent={item.id === api.currentSongId}
-          canMoveUp={position > 0}
-          canMoveDown={position < queue.length - 1}
+          songId={queue[currentPosition].id}
+          title={queue[currentPosition].title}
+          artistNames={queue[currentPosition].artistNames}
+          durationSeconds={queue[currentPosition].durationSeconds}
+          position={currentPosition}
+          isCurrent
+          canMoveUp={currentPosition > 0}
+          canMoveDown={currentPosition < queue.length - 1}
         />
-      ))}
+      ) : null}
+      {currentPosition < queue.length - 1 ? <SectionHeader>Up next</SectionHeader> : null}
+      {queue.map((item, position) => {
+        if (position <= currentPosition) return null
+        return (
+          <QueueRow
+            key={item.id}
+            songId={item.id}
+            title={item.title}
+            artistNames={item.artistNames}
+            durationSeconds={item.durationSeconds}
+            position={position}
+            isCurrent={false}
+            canMoveUp={position > 0}
+            canMoveDown={position < queue.length - 1}
+          />
+        )
+      })}
     </ol>
   )
 }
