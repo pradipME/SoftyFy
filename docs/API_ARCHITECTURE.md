@@ -40,6 +40,10 @@ REST API served by the Spring Boot backend at `/api`. All responses are JSON.
   | `INVALID_REORDER_REQUEST` | 400 | Reorder body is not an exact permutation |
   | `VALIDATION_FAILED` | 400 | Bean validation or malformed input; `errors` maps field → message |
   | `INVALID_SORT` | 400 | Unknown `sort` value |
+  | `INVALID_FILE` | 400 | Unsupported extension, wrong magic bytes, or MIME mismatch |
+  | `UNSUPPORTED_MEDIA_TYPE` | 415 | Missing multipart part or unsupported content type |
+  | `FILE_TOO_LARGE` | 413 | Upload exceeds the configured size limit |
+  | `STORAGE_ERROR` | 500 | Underlying storage write/delete failure |
   | `CONFLICT` | 409 | Data integrity violation |
   | `INTERNAL_ERROR` | 500 | Unhandled exception (logged, detail hidden) |
 
@@ -69,6 +73,8 @@ REST API served by the Spring Boot backend at `/api`. All responses are JSON.
 | POST | `/api/favorites` | Favorite a song (body `{"songId": "..."}`; idempotent) |
 | POST | `/api/favorites/{songId}` | Favorite a song by path (idempotent) |
 | DELETE | `/api/favorites/{songId}` | Remove favorite (idempotent, 204) |
+| POST | `/api/songs/upload` | Upload an audio file (multipart `file`, optional `title`/`artist`/`album` overrides); 201 = new song, 200 = already imported. Body: `{"song": {...}, "created": bool}` |
+| DELETE | `/api/songs/{id}` | Delete a song and its stored audio objects (204) |
 
 ### Create song example
 
@@ -84,7 +90,7 @@ REST API served by the Spring Boot backend at `/api`. All responses are JSON.
 
 ## Not implemented (later phases)
 
-- `PATCH`/`DELETE /api/songs`, `PATCH`/`DELETE /api/playlists`
+- `PATCH /api/songs`, `PATCH`/`DELETE /api/playlists`
   (request DTOs exist).
 - Free-text query params and `/api/search`.
 - Audio streaming endpoints.

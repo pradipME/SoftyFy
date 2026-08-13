@@ -13,3 +13,24 @@ export function initials(value: string): string {
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
 }
+
+interface AudioQualitySource {
+  format: string | null
+  bitrateKbps: number | null
+  sampleRateHz: number | null
+  bitDepth: number | null
+}
+
+export function formatAudioQuality(file: AudioQualitySource | null | undefined): string | null {
+  if (!file) return null
+  const parts: string[] = []
+  if (file.bitDepth != null && file.sampleRateHz != null) {
+    parts.push(`${file.bitDepth}-bit/${Math.round(file.sampleRateHz / 1000)} kHz`)
+  } else if (file.bitrateKbps != null) {
+    parts.push(`${file.bitrateKbps} kbps`)
+  }
+  if (file.format) {
+    parts.unshift(file.format.toUpperCase())
+  }
+  return parts.length > 0 ? parts.join(' · ') : null
+}

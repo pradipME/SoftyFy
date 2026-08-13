@@ -2,7 +2,7 @@
 
 A private, personal music streaming web application for your own legally obtained or licensed music collection. No advertisements, no subscriptions, no payments, and no public music catalog — just your library, with high-quality playback and a Spotify-inspired experience.
 
-> **Status:** Phase 1 — Project Foundation. The repository contains the backend and frontend foundations only. No music features are implemented yet.
+> **Status:** Phase 4 — Audio Storage & Ingestion. Users can upload local audio files (MP3/FLAC/WAV/M4A/OGG); the backend validates, extracts metadata, deduplicates, and stores the bytes outside the database. Playback is still a later phase.
 
 ## Technology Stack
 
@@ -60,9 +60,20 @@ Copy `.env.example` to `.env` at the repository root and adjust values. The real
 | `SOFTYFY_DB_NAME` | Database name | `softyfy` |
 | `SOFTYFY_DB_USER` | Database user | `softyfy` |
 | `SOFTYFY_DB_PASSWORD` | Database password | `softyfy` (dev only) |
+| `SOFTYFY_STORAGE_PROVIDER` | Audio storage backend; only `local` is implemented | `local` |
+| `SOFTYFY_STORAGE_LOCAL_ROOT` | Root directory for local audio storage (git-ignored) | `./data/audio` |
+| `SOFTYFY_AUDIO_MAX_FILE_SIZE_MB` | Maximum audio upload size | `200` |
 | `VITE_API_BASE_URL` | Backend API base URL used by the frontend at build time | `http://localhost:8080` |
 
 In the `prod` profile the database host, name, user and password are **required** — the application fails to start if any of them are missing.
+
+## Adding Music
+
+Use the **Add music** button (home, header, or Songs page). Select or drop audio
+files (up to 200 MB each); the frontend uploads with progress and per-file
+status. Metadata is read from the file's tags and can be overridden per batch.
+See [`docs/STORAGE_ARCHITECTURE.md`](docs/STORAGE_ARCHITECTURE.md) for the
+storage design and deduplication rules.
 
 ## PostgreSQL Setup (Docker Compose)
 

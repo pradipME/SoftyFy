@@ -4,17 +4,22 @@ import com.softyfy.common.api.PageResponse;
 import com.softyfy.common.exception.ErrorCode;
 import com.softyfy.common.exception.NotFoundException;
 import com.softyfy.common.exception.ValidationException;
+import com.softyfy.ingestion.SongIngestionService;
+import com.softyfy.ingestion.UploadOverrides;
+import com.softyfy.ingestion.UploadResult;
 import com.softyfy.song.dto.SongDto;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
 import java.util.UUID;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
@@ -22,6 +27,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -34,6 +40,9 @@ class SongControllerTest {
 
     @MockitoBean
     private SongService songService;
+
+    @MockitoBean
+    private SongIngestionService songIngestionService;
 
     @Test
     void findByIdReturns404ProblemDetail() throws Exception {
@@ -147,5 +156,34 @@ class SongControllerTest {
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete("/api/songs/{id}", id))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("SONG_NOT_FOUND"));
+    }
+
+    @Test
+    void uploadNewSongReturns201WithCreatedFlag() throws Exception {
+        SongDto dto = new SongDto(UUID.randomUUID(), "Song", 200, 1, null, List.of(), List.of(), null, null);
+        when(songIngestionService.ingest(any(), any(UploadOverrides.class)))
+                .thenReturn(new UploadResult(dto, true));
+        MockMultipartFile file = new MockMultipartFile("file", "song.mp3", "audio/mpeg",
+                new byte[]{'I', 'D', '3', 0, 0, 0, 0, 0, 0, 0, 0, 0});
+
+        mockMvc.perform(multipart("/api/songs/upload").file(file).param("title", "Song"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.created").value(true))
+                .andExpect(jsonPath("$.song.title").value("Song"));
+
+        verify(songIngestionService).ingest(any(), eq(new UploadOverrides("Song", null, null)));
+    }
+
+    @Test
+    void uploadAlreadyImportedSongReturns200() throws Exception {
+        SongDto dto = new SongDto(UUID.randomUUID(), "Song", 200, 1, null, List.of(), List.of(), null, null);
+        when(songIngestionService.ingest(any(), any(UploadOverrides.class)))
+                .thenReturn(new UploadResult(dto, false));
+        MockMultipartFile file = new MockMultipartFile("file", "song.mp3", "audio/mpeg",
+                new byte[]{'I', 'D', '3', 0, 0, 0, 0, 0, 0, 0, 0, 0});
+
+        mockMvc.perform(multipart("/api/songs/upload").file(file))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.created").value(false));
     }
 }

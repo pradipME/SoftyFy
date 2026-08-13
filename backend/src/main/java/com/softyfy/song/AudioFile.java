@@ -33,16 +33,34 @@ public class AudioFile extends AuditableEntity {
     @Column(name = "format", length = 20)
     private String format;
 
+    @Column(name = "label", length = 255)
+    private String label;
+
     @Column(name = "bitrate_kbps")
     private Integer bitrateKbps;
+
+    @Column(name = "sample_rate_hz")
+    private Integer sampleRateHz;
+
+    @Column(name = "channels")
+    private Integer channels;
+
+    @Column(name = "bit_depth")
+    private Integer bitDepth;
 
     @Column(name = "size_bytes")
     private Long sizeBytes;
 
+    @Column(name = "content_type", length = 255)
+    private String contentType;
+
+    @Column(name = "sha256", length = 64)
+    private String sha256;
+
     @Column(name = "is_primary", nullable = false)
     private boolean primary;
 
-    protected AudioFile() {
+    public AudioFile() {
     }
 
     public AudioFile(Song song, String storageProvider, String storageKey, String format,
@@ -60,8 +78,40 @@ public class AudioFile extends AuditableEntity {
         return id;
     }
 
+    public void setId(UUID id) {
+        this.id = id;
+    }
+
     public Song getSong() {
         return song;
+    }
+
+    public void setSong(Song song) {
+        this.song = song;
+    }
+
+    public void setStorageProvider(String storageProvider) {
+        this.storageProvider = storageProvider;
+    }
+
+    public void setStorageKey(String storageKey) {
+        this.storageKey = storageKey;
+    }
+
+    public void setFormat(String format) {
+        this.format = format;
+    }
+
+    public void setBitrateKbps(Integer bitrateKbps) {
+        this.bitrateKbps = bitrateKbps;
+    }
+
+    public void setSizeBytes(Long sizeBytes) {
+        this.sizeBytes = sizeBytes;
+    }
+
+    public void setPrimary(boolean primary) {
+        this.primary = primary;
     }
 
     public String getStorageProvider() {
@@ -80,11 +130,59 @@ public class AudioFile extends AuditableEntity {
         return bitrateKbps;
     }
 
+    public String getLabel() {
+        return label;
+    }
+
+    public Integer getSampleRateHz() {
+        return sampleRateHz;
+    }
+
+    public Integer getChannels() {
+        return channels;
+    }
+
+    public Integer getBitDepth() {
+        return bitDepth;
+    }
+
+    public String getContentType() {
+        return contentType;
+    }
+
+    public String getSha256() {
+        return sha256;
+    }
+
     public Long getSizeBytes() {
         return sizeBytes;
     }
 
     public boolean isPrimary() {
         return primary;
+    }
+
+    public void setLabel(String label) {
+        this.label = label;
+    }
+
+    public void setSampleRateHz(Integer sampleRateHz) {
+        this.sampleRateHz = sampleRateHz;
+    }
+
+    public void setChannels(Integer channels) {
+        this.channels = channels;
+    }
+
+    public void setBitDepth(Integer bitDepth) {
+        this.bitDepth = bitDepth;
+    }
+
+    public void setContentType(String contentType) {
+        this.contentType = contentType;
+    }
+
+    public void setSha256(String sha256) {
+        this.sha256 = sha256;
     }
 }

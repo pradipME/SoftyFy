@@ -1,4 +1,4 @@
-import { formatDuration } from '../../lib/format'
+import { formatAudioQuality, formatDuration } from '../../lib/format'
 import type { Song } from '../../types/song'
 import type { SongSummary } from '../../types/song'
 import { Badge } from '../ui/Badge'
@@ -52,7 +52,11 @@ export function SongList({ songs, onAddToPlaylist }: SongListProps) {
                   {song.album?.title ?? '–'}
                 </td>
                 <td className="hidden px-2 py-2.5 sm:table-cell">
-                  {primaryFile?.format ? <Badge>{primaryFile.format}</Badge> : <span className="text-xs text-dim">–</span>}
+                  {primaryFile ? (
+                    <Badge>{formatAudioQuality(primaryFile) ?? primaryFile.format ?? '–'}</Badge>
+                  ) : (
+                    <span className="text-xs text-dim">–</span>
+                  )}
                 </td>
                 <td className="px-3 py-2.5 text-right text-sm text-muted sm:px-4">
                   {formatDuration(song.durationSeconds)}

@@ -142,3 +142,9 @@ allure-results/
 docker/data/
 pgdata/
 *.postgresql
+
+# ---------------------------------------------------------------------------
+# Runtime data — local audio object storage (never commit uploaded files)
+# ---------------------------------------------------------------------------
+data/
+backend/data/

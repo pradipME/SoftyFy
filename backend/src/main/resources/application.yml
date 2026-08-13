@@ -9,9 +9,20 @@ spring:
       allowed-methods: GET,POST,PUT,PATCH,DELETE,OPTIONS
       allowed-headers: "*"
       max-age: 3600
+  servlet:
+    multipart:
+      max-file-size: ${SOFTYFY_AUDIO_MAX_FILE_SIZE_MB:200}MB
+      max-request-size: ${SOFTYFY_AUDIO_MAX_FILE_SIZE_MB:200}MB
 
 server:
   port: ${SERVER_PORT:8080}
+
+softyfy:
+  storage:
+    provider: ${SOFTYFY_STORAGE_PROVIDER:local}
+    local-root: ${SOFTYFY_STORAGE_LOCAL_ROOT:./data/audio}
+  audio:
+    max-file-size-mb: ${SOFTYFY_AUDIO_MAX_FILE_SIZE_MB:200}
 
 management:
   endpoints:

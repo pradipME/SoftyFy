@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { SearchOverlay } from '../../features/search/SearchOverlay'
+import { AddMusicButton } from '../../features/upload/AddMusicButton'
 import { MenuIcon, SearchIcon } from '../ui/icons'
 
 interface HeaderProps {
@@ -31,6 +32,10 @@ export function Header({ onOpenMobileNav }: HeaderProps) {
           ⌘ K
         </kbd>
       </button>
+
+      <div className="ml-auto">
+        <AddMusicButton size="sm" />
+      </div>
 
       <SearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} />
     </header>

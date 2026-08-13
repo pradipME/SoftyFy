@@ -6,8 +6,13 @@ export interface AudioFile {
   storageProvider: string
   storageKey: string
   format: string | null
+  label: string | null
   bitrateKbps: number | null
+  sampleRateHz: number | null
+  channels: number | null
+  bitDepth: number | null
   sizeBytes: number | null
+  contentType: string | null
   primary: boolean
 }
 

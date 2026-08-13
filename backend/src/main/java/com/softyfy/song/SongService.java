@@ -11,12 +11,16 @@ import com.softyfy.common.exception.ValidationException;
 import com.softyfy.song.dto.CreateSongRequest;
 import com.softyfy.song.dto.SongDto;
 import com.softyfy.song.dto.SongPatchRequest;
+import com.softyfy.storage.AudioStorage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -26,18 +30,24 @@ import java.util.UUID;
 @Service
 public class SongService {
 
+    private static final Logger log = LoggerFactory.getLogger(SongService.class);
     private static final int MAX_PAGE_SIZE = 100;
     private static final Set<String> SORT_OPTIONS = Set.of("title", "artist", "album", "created");
 
     private final SongRepository songRepository;
     private final AlbumRepository albumRepository;
     private final ArtistRepository artistRepository;
+    private final AudioFileRepository audioFileRepository;
+    private final AudioStorage audioStorage;
 
     public SongService(SongRepository songRepository, AlbumRepository albumRepository,
-                       ArtistRepository artistRepository) {
+                       ArtistRepository artistRepository, AudioFileRepository audioFileRepository,
+                       AudioStorage audioStorage) {
         this.songRepository = songRepository;
         this.albumRepository = albumRepository;
         this.artistRepository = artistRepository;
+        this.audioFileRepository = audioFileRepository;
+        this.audioStorage = audioStorage;
     }
 
     @Transactional(readOnly = true)
@@ -98,10 +108,16 @@ public class SongService {
 
     @Transactional
     public void delete(UUID id) {
-        if (!songRepository.existsById(id)) {
-            throw new NotFoundException(ErrorCode.SONG_NOT_FOUND, "Song not found: " + id);
+        Song song = getSongOrThrow(id);
+        for (AudioFile audioFile : song.getAudioFiles()) {
+            try {
+                audioStorage.delete(audioFile.getStorageKey());
+            } catch (IOException ex) {
+                log.warn("Could not delete stored audio object {} for song {}",
+                        audioFile.getStorageKey(), id, ex);
+            }
         }
-        songRepository.deleteById(id);
+        songRepository.delete(song);
     }
 
     private Song getSongOrThrow(UUID id) {

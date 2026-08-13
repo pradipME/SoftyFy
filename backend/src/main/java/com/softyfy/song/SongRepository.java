@@ -64,4 +64,6 @@ public interface SongRepository extends JpaRepository<Song, UUID> {
             order by lower(s.title) asc
             """)
     Page<Song> search(String term, Pageable pageable);
+
+    List<Song> findByTitleIgnoreCase(String title);
 }

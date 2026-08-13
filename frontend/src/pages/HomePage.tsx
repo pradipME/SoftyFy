@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { PageHeader } from '../components/ui/PageHeader'
+import { AddMusicButton } from '../features/upload/AddMusicButton'
 import {
   DiscIcon,
   HeartIcon,
@@ -52,6 +53,7 @@ export function HomePage() {
       <PageHeader
         title="Your library"
         description="Everything in one place. Audio playback is coming soon."
+        actions={<AddMusicButton />}
       />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {sections.map((section) => (

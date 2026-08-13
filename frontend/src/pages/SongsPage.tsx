@@ -5,6 +5,7 @@ import { ErrorState } from '../components/ui/ErrorState'
 import { ListSkeleton } from '../components/ui/Skeleton'
 import { Pagination } from '../components/ui/Pagination'
 import { PlaylistPickerModal } from '../components/playlists/PlaylistPickerModal'
+import { AddMusicButton } from '../features/upload/AddMusicButton'
 import { useSongs } from '../hooks/useSongs'
 import type { SongSortOption } from '../types/api'
 import type { Song } from '../types/song'
@@ -25,27 +26,36 @@ export function SongsPage() {
   const [notice, setNotice] = useState<string | null>(null)
   const { data, loading, error, reload } = useSongs(page, PAGE_SIZE, sort)
 
+  const handleUploaded = () => {
+    setNotice('Audio imported successfully.')
+    setPage(0)
+    reload()
+  }
+
   return (
     <>
       <PageHeader
         title="Songs"
         description="All tracks in your library."
         actions={
-          <select
-            value={sort}
-            onChange={(event) => {
-              setSort(event.target.value as SongSortOption)
-              setPage(0)
-            }}
-            aria-label="Sort songs"
-            className="rounded-lg border border-line bg-elevated px-3 py-2 text-sm text-fg focus:border-accent focus:outline-none"
-          >
-            {sortOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+          <>
+            <AddMusicButton onUploaded={handleUploaded} />
+            <select
+              value={sort}
+              onChange={(event) => {
+                setSort(event.target.value as SongSortOption)
+                setPage(0)
+              }}
+              aria-label="Sort songs"
+              className="rounded-lg border border-line bg-elevated px-3 py-2 text-sm text-fg focus:border-accent focus:outline-none"
+            >
+              {sortOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </>
         }
       />
 

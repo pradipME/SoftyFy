@@ -23,4 +23,6 @@ public interface AlbumRepository extends JpaRepository<Album, UUID> {
             order by a.year desc nulls last, lower(a.title) asc
             """)
     Page<Album> searchByTitle(String term, Pageable pageable);
+
+    List<Album> findByTitleIgnoreCase(String title);
 }

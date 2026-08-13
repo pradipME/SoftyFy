@@ -8,6 +8,7 @@ import com.softyfy.common.exception.NotFoundException;
 import com.softyfy.common.exception.ValidationException;
 import com.softyfy.song.dto.CreateSongRequest;
 import com.softyfy.song.dto.SongDto;
+import com.softyfy.storage.AudioStorage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -16,6 +17,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -39,11 +41,18 @@ class SongServiceTest {
     @Mock
     private ArtistRepository artistRepository;
 
+    @Mock
+    private AudioFileRepository audioFileRepository;
+
+    @Mock
+    private AudioStorage audioStorage;
+
     private SongService songService;
 
     @BeforeEach
     void setUp() {
-        songService = new SongService(songRepository, albumRepository, artistRepository);
+        songService = new SongService(songRepository, albumRepository, artistRepository,
+                audioFileRepository, audioStorage);
     }
 
     @Test
@@ -107,5 +116,34 @@ class SongServiceTest {
         songService.findAll(0, 20, "title");
 
         verify(songRepository).findAllOrderByTitle(any(Pageable.class));
+    }
+
+    @Test
+    void deleteRemovesStoredAudioObjectsBeforeDeletingSong() throws IOException {
+        UUID id = UUID.randomUUID();
+        Song song = new Song("Song", null, List.of());
+        AudioFile audioFile = new AudioFile(song, "local", "audio/1.mp3", "mp3", 320, 1000L, true);
+        song.addAudioFile(audioFile);
+        when(songRepository.findByIdWithGraph(id)).thenReturn(List.of(song));
+
+        songService.delete(id);
+
+        verify(audioStorage).delete("audio/1.mp3");
+        verify(songRepository).delete(song);
+    }
+
+    @Test
+    void deleteKeepsDeletingDatabaseRowWhenStorageCleanupFails() throws IOException {
+        UUID id = UUID.randomUUID();
+        Song song = new Song("Song", null, List.of());
+        AudioFile audioFile = new AudioFile(song, "local", "audio/1.mp3", "mp3", 320, 1000L, true);
+        song.addAudioFile(audioFile);
+        when(songRepository.findByIdWithGraph(id)).thenReturn(List.of(song));
+        org.mockito.Mockito.doThrow(new IOException("disk error"))
+                .when(audioStorage).delete("audio/1.mp3");
+
+        songService.delete(id);
+
+        verify(songRepository).delete(song);
     }
 }

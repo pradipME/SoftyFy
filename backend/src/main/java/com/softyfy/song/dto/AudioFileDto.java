@@ -9,8 +9,13 @@ public record AudioFileDto(
         String storageProvider,
         String storageKey,
         String format,
+        String label,
         Integer bitrateKbps,
+        Integer sampleRateHz,
+        Integer channels,
+        Integer bitDepth,
         Long sizeBytes,
+        String contentType,
         boolean primary) {
 
     public static AudioFileDto from(AudioFile audioFile) {
@@ -19,8 +24,13 @@ public record AudioFileDto(
                 audioFile.getStorageProvider(),
                 audioFile.getStorageKey(),
                 audioFile.getFormat(),
+                audioFile.getLabel(),
                 audioFile.getBitrateKbps(),
+                audioFile.getSampleRateHz(),
+                audioFile.getChannels(),
+                audioFile.getBitDepth(),
                 audioFile.getSizeBytes(),
+                audioFile.getContentType(),
                 audioFile.isPrimary());
     }
 }

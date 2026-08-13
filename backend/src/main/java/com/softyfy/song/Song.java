@@ -93,6 +93,19 @@ public class Song extends AuditableEntity {
         this.title = title;
     }
 
+    public void setAlbum(Album album) {
+        this.album = album;
+    }
+
+    public void setArtists(List<Artist> artists) {
+        this.artists = artists == null ? new ArrayList<>() : new ArrayList<>(artists);
+    }
+
+    public void addAudioFile(AudioFile audioFile) {
+        audioFile.setSong(this);
+        this.audioFiles.add(audioFile);
+    }
+
     public void setDurationSeconds(Integer durationSeconds) {
         this.durationSeconds = durationSeconds;
     }

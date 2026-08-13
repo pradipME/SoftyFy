@@ -13,6 +13,8 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.LinkedHashMap;
@@ -60,6 +62,20 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest()
                 .body(problemDetail(HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_FAILED,
                         "Missing required parameter: " + ex.getParameterName(), null));
+    }
+
+    @ExceptionHandler(MissingServletRequestPartException.class)
+    public ResponseEntity<ProblemDetail> handleMissingPart(MissingServletRequestPartException ex) {
+        return ResponseEntity.badRequest()
+                .body(problemDetail(HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_FAILED,
+                        "Missing required part: " + ex.getRequestPartName(), null));
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ProblemDetail> handleMaxUploadSize(MaxUploadSizeExceededException ex) {
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
+                .body(problemDetail(HttpStatus.PAYLOAD_TOO_LARGE, ErrorCode.FILE_TOO_LARGE,
+                        "The uploaded file exceeds the configured size limit", null));
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
