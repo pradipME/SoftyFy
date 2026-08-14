@@ -194,7 +194,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   const currentSong = currentSongOf(state)
 
-  // Media Session API — lockscreen/OS media controls where available.
+  // Media Session API — lockscreen / OS media controls where available.
+  // Every handler delegates to the exact same functions the in-app buttons
+  // use (togglePlay/previous/next/seek), so there is no duplicated logic.
   useEffect(() => {
     if (typeof navigator === 'undefined' || !('mediaSession' in navigator)) return
     const ms = navigator.mediaSession
@@ -202,28 +204,53 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     ms.setActionHandler('pause', () => togglePlay())
     ms.setActionHandler('previoustrack', () => previous())
     ms.setActionHandler('nexttrack', () => next())
+    ms.setActionHandler('seekto', (details) => {
+      if (details.seekTime !== undefined) seek(details.seekTime)
+    })
     return () => {
       ms.setActionHandler('play', null)
       ms.setActionHandler('pause', null)
       ms.setActionHandler('previoustrack', null)
       ms.setActionHandler('nexttrack', null)
+      ms.setActionHandler('seekto', null)
     }
-  }, [togglePlay, previous, next])
+  }, [togglePlay, previous, next, seek])
 
+  // Keep the OS metadata in sync with the current song. Artwork `src` is
+  // resolved to an absolute URL — some browsers ignore relative paths here.
   useEffect(() => {
     if (typeof navigator === 'undefined' || !('mediaSession' in navigator)) return
     const ms = navigator.mediaSession
-    ms.metadata =
-      currentSong === null
-        ? null
-        : new MediaMetadata({
-            title: currentSong.title,
-            artist: currentSong.artist,
-            album: currentSong.album ?? '',
-            artwork: [{ src: currentSong.coverSrc }],
-          })
-    ms.playbackState = state.status === 'playing' ? 'playing' : 'paused'
-  }, [currentSong, state.status])
+    if (currentSong === null) {
+      ms.metadata = null
+      return
+    }
+    let artworkSrc = currentSong.coverSrc
+    try {
+      artworkSrc = new URL(currentSong.coverSrc, window.location.origin).href
+    } catch {
+      // Fall back to the raw path if resolution ever fails.
+    }
+    ms.metadata = new MediaMetadata({
+      title: currentSong.title,
+      artist: currentSong.artist,
+      album: currentSong.album ?? '',
+      artwork: [
+        { src: artworkSrc, sizes: '96x96', type: 'image/jpeg' },
+        { src: artworkSrc, sizes: '256x256', type: 'image/jpeg' },
+        { src: artworkSrc, sizes: '512x512', type: 'image/jpeg' },
+      ],
+    })
+  }, [currentSong])
+
+  // Reflect the real play state in the OS UI (pause icon while playing, etc.).
+  // 'loading' leads straight into playback, so keep the OS showing "playing".
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !('mediaSession' in navigator)) return
+    const ms = navigator.mediaSession
+    ms.playbackState =
+      state.status === 'playing' || state.status === 'loading' ? 'playing' : 'paused'
+  }, [state.status])
 
   // Global keyboard shortcuts (Space, arrows, M) — ignored while typing.
   useEffect(() => {
