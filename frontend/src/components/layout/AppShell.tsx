@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { AmbientBackground } from '../ambient/AmbientBackground'
+import { CoverBackground } from '../ambient/CoverBackground'
 import { RouteTransition } from '../motion/RouteTransition'
 import { NowPlayingSheet } from '../player/NowPlayingSheet'
 import { PlayerBar } from '../player/PlayerBar'
@@ -17,6 +18,7 @@ export function AppShell() {
   return (
     <div className="relative isolate min-h-dvh bg-base text-fg">
       <AmbientBackground />
+      <CoverBackground />
       <Sidebar />
       <main className="relative z-10 pb-48 pt-4 md:ml-64 md:pb-32 md:pt-6">
         <div className="mx-auto w-full max-w-6xl px-4">
