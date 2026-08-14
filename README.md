@@ -94,6 +94,14 @@ The build is a pure static site — deploy `frontend/dist` to **any** static hos
 - The app uses hash-based routing, so no SPA redirect/rewrite rule is needed.
 - To serve under a sub-path (e.g. GitHub Pages project page), set the Vite `base` option in `vite.config.ts`.
 
+### Install as a Progressive Web App
+
+SoftyFy is a PWA: on Android Chrome (or iOS Safari) open the deployed URL, tap the browser menu and choose **Add to Home screen / Install app**. It opens in standalone (no browser UI) with `#121212` theming and a home-screen icon.
+
+- The manifest (`manifest.webmanifest`), service worker (`sw.js`) and icons live in `dist/`, so any static host — including the Render deployment — serves them with no extra config.
+- Only the app shell (~0.4 MB) is precached. Covers are cached the first time you see them and songs are cached the first time you play them, so the ~225 MB music library never blocks installation and works offline after being played once.
+- To regenerate the launcher icons from `public/favicon.svg` after changing the logo: `npm run icons`.
+
 ## License / Content
 
 Intended for personal use with music you own or are licensed to play. Do not distribute content you do not have the rights to.
