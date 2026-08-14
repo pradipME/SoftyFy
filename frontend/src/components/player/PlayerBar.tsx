@@ -1,10 +1,8 @@
-import { Link } from 'react-router-dom'
-import { formatPlaybackTime } from '../../player/format'
-import { usePlayerApi, usePlayerState } from '../../state/PlayerContext'
-import { AlbumArt } from '../album/AlbumArt'
+import { usePlayer } from '../../context/PlayerContext'
+import { CoverGlow } from '../ambient/CoverGlow'
+import { Cover } from '../song/Cover'
 import { IconButton } from '../ui/IconButton'
 import {
-  ListMusicIcon,
   LoaderIcon,
   PauseIcon,
   PlayIcon,
@@ -13,174 +11,143 @@ import {
   SkipBackIcon,
   SkipForwardIcon,
 } from '../ui/icons'
-import { SeekBar, toggleClass, VolumeControl } from './controls'
+import { VolumeControl } from './VolumeControl'
 
 interface PlayerBarProps {
-  onOpenQueue: () => void
+  onOpenSheet: () => void
 }
 
-export function PlayerBar({ onOpenQueue }: PlayerBarProps) {
-  const state = usePlayerState()
-  const api = usePlayerApi()
-  const song = api.currentSong
-  const hasSong = song !== null
-  const isPlaying = state.status === 'playing'
-  const isLoading = hasSong && state.status === 'loading'
-  const isError = hasSong && state.status === 'error'
+/**
+ * Floating frosted-glass mini player. Hovers just above the bottom nav with a
+ * soft shadow and cover glow, so it reads as a layer above the ambient
+ * background rather than a flat strip. Tap the song info to expand the sheet.
+ */
+export function PlayerBar({ onOpenSheet }: PlayerBarProps) {
+  const {
+    currentSong,
+    status,
+    currentTime,
+    duration,
+    shuffle,
+    repeat,
+    togglePlay,
+    next,
+    previous,
+    toggleShuffle,
+    cycleRepeat,
+  } = usePlayer()
 
-  const playToggleLabel = isLoading ? 'Loading' : isPlaying ? 'Pause' : 'Play'
+  if (currentSong === null) return null
+
+  const isPlaying = status === 'playing'
+  const isLoading = status === 'loading'
+  const isError = status === 'error'
+  const total = duration > 0 ? duration : currentSong.durationSec
+  const percent = total > 0 ? (Math.min(currentTime, total) / total) * 100 : 0
+
+  const playLabel = isLoading ? 'Loading' : isPlaying ? 'Pause' : 'Play'
 
   return (
-    <footer className="relative flex h-20 shrink-0 flex-col border-t border-line bg-surface">
-      <div className="md:hidden">
-        <SeekBar />
-      </div>
-      <div className="flex min-h-0 flex-1 items-center gap-3 px-3 sm:px-6">
-        <div className="flex min-w-0 flex-1 items-center gap-3">
-          <Link
-            to="/now-playing"
-            aria-label={song ? `Now playing: ${song.title}` : 'Now playing'}
-            className="shrink-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-          >
-            <AlbumArt title={song?.title ?? 'SoftyFy'} className="h-12 w-12" rounded="rounded-lg" />
-          </Link>
-          <div className="min-w-0">
-            <p className="truncate text-sm font-medium text-fg">{song?.title ?? 'Nothing playing'}</p>
-            <p className={`truncate text-xs ${isError ? 'text-danger' : 'text-dim'}`}>
-              {isError
-                ? state.error ?? 'Unable to play this song.'
-                : isLoading
-                  ? 'Loading…'
-                  : song
-                    ? song.artistNames.join(', ') || 'Unknown artist'
-                    : 'Pick a track to start listening'}
-            </p>
-          </div>
+    <div className="fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+76px)] z-40 md:bottom-4 md:left-1/2 md:right-auto md:w-full md:max-w-2xl md:-translate-x-1/2">
+      <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-base/75 shadow-[0_18px_44px_rgba(0,0,0,0.55)] backdrop-blur-2xl">
+        <div aria-hidden className="absolute inset-x-0 top-0 h-0.5 bg-elevated/70">
+          <div
+            className="h-full bg-accent transition-[width] duration-300 ease-linear"
+            style={{ width: `${percent}%` }}
+          />
         </div>
 
-        <div className="hidden items-center gap-2 md:flex">
-          <IconButton
-            label={state.shuffleEnabled ? 'Turn shuffle off' : 'Turn shuffle on'}
-            onClick={api.toggleShuffle}
-            className={toggleClass(state.shuffleEnabled)}
-          >
-            <ShuffleIcon className="h-4 w-4" />
-          </IconButton>
-          <IconButton
-            label="Previous track"
-            onClick={api.previous}
-            className="rounded-full p-2 text-dim transition-colors hover:bg-elevated hover:text-fg"
-          >
-            <SkipBackIcon className="h-5 w-5" />
-          </IconButton>
+        <div className="flex h-16 items-center gap-2 px-2.5 sm:px-3">
           <button
             type="button"
-            onClick={api.togglePlay}
-            disabled={!hasSong}
-            title={playToggleLabel}
-            aria-label={playToggleLabel}
-            className="flex h-11 w-11 items-center justify-center rounded-full bg-fg text-base text-elevated transition-colors hover:bg-accent hover:text-white disabled:opacity-40"
+            onClick={onOpenSheet}
+            aria-label={`Now playing: ${currentSong.title} — tap to expand`}
+            className="flex min-w-0 flex-1 items-center gap-3 rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
-            {isLoading ? (
-              <LoaderIcon className="h-5 w-5 animate-spin" />
-            ) : isPlaying ? (
-              <PauseIcon className="h-5 w-5" />
-            ) : (
-              <PlayIcon className="h-5 w-5" />
-            )}
-          </button>
-          <IconButton
-            label="Next track"
-            onClick={api.next}
-            className="rounded-full p-2 text-dim transition-colors hover:bg-elevated hover:text-fg"
-          >
-            <SkipForwardIcon className="h-5 w-5" />
-          </IconButton>
-          <IconButton
-            label={
-              state.repeatMode === 'off'
-                ? 'Repeat off — turn repeat on'
-                : state.repeatMode === 'all'
-                  ? 'Repeat all — turn repeat on one'
-                  : 'Repeat one — turn repeat off'
-            }
-            onClick={api.cycleRepeat}
-            className={toggleClass(state.repeatMode !== 'off')}
-          >
-            <span className="relative">
-              <RepeatIcon className="h-4 w-4" />
-              {state.repeatMode === 'one' ? (
-                <span className="absolute -right-1.5 -top-1.5 text-[9px] font-bold leading-none">
-                  1
-                </span>
-              ) : null}
-            </span>
-          </IconButton>
-        </div>
-
-        <div className="hidden flex-1 items-center justify-end gap-3 md:flex">
-          <IconButton
-            label="Open queue"
-            onClick={onOpenQueue}
-            className="relative rounded-full p-2 text-dim transition-colors hover:bg-elevated hover:text-fg"
-          >
-            <ListMusicIcon className="h-5 w-5" />
-            {state.queue.length > 0 ? (
-              <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-semibold text-white">
-                {state.queue.length}
-              </span>
-            ) : null}
-          </IconButton>
-          <VolumeControl />
-        </div>
-
-        <div className="flex items-center gap-2 md:hidden">
-          <button
-            type="button"
-            onClick={api.togglePlay}
-            disabled={!hasSong}
-            title={playToggleLabel}
-            aria-label={playToggleLabel}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-fg text-base text-elevated transition-colors hover:bg-accent hover:text-white disabled:opacity-40"
-          >
-            {isLoading ? (
-              <LoaderIcon className="h-5 w-5 animate-spin" />
-            ) : isPlaying ? (
-              <PauseIcon className="h-5 w-5" />
-            ) : (
-              <PlayIcon className="h-5 w-5" />
-            )}
-          </button>
-          <IconButton label="Next track" onClick={api.next} className="rounded-full p-2 text-dim hover:text-fg">
-            <SkipForwardIcon className="h-5 w-5" />
-          </IconButton>
-          <IconButton label="Open queue" onClick={onOpenQueue} className="relative rounded-full p-2 text-dim hover:text-fg">
-            <ListMusicIcon className="h-5 w-5" />
-            {state.queue.length > 0 ? (
-              <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-semibold text-white">
-                {state.queue.length}
-              </span>
-            ) : null}
-          </IconButton>
-        </div>
-      </div>
-      <div className="hidden items-center gap-3 md:flex">
-        <div className="min-w-0 flex-1" />
-        <div className="w-full max-w-md">
-          <div className="flex items-center gap-2 pb-2">
-            <span className="w-10 shrink-0 text-right text-[11px] tabular-nums text-dim">
-              {formatPlaybackTime(state.currentTime)}
-            </span>
+            <CoverGlow song={currentSong} inset="-inset-4" className="shrink-0">
+              <Cover src={currentSong.coverSrc} alt={currentSong.title} className="h-12 w-12 rounded-xl" />
+            </CoverGlow>
             <div className="min-w-0 flex-1">
-              <SeekBar />
+              <p className="truncate text-sm font-semibold text-fg">{currentSong.title}</p>
+              <p className={`truncate text-xs ${isError ? 'text-danger' : 'text-muted'}`}>
+                {isError ? 'Unable to play this song.' : currentSong.artist}
+              </p>
             </div>
-            <span className="w-10 shrink-0 text-[11px] tabular-nums text-dim">
-              {formatPlaybackTime(state.duration)}
-            </span>
+          </button>
+
+          {/* Desktop controls */}
+          <div className="hidden items-center gap-1 md:flex">
+            <IconButton
+              label={shuffle ? 'Turn shuffle off' : 'Turn shuffle on'}
+              onClick={toggleShuffle}
+              className={shuffle ? 'text-accent' : ''}
+            >
+              <ShuffleIcon className="h-4 w-4" />
+            </IconButton>
+            <IconButton label="Previous track" onClick={previous}>
+              <SkipBackIcon className="h-5 w-5" />
+            </IconButton>
+            <button
+              type="button"
+              onClick={togglePlay}
+              aria-label={playLabel}
+              className="mx-1 flex h-10 w-10 items-center justify-center rounded-full bg-fg text-black transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            >
+              {isLoading ? (
+                <LoaderIcon className="h-4 w-4 animate-spin" />
+              ) : isPlaying ? (
+                <PauseIcon className="h-5 w-5" />
+              ) : (
+                <PlayIcon className="h-5 w-5" />
+              )}
+            </button>
+            <IconButton label="Next track" onClick={next}>
+              <SkipForwardIcon className="h-5 w-5" />
+            </IconButton>
+            <IconButton
+              label={
+                repeat === 'off'
+                  ? 'Repeat off — turn repeat on'
+                  : repeat === 'all'
+                    ? 'Repeat all — turn repeat one on'
+                    : 'Repeat one — turn repeat off'
+              }
+              onClick={cycleRepeat}
+              className={repeat !== 'off' ? 'text-accent' : ''}
+            >
+              <span className="relative">
+                <RepeatIcon className="h-4 w-4" />
+                {repeat === 'one' ? (
+                  <span className="absolute -right-1.5 -top-1.5 text-[9px] font-bold leading-none">1</span>
+                ) : null}
+              </span>
+            </IconButton>
+          </div>
+
+          <VolumeControl />
+
+          {/* Mobile controls */}
+          <div className="flex items-center md:hidden">
+            <button
+              type="button"
+              onClick={togglePlay}
+              aria-label={playLabel}
+              className="flex h-11 w-11 items-center justify-center rounded-full text-fg transition-colors hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            >
+              {isLoading ? (
+                <LoaderIcon className="h-5 w-5 animate-spin" />
+              ) : isPlaying ? (
+                <PauseIcon className="h-6 w-6" />
+              ) : (
+                <PlayIcon className="h-6 w-6" />
+              )}
+            </button>
+            <IconButton label="Next track" onClick={next}>
+              <SkipForwardIcon className="h-5 w-5" />
+            </IconButton>
           </div>
         </div>
-        <div className="min-w-0 flex-1" />
       </div>
-    </footer>
+    </div>
   )
 }

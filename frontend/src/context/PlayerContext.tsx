@@ -1,0 +1,312 @@
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  type ReactNode,
+} from 'react'
+import { useAudioPlayer } from '../hooks/useAudioPlayer'
+import { loadPreferences, safeStorage, savePreferences } from '../lib/storage'
+import type { Song } from '../types/song'
+import {
+  clamp,
+  createInitialState,
+  currentSongOf,
+  playerReducer,
+  type PlaybackStatus,
+  type RepeatMode,
+} from './playerReducer'
+
+export type { PlaybackStatus, RepeatMode } from './playerReducer'
+
+export interface PlayerApi {
+  currentSong: Song | null
+  status: PlaybackStatus
+  currentTime: number
+  duration: number
+  volume: number
+  muted: boolean
+  shuffle: boolean
+  repeat: RepeatMode
+  error: string | null
+  /** Plays `song` within `queue` (the queue is used for next/prev/auto-advance). */
+  playSong: (song: Song, queue: Song[]) => void
+  togglePlay: () => void
+  next: () => void
+  previous: () => void
+  seek: (time: number) => void
+  setVolume: (volume: number) => void
+  toggleMute: () => void
+  toggleShuffle: () => void
+  cycleRepeat: () => void
+}
+
+const PlayerContext = createContext<PlayerApi | null>(null)
+
+const TIMEUPDATE_THROTTLE_MS = 250
+
+export function PlayerProvider({ children }: { children: ReactNode }) {
+  const [state, dispatch] = useReducer(playerReducer, undefined, () =>
+    createInitialState(loadPreferences(safeStorage()) ?? {}),
+  )
+  const stateRef = useRef(state)
+  stateRef.current = state
+
+  const lastTimeUpdateRef = useRef(0)
+
+  const onTimeUpdate = useCallback((time: number) => {
+    const now = performance.now()
+    if (now - lastTimeUpdateRef.current < TIMEUPDATE_THROTTLE_MS) return
+    lastTimeUpdateRef.current = now
+    dispatch({ type: 'SET_CURRENT_TIME', time })
+  }, [])
+
+  const onDurationChange = useCallback((duration: number) => {
+    dispatch({ type: 'SET_DURATION', duration })
+  }, [])
+
+  const onStatusChange = useCallback((status: PlaybackStatus) => {
+    dispatch({ type: 'SET_STATUS', status })
+  }, [])
+
+  const onError = useCallback(() => {
+    dispatch({ type: 'PLAY_FAILED' })
+  }, [])
+
+  // A song ended: let the reducer resolve the next song (auto-advance, repeat,
+  // or stop). A subsequent play() on an ended element restarts from the top.
+  const onEnded = useCallback(() => {
+    dispatch({ type: 'NEXT' })
+  }, [])
+
+  const {
+    loadAndPlay,
+    clearSource,
+    seekTo,
+    pauseAudio,
+    setVolume: applyVolume,
+  } = useAudioPlayer({
+    onTimeUpdate,
+    onDurationChange,
+    onStatusChange,
+    onError,
+    onEnded,
+  })
+
+  const playSong = useCallback((song: Song, queue: Song[]) => {
+    const current = currentSongOf(stateRef.current)
+    if (current?.id === song.id) {
+      dispatch({ type: 'PLAY' })
+      return
+    }
+    const startIndex = queue.findIndex((s) => s.id === song.id)
+    if (startIndex < 0) return
+    dispatch({ type: 'PLAY_SONG', queue, startIndex })
+  }, [])
+
+  const togglePlay = useCallback(() => {
+    if (currentSongOf(stateRef.current) === null) return
+    if (stateRef.current.status === 'playing') {
+      dispatch({ type: 'PAUSE' })
+    } else {
+      dispatch({ type: 'PLAY' })
+    }
+  }, [])
+
+  const next = useCallback(() => {
+    dispatch({ type: 'NEXT' })
+  }, [])
+
+  const previous = useCallback(() => {
+    dispatch({ type: 'PREVIOUS', currentTime: stateRef.current.currentTime })
+  }, [])
+
+  const seek = useCallback(
+    (time: number) => {
+      const s = stateRef.current
+      const target = clamp(time, 0, Math.max(0, s.duration))
+      seekTo(target)
+      dispatch({ type: 'SEEK', time: target })
+    },
+    [seekTo],
+  )
+
+  const setVolume = useCallback((volume: number) => {
+    dispatch({ type: 'SET_VOLUME', volume })
+  }, [])
+
+  const toggleMute = useCallback(() => {
+    dispatch({ type: 'TOGGLE_MUTE' })
+  }, [])
+
+  const toggleShuffle = useCallback(() => {
+    dispatch({ type: 'TOGGLE_SHUFFLE' })
+  }, [])
+
+  const cycleRepeat = useCallback(() => {
+    dispatch({ type: 'CYCLE_REPEAT' })
+  }, [])
+
+  // The single song-load pipeline: load a source only when the song id changes
+  // and consume the one-shot play intent (so play() runs at most once per
+  // transition).
+  const { queue, playOrder, position, playIntent } = state
+  useEffect(() => {
+    const song = currentSongOf({ queue, playOrder, position })
+    if (song === null) {
+      clearSource()
+      return
+    }
+    loadAndPlay(song.audioSrc, playIntent?.startAt ?? null, playIntent !== null)
+    if (playIntent !== null) {
+      dispatch({ type: 'CONSUME_PLAY_INTENT' })
+    }
+  }, [queue, playOrder, position, playIntent, loadAndPlay, clearSource])
+
+  // Pause the real <audio> element whenever the reducer resolves to a paused
+  // state (user pause, or next/previous that must stay stopped). The load
+  // pipeline above only reacts to queue/position/intent changes, so without
+  // this the element keeps playing while the UI reports paused.
+  useEffect(() => {
+    if (state.status === 'paused') pauseAudio()
+  }, [state.status, pauseAudio])
+
+  // Keep the audio element in sync with the volume settings.
+  useEffect(() => {
+    applyVolume(state.volume, state.muted)
+  }, [state.volume, state.muted, applyVolume])
+
+  // Persist playback preferences across sessions.
+  useEffect(() => {
+    savePreferences(
+      {
+        volume: state.volume,
+        muted: state.muted,
+        repeat: state.repeat,
+        shuffle: state.shuffle,
+      },
+      safeStorage(),
+    )
+  }, [state.volume, state.muted, state.repeat, state.shuffle])
+
+  const currentSong = currentSongOf(state)
+
+  // Media Session API — lockscreen/OS media controls where available.
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !('mediaSession' in navigator)) return
+    const ms = navigator.mediaSession
+    ms.setActionHandler('play', () => togglePlay())
+    ms.setActionHandler('pause', () => togglePlay())
+    ms.setActionHandler('previoustrack', () => previous())
+    ms.setActionHandler('nexttrack', () => next())
+    return () => {
+      ms.setActionHandler('play', null)
+      ms.setActionHandler('pause', null)
+      ms.setActionHandler('previoustrack', null)
+      ms.setActionHandler('nexttrack', null)
+    }
+  }, [togglePlay, previous, next])
+
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !('mediaSession' in navigator)) return
+    const ms = navigator.mediaSession
+    ms.metadata =
+      currentSong === null
+        ? null
+        : new MediaMetadata({
+            title: currentSong.title,
+            artist: currentSong.artist,
+            album: currentSong.album ?? '',
+            artwork: [{ src: currentSong.coverSrc }],
+          })
+    ms.playbackState = state.status === 'playing' ? 'playing' : 'paused'
+  }, [currentSong, state.status])
+
+  // Global keyboard shortcuts (Space, arrows, M) — ignored while typing.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target
+      if (target instanceof HTMLElement) {
+        const tag = target.tagName
+        if (
+          tag === 'INPUT' ||
+          tag === 'TEXTAREA' ||
+          tag === 'SELECT' ||
+          tag === 'BUTTON' ||
+          tag === 'A' ||
+          target.isContentEditable
+        ) {
+          return
+        }
+      }
+      if (event.code === 'Space') {
+        event.preventDefault()
+        togglePlay()
+      } else if (event.code === 'ArrowRight') {
+        event.preventDefault()
+        seek(stateRef.current.currentTime + 5)
+      } else if (event.code === 'ArrowLeft') {
+        event.preventDefault()
+        seek(stateRef.current.currentTime - 5)
+      } else if (event.key.toLowerCase() === 'm') {
+        toggleMute()
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [togglePlay, seek, toggleMute])
+
+  const api = useMemo<PlayerApi>(
+    () => ({
+      currentSong,
+      status: state.status,
+      currentTime: state.currentTime,
+      duration: state.duration,
+      volume: state.volume,
+      muted: state.muted,
+      shuffle: state.shuffle,
+      repeat: state.repeat,
+      error: state.error,
+      playSong,
+      togglePlay,
+      next,
+      previous,
+      seek,
+      setVolume,
+      toggleMute,
+      toggleShuffle,
+      cycleRepeat,
+    }),
+    [
+      currentSong,
+      state.status,
+      state.currentTime,
+      state.duration,
+      state.volume,
+      state.muted,
+      state.shuffle,
+      state.repeat,
+      state.error,
+      playSong,
+      togglePlay,
+      next,
+      previous,
+      seek,
+      setVolume,
+      toggleMute,
+      toggleShuffle,
+      cycleRepeat,
+    ],
+  )
+
+  return <PlayerContext.Provider value={api}>{children}</PlayerContext.Provider>
+}
+
+export function usePlayer(): PlayerApi {
+  const api = useContext(PlayerContext)
+  if (api === null) throw new Error('usePlayer must be used within a PlayerProvider')
+  return api
+}

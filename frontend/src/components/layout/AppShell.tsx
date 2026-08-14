@@ -1,32 +1,31 @@
 import { useState } from 'react'
-import { Outlet, useLocation } from 'react-router-dom'
-import { Header } from './Header'
-import { MobileNav, Sidebar } from './Sidebar'
+import { AmbientBackground } from '../ambient/AmbientBackground'
+import { RouteTransition } from '../motion/RouteTransition'
+import { NowPlayingSheet } from '../player/NowPlayingSheet'
 import { PlayerBar } from '../player/PlayerBar'
-import { QueueDrawer } from '../player/QueueDrawer'
+import { BottomNav } from './BottomNav'
+import { Sidebar } from './Sidebar'
 
+/**
+ * Wraps the routed pages with the persistent UI: desktop sidebar, mobile
+ * bottom nav, the floating mini player, the Now Playing sheet, and the ambient
+ * cover-glow background behind everything.
+ */
 export function AppShell() {
-  const [mobileNavOpen, setMobileNavOpen] = useState(false)
-  const [queueOpen, setQueueOpen] = useState(false)
-  const { pathname } = useLocation()
-  const showPlayerBar = pathname !== '/now-playing'
+  const [sheetOpen, setSheetOpen] = useState(false)
 
   return (
-    <div className="flex h-dvh flex-col bg-base text-fg">
-      <div className="flex min-h-0 flex-1">
-        <Sidebar />
-        <div className="flex min-w-0 flex-1 flex-col">
-          <Header onOpenMobileNav={() => setMobileNavOpen(true)} />
-          <main className="min-h-0 flex-1 overflow-y-auto">
-            <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
-              <Outlet />
-            </div>
-          </main>
+    <div className="relative isolate min-h-dvh bg-base text-fg">
+      <AmbientBackground />
+      <Sidebar />
+      <main className="relative z-10 pb-48 pt-4 md:ml-64 md:pb-32 md:pt-6">
+        <div className="mx-auto w-full max-w-6xl px-4">
+          <RouteTransition />
         </div>
-      </div>
-      {showPlayerBar ? <PlayerBar onOpenQueue={() => setQueueOpen(true)} /> : null}
-      <QueueDrawer open={queueOpen} onClose={() => setQueueOpen(false)} />
-      <MobileNav open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
+      </main>
+      <PlayerBar onOpenSheet={() => setSheetOpen(true)} />
+      <BottomNav />
+      <NowPlayingSheet open={sheetOpen} onClose={() => setSheetOpen(false)} />
     </div>
   )
 }

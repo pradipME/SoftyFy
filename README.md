@@ -1,159 +1,99 @@
 # SoftyFy
 
-A private, personal music streaming web application for your own legally obtained or licensed music collection. No advertisements, no subscriptions, no payments, and no public music catalog — just your library, with high-quality playback and a Spotify-inspired experience.
+A mobile-first, Spotify-style web player for your **own personal music collection** — with no login, no backend, and no database. Everything is a static website: your songs and covers are shipped as files inside the app and played directly in the browser.
 
-> **Status:** Phase 4 — Audio Storage & Ingestion. Users can upload local audio files (MP3/FLAC/WAV/M4A/OGG); the backend validates, extracts metadata, deduplicates, and stores the bytes outside the database. Playback is still a later phase.
+> **No server. No accounts. No ads.** Just your music.
 
-## Technology Stack
+## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Frontend | React + TypeScript + Vite + Tailwind CSS |
-| Backend | Java 21 + Spring Boot 3.5 + Maven (REST API) |
-| Database | PostgreSQL 16 |
-| Local infrastructure | Docker Compose |
-| Deployment target | Render (planned, not yet deployed) |
+- **React + TypeScript + Vite** for the app
+- **Tailwind CSS v4** for styling (Spotify-inspired dark theme)
+- **react-router-dom** for the three pages (Home / Search / Library)
+- A single shared `<audio>` element managed by a React Context so playback keeps going as you navigate
 
-## Repository Structure
+All commands below run from the `frontend/` directory (that is the project root).
 
-```
-SoftyFy/
-├── backend/            # Spring Boot REST API
-│   ├── src/main/java/com/softyfy/
-│   │   ├── config/     # configuration (reserved)
-│   │   ├── controller/ # REST controllers (reserved)
-│   │   ├── service/    # business logic (reserved)
-│   │   ├── repository/ # data access (reserved)
-│   │   └── exception/  # error handling (reserved)
-│   └── src/main/resources/
-│       ├── application.yml          # base configuration
-│       ├── application-local.yml    # local development profile
-│       └── application-prod.yml     # production profile
-├── frontend/           # React/Vite/Tailwind web app
-│   └── src/
-│       ├── App.tsx     # minimal placeholder page
-│       └── index.css   # Tailwind entry
-├── docker-compose.yml  # local PostgreSQL 16
-├── render.yaml         # Render blueprint (preparation only)
-└── .env.example        # environment variable reference
-```
+## Features
 
-## Prerequisites
+- Home page with a time-based greeting and a grid of your songs
+- Instant client-side Search across title, artist and album
+- Library page with sortable, full list of songs
+- Persistent mini player pinned at the bottom (above the bottom nav on mobile)
+- Full-screen **Now Playing** sheet — tap the mini player to open it; swipe down, tap the chevron, or press `Esc` to close it
+- Play / pause / previous / next, seekable progress bar, volume, shuffle and repeat
+- Auto-advances to the next song when a track ends
+- Keyboard shortcuts: `Space` play/pause, `←`/`→` seek ±5s, `M` mute
+- Volume, mute, shuffle and repeat preferences are remembered between visits
+- Fully offline once the songs are in place (no network calls for playback)
 
-- **Java 21** JDK (e.g. Eclipse Adoptium 21). The Maven wrapper needs `JAVA_HOME` to point at the JDK, for example:
-  ```powershell
-  $env:JAVA_HOME = "C:\Program Files\Eclipse Adoptium\jdk-21.0.11.10-hotspot"
-  ```
-- **Node.js 20+** and npm (verified against Node 24 / npm 11).
-- **Docker Desktop** (or another Docker engine) for local PostgreSQL. Docker is **not** installed on this development machine, so PostgreSQL cannot be started locally yet.
-
-## Environment Variables
-
-Copy `.env.example` to `.env` at the repository root and adjust values. The real `.env` file is git-ignored and must never be committed.
-
-| Variable | Description | Default (dev) |
-|---|---|---|
-| `SOFTYFY_PROFILE` | Spring profile: `local` or `prod` | `local` |
-| `SERVER_PORT` | Backend HTTP port | `8080` |
-| `SOFTYFY_DB_HOST` | PostgreSQL host | `localhost` |
-| `SOFTYFY_DB_PORT` | PostgreSQL port | `5432` |
-| `SOFTYFY_DB_NAME` | Database name | `softyfy` |
-| `SOFTYFY_DB_USER` | Database user | `softyfy` |
-| `SOFTYFY_DB_PASSWORD` | Database password | `softyfy` (dev only) |
-| `SOFTYFY_STORAGE_PROVIDER` | Audio storage backend; only `local` is implemented | `local` |
-| `SOFTYFY_STORAGE_LOCAL_ROOT` | Root directory for local audio storage (git-ignored) | `./data/audio` |
-| `SOFTYFY_AUDIO_MAX_FILE_SIZE_MB` | Maximum audio upload size | `200` |
-| `VITE_API_BASE_URL` | Backend API base URL used by the frontend at build time | `http://localhost:8080` |
-
-In the `prod` profile the database host, name, user and password are **required** — the application fails to start if any of them are missing.
-
-## Adding Music
-
-Use the **Add music** button (home, header, or Songs page). Select or drop audio
-files (up to 200 MB each); the frontend uploads with progress and per-file
-status. Metadata is read from the file's tags and can be overridden per batch.
-See [`docs/STORAGE_ARCHITECTURE.md`](docs/STORAGE_ARCHITECTURE.md) for the
-storage design and deduplication rules.
-
-## PostgreSQL Setup (Docker Compose)
-
-```powershell
-docker compose up -d
-```
-
-Starts PostgreSQL 16 (`postgres:16.14`) on `127.0.0.1:5432` with a persistent named volume. Credentials come from the environment variables above (or safe dev defaults). The port is bound to loopback only and is not exposed to the public network.
-
-Useful commands:
-- `docker compose down` — stop the container (keeps data)
-- `docker compose down -v` — stop and remove the data volume
-
-## Backend Setup
-
-```powershell
-cd backend
-$env:JAVA_HOME = "C:\Program Files\Eclipse Adoptium\jdk-21.0.11.10-hotspot"   # if not already set
-./mvnw -v
-```
-
-### Run the Backend
-
-```powershell
-cd backend
-./mvnw spring-boot:run
-```
-
-The application starts with the `local` profile by default and listens on `http://localhost:8080`. It requires PostgreSQL to be reachable (see Docker Compose above); without a database the application will not start.
-
-### Health Endpoint
+## Project Structure
 
 ```
-GET http://localhost:8080/actuator/health
+frontend/
+├── public/
+│   ├── audio/        ← drop your music files here (mp3, m4a, ogg, wav, …)
+│   ├── covers/       ← drop square cover images here
+│   └── favicon.svg
+└── src/
+    ├── data/songs.ts            ← THE catalog — add/edit your songs here
+    ├── types/song.ts            ← the Song type
+    ├── context/PlayerContext.tsx← global player state + shared <audio>
+    ├── hooks/useAudioPlayer.ts  ← wraps the HTMLAudioElement
+    ├── components/
+    │   ├── layout/    Sidebar (desktop), BottomNav (mobile), AppShell
+    │   ├── player/    PlayerBar, NowPlayingSheet, ProgressBar, VolumeControl
+    │   ├── song/      SongCard, SongGrid, SongRow, SongList, Cover
+    │   └── ui/        Button, IconButton, Skeleton, icons
+    └── pages/         Home, Search, Library
 ```
 
-The health endpoint is exposed via Spring Boot Actuator. In the `local` profile it reports detailed status including database connectivity (`db` component).
-
-## Frontend Setup
+## Getting Started
 
 ```powershell
 cd frontend
 npm install
+npm run dev        # http://localhost:5173
 ```
 
-### Run the Frontend
+Production build and preview:
 
 ```powershell
-cd frontend
-npm run dev
+npm run build      # outputs to frontend/dist
+npm run preview    # serve the built site locally
 ```
 
-Opens the development server at `http://localhost:5173`. During development, `/api` and `/actuator` requests are proxied to `http://localhost:8080`.
+Other scripts: `npm run lint` (oxlint) and `npm test` (vitest, reducer unit tests).
 
-### Build the Frontend
+## Adding Your Songs
 
-```powershell
-cd frontend
-npm run build
-```
+1. **Audio** — copy each music file into `frontend/public/audio/`. MP3 and M4A are safest; OGG/WAV work in most browsers.
+2. **Covers (optional)** — copy a square image per song into `frontend/public/covers/`. Missing or broken images automatically fall back to a gradient placeholder.
+3. **Catalog** — open `src/data/songs.ts`. It is heavily commented and the only file you normally need to touch. Each entry looks like:
 
-Produces a production build in `frontend/dist`.
+   ```ts
+   {
+     id: 'track-01',              // unique, letters/numbers/dashes
+     title: 'Track 01',           // shown in the UI
+     artist: 'Unknown Artist',    // shown under the title
+     album: 'Local Collection',   // optional — used by Search
+     durationSec: 187,            // rough length; real duration is read automatically
+     audioSrc: '/audio/track-01.mp3',
+     coverSrc: '/covers/track-01.svg',
+   }
+   ```
 
-## Build Verification
+   Update the existing 24 placeholder entries with your real titles, artists, file names and cover paths — or add/remove entries freely. The order in this file is the order shown on the Home and Library pages.
 
-```powershell
-# Backend: compile and package (requires JAVA_HOME)
-cd backend
-./mvnw clean package
-
-# Frontend
-cd frontend
-npm install
-npm run build
-```
+4. Save, reload the page, and play.
 
 ## Deployment
 
-Deployment to Render is planned for a later phase. `render.yaml` contains a blueprint describing the intended architecture (Spring Boot web service, React static site, managed PostgreSQL), but **no deployment has been performed or verified yet**.
+The build is a pure static site — deploy `frontend/dist` to **any** static host: Vercel, Netlify, GitHub Pages, Render Static Site, Cloudflare Pages, or a plain web server.
+
+- No server, database, or environment variables are required.
+- The app uses hash-based routing, so no SPA redirect/rewrite rule is needed.
+- To serve under a sub-path (e.g. GitHub Pages project page), set the Vite `base` option in `vite.config.ts`.
 
 ## License / Content
 
-This project is intended for personal use with music you own or are licensed to play. Do not distribute or publicly stream content you do not have the rights to.
+Intended for personal use with music you own or are licensed to play. Do not distribute content you do not have the rights to.

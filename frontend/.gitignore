@@ -11,14 +11,15 @@ node_modules
 dist
 dist-ssr
 *.local
+*.tsbuildinfo
+
+# Environment (none required for this static app)
+.env
+.env.*
 
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
 .idea
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
 *.sw?

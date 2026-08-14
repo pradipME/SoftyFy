@@ -1,37 +1,29 @@
-import type { ReactNode } from 'react'
-import { Button, type ButtonVariant } from './Button'
+import type { ButtonHTMLAttributes, ReactNode } from 'react'
 
-interface IconButtonProps {
+interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   label: string
-  onClick?: () => void
-  variant?: ButtonVariant
-  disabled?: boolean
   size?: 'sm' | 'md'
-  className?: string
   children: ReactNode
 }
 
 export function IconButton({
   label,
-  onClick,
-  variant = 'ghost',
-  disabled,
   size = 'md',
   className = '',
   children,
+  type = 'button',
+  ...rest
 }: IconButtonProps) {
-  const padding = size === 'sm' ? 'p-1.5' : 'p-2'
+  const sizes = size === 'sm' ? 'h-8 w-8' : 'h-11 w-11'
   return (
-    <Button
-      type="button"
+    <button
+      type={type}
       aria-label={label}
       title={label}
-      onClick={onClick}
-      variant={variant}
-      disabled={disabled}
-      className={`rounded-full ${padding} ${className}`}
+      className={`inline-flex shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:pointer-events-none disabled:opacity-40 ${sizes} ${className}`}
+      {...rest}
     >
       {children}
-    </Button>
+    </button>
   )
 }

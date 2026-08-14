@@ -1,36 +1,12 @@
-export function formatDuration(totalSeconds: number | null | undefined): string {
-  if (totalSeconds === null || totalSeconds === undefined || totalSeconds < 0) {
-    return '–'
+/** Formats a duration in seconds as m:ss or h:mm:ss. */
+export function formatPlaybackTime(time: number): string {
+  if (!Number.isFinite(time) || time < 0) return '0:00'
+  const total = Math.floor(time)
+  const hours = Math.floor(total / 3600)
+  const minutes = Math.floor((total % 3600) / 60)
+  const seconds = total % 60
+  if (hours > 0) {
+    return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
   }
-  const minutes = Math.floor(totalSeconds / 60)
-  const seconds = Math.floor(totalSeconds % 60)
   return `${minutes}:${seconds.toString().padStart(2, '0')}`
-}
-
-export function initials(value: string): string {
-  const parts = value.trim().split(/\s+/).filter(Boolean)
-  if (parts.length === 0) return '?'
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-}
-
-interface AudioQualitySource {
-  format: string | null
-  bitrateKbps: number | null
-  sampleRateHz: number | null
-  bitDepth: number | null
-}
-
-export function formatAudioQuality(file: AudioQualitySource | null | undefined): string | null {
-  if (!file) return null
-  const parts: string[] = []
-  if (file.bitDepth != null && file.sampleRateHz != null) {
-    parts.push(`${file.bitDepth}-bit/${Math.round(file.sampleRateHz / 1000)} kHz`)
-  } else if (file.bitrateKbps != null) {
-    parts.push(`${file.bitrateKbps} kbps`)
-  }
-  if (file.format) {
-    parts.unshift(file.format.toUpperCase())
-  }
-  return parts.length > 0 ? parts.join(' · ') : null
 }

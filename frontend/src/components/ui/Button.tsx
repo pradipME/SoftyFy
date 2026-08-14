@@ -1,33 +1,32 @@
 import type { ButtonHTMLAttributes } from 'react'
 
-export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger'
-export type ButtonSize = 'sm' | 'md'
-
-const variants: Record<ButtonVariant, string> = {
-  primary:
-    'bg-accent text-white hover:bg-accent-strong active:bg-accent disabled:bg-accent/50',
-  secondary:
-    'border border-line bg-elevated text-fg hover:border-accent/40 hover:bg-elevated-hover disabled:opacity-50',
-  ghost: 'text-muted hover:text-fg hover:bg-elevated disabled:opacity-50',
-  danger:
-    'border border-line bg-elevated text-danger hover:border-danger/50 hover:bg-danger/10 disabled:opacity-50',
+interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: 'primary' | 'secondary' | 'ghost'
+  size?: 'sm' | 'md'
 }
 
-const sizes: Record<ButtonSize, string> = {
-  sm: 'px-3 py-1.5 text-xs gap-1.5',
-  md: 'px-4 py-2 text-sm gap-2',
-}
+const VARIANTS = {
+  primary: 'bg-accent text-black hover:bg-accent-strong',
+  secondary: 'bg-surface text-fg hover:bg-elevated border border-line',
+  ghost: 'text-muted hover:text-fg hover:bg-surface',
+} as const
 
-export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: ButtonVariant
-  size?: ButtonSize
-}
+const SIZES = {
+  sm: 'h-8 px-3 text-xs',
+  md: 'h-10 px-4 text-sm',
+} as const
 
-export function Button({ variant = 'primary', size = 'md', className = '', type = 'button', ...rest }: ButtonProps) {
+export function Button({
+  variant = 'secondary',
+  size = 'md',
+  className = '',
+  type = 'button',
+  ...rest
+}: ButtonProps) {
   return (
     <button
       type={type}
-      className={`inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${variants[variant]} ${sizes[size]} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 rounded-full font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:pointer-events-none disabled:opacity-40 ${VARIANTS[variant]} ${SIZES[size]} ${className}`}
       {...rest}
     />
   )

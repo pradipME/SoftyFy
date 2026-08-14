@@ -1,38 +1,22 @@
-import type { AlbumSummary } from './album'
-import type { ArtistSummary } from './artist'
-
-export interface AudioFile {
-  id: string
-  storageProvider: string
-  storageKey: string
-  format: string | null
-  label: string | null
-  bitrateKbps: number | null
-  sampleRateHz: number | null
-  channels: number | null
-  bitDepth: number | null
-  sizeBytes: number | null
-  contentType: string | null
-  primary: boolean
-}
-
-export interface SongSummary {
-  id: string
-  title: string
-  durationSeconds: number | null
-  artistNames: string[]
-  albumId: string | null
-  albumTitle: string | null
-}
-
+/**
+ * A single playable song.
+ *
+ * All audio and cover files live in `public/` and are referenced by their
+ * absolute path (e.g. `/audio/track-01.mp3`), so they work on any static host.
+ */
 export interface Song {
+  /** Unique id used as the React key and by the player. Keep it stable. */
   id: string
+  /** Display title shown everywhere in the UI. */
   title: string
-  durationSeconds: number | null
-  trackNumber: number | null
-  album: AlbumSummary | null
-  artists: ArtistSummary[]
-  audioFiles: AudioFile[]
-  createdAt: string
-  updatedAt: string
+  /** Artist name shown next to the title. */
+  artist: string
+  /** Optional album name (used in Search). */
+  album?: string
+  /** Rough duration in seconds. Used only until the real duration is read from the audio file. */
+  durationSec: number
+  /** Absolute path to the audio file, e.g. "/audio/track-01.mp3". */
+  audioSrc: string
+  /** Absolute path to the cover image, e.g. "/covers/track-01.jpg". */
+  coverSrc: string
 }

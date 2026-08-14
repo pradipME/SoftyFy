@@ -35,29 +35,6 @@ export const MusicIcon = icon(
   </>,
 )
 
-export const UserIcon = icon(
-  <>
-    <circle cx="12" cy="8" r="4" />
-    <path d="M4 21c1-4 4-6 8-6s7 2 8 6" />
-  </>,
-)
-
-export const UsersIcon = icon(
-  <>
-    <circle cx="9" cy="8" r="3.5" />
-    <path d="M2.5 20c1-3.5 3.5-5.5 6.5-5.5s5.5 2 6.5 5.5" />
-    <path d="M16 4.6a3.5 3.5 0 0 1 0 6.8" />
-    <path d="M18.5 14.7c1.8.8 2.8 2.6 3.2 5.3" />
-  </>,
-)
-
-export const DiscIcon = icon(
-  <>
-    <circle cx="12" cy="12" r="9" />
-    <circle cx="12" cy="12" r="2.5" />
-  </>,
-)
-
 export const ListMusicIcon = icon(
   <>
     <path d="M3 6h11" />
@@ -68,21 +45,10 @@ export const ListMusicIcon = icon(
   </>,
 )
 
-export const HeartIcon = icon(
-  <path d="M12 20s-7-4.4-9.2-8.4C1.2 8.8 2.9 6 5.6 6c1.9 0 3.2 1 4.4 2.7C11.2 7 12.5 6 14.4 6c2.7 0 4.4 2.8 2.8 5.6C17 15.6 12 20 12 20Z" />,
-)
-
 export const SearchIcon = icon(
   <>
     <circle cx="11" cy="11" r="7" />
     <path d="m20 20-3.2-3.2" />
-  </>,
-)
-
-export const PlusIcon = icon(
-  <>
-    <path d="M12 5v14" />
-    <path d="M5 12h14" />
   </>,
 )
 
@@ -93,31 +59,19 @@ export const CloseIcon = icon(
   </>,
 )
 
-export const TrashIcon = icon(
-  <>
-    <path d="M4 7h16" />
-    <path d="M9 7V4h6v3" />
-    <path d="M6 7l1 13h10l1-13" />
-    <path d="M10 11v5" />
-    <path d="M14 11v5" />
-  </>,
-)
-
-export const EditIcon = icon(
-  <>
-    <path d="M4 20h4l11-11-4-4L4 16v4Z" />
-    <path d="m13.5 6.5 4 4" />
-  </>,
-)
-
-export const ChevronUpIcon = icon(<path d="m6 14 6-6 6 6" />)
 export const ChevronDownIcon = icon(<path d="m6 10 6 6 6-6" />)
-export const ChevronLeftIcon = icon(<path d="m14 6-6 6 6 6" />)
-export const ChevronRightIcon = icon(<path d="m10 6 6 6-6 6" />)
+export const ChevronUpIcon = icon(<path d="m6 14 6-6 6 6" />)
 export const ArrowLeftIcon = icon(
   <>
     <path d="M19 12H5" />
     <path d="m11 6-6 6 6 6" />
+  </>,
+)
+
+export const ArrowRightIcon = icon(
+  <>
+    <path d="M5 12h14" />
+    <path d="m13 6 6 6-6 6" />
   </>,
 )
 
@@ -179,44 +133,8 @@ export const VolumeMuteIcon = icon(
   </>,
 )
 
-export const MenuIcon = icon(
-  <>
-    <path d="M4 6h16" />
-    <path d="M4 12h16" />
-    <path d="M4 18h16" />
-  </>,
-)
-
-export const LinkIcon = icon(
-  <>
-    <path d="M10 14a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1.5 1.5" />
-    <path d="M14 10a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1.5-1.5" />
-  </>,
-)
-
 export const LoaderIcon = icon(
   <>
     <path d="M12 3a9 9 0 1 0 9 9" />
-  </>,
-)
-
-export const SettingsIcon = icon(
-  <>
-    <circle cx="12" cy="12" r="3" />
-    <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.55-1 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34h.01a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87v.01a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.55 1Z" />
-  </>,
-)
-
-export const CheckIcon = icon(
-  <>
-    <path d="m4 12 5 5L20 6" />
-  </>,
-)
-
-export const UploadIcon = icon(
-  <>
-    <path d="M12 16V4" />
-    <path d="m7 9 5-5 5 5" />
-    <path d="M4 20h16" />
   </>,
 )

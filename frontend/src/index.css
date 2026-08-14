@@ -1,22 +1,22 @@
 @import 'tailwindcss';
 
 @theme {
-  --color-base: #0a0c12;
-  --color-surface: #10131b;
-  --color-elevated: #161b29;
-  --color-elevated-hover: #1d2436;
-  --color-line: #232a3c;
-  --color-fg: #e9ebf4;
-  --color-muted: #97a0b4;
-  --color-dim: #5f6980;
-  --color-accent: #8b5cf6;
-  --color-accent-strong: #a78bfa;
-  --color-accent-soft: #22d3ee;
-  --color-danger: #f87171;
-  --color-success: #34d399;
-  --color-warning: #fbbf24;
+  /* Spotify-inspired dark palette */
+  --color-base: #121212;
+  --color-surface: #181818;
+  --color-elevated: #242424;
+  --color-elevated-hover: #2a2a2a;
+  --color-line: #2a2a2a;
+  --color-fg: #f5f5f5;
+  --color-muted: #b3b3b3;
+  --color-dim: #7d7d7d;
+  --color-accent: #1db954;
+  --color-accent-strong: #1ed760;
+  --color-accent-soft: #1fdf64;
+  --color-danger: #f15e6c;
 
-  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue',
+    Arial, sans-serif;
 }
 
 @layer base {
@@ -29,6 +29,7 @@
     color: var(--color-fg);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+    overscroll-behavior-y: none;
   }
 
   ::selection {
@@ -53,35 +54,103 @@
   ::-webkit-scrollbar-thumb:hover {
     background-color: var(--color-elevated-hover);
   }
+
+  /* Hide the native search input clear button (styled input looks cleaner). */
+  input[type='search']::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+}
+
+/* Seek/volume slider: filled progress + white thumb on hover. */
+.scrubber {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 9999px;
+  background: linear-gradient(
+    to right,
+    var(--color-accent) 0%,
+    var(--color-accent) var(--fill, 0%),
+    var(--color-elevated) var(--fill, 0%),
+    var(--color-elevated) 100%
+  );
+  cursor: pointer;
+}
+
+.scrubber:disabled {
+  cursor: default;
+}
+
+.scrubber::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 9999px;
+  background: var(--color-fg);
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.scrubber:hover::-webkit-slider-thumb,
+.scrubber:focus-visible::-webkit-slider-thumb {
+  opacity: 1;
+}
+
+.scrubber::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border: none;
+  border-radius: 9999px;
+  background: var(--color-fg);
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.scrubber:hover::-moz-range-thumb,
+.scrubber:focus-visible::-moz-range-thumb {
+  opacity: 1;
+}
+
+/* Animated equalizer bars used for the currently playing row. */
+@keyframes softyfy-eq {
+  0%,
+  100% {
+    transform: scaleY(0.3);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+.eq-bar {
+  transform-origin: bottom;
+  animation: softyfy-eq 1s ease-in-out infinite;
 }
 
 @layer utilities {
-  .text-gradient {
-    background-image: linear-gradient(100deg, var(--color-accent) 0%, var(--color-accent-soft) 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+  /* Horizontal card rails and other scroll containers keep native scrolling
+     but without a visible scrollbar. */
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
-
-  .surface-card {
-    background-color: var(--color-surface);
-    border: 1px solid var(--color-line);
-    border-radius: 0.75rem;
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
   }
+}
 
-  .bg-app {
-    background-image:
-      radial-gradient(1100px 420px at 85% -12%, color-mix(in srgb, var(--color-accent) 14%, transparent), transparent 60%),
-      radial-gradient(900px 320px at -8% 0%, color-mix(in srgb, var(--color-accent-soft) 8%, transparent), transparent 55%);
-  }
-
-  .card-lift {
-    transition: border-color 150ms ease, background-color 150ms ease, transform 150ms ease, box-shadow 150ms ease;
-  }
-
-  .card-lift:hover {
-    border-color: color-mix(in srgb, var(--color-accent) 45%, var(--color-line));
-    transform: translateY(-2px);
-    box-shadow: 0 10px 24px -14px rgb(0 0 0 / 0.7);
+/* Respect reduced-motion: collapse all CSS animations/transitions so the UI
+   never relies on motion to be usable. Framer-Motion gets the same signal via
+   MotionConfig reducedMotion="user". */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
   }
 }
