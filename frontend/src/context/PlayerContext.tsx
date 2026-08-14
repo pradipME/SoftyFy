@@ -6,6 +6,7 @@ import {
   useMemo,
   useReducer,
   useRef,
+  useState,
   type ReactNode,
 } from 'react'
 import { useAudioPlayer } from '../hooks/useAudioPlayer'
@@ -34,6 +35,8 @@ export interface PlayerApi {
   error: string | null
   /** Plays `song` within `queue` (the queue is used for next/prev/auto-advance). */
   playSong: (song: Song, queue: Song[]) => void
+  /** Increments whenever the user selects a song via `playSong`. */
+  selectionEpoch: number
   togglePlay: () => void
   next: () => void
   previous: () => void
@@ -54,6 +57,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   )
   const stateRef = useRef(state)
   stateRef.current = state
+
+  // Bumped on every user-initiated song selection (playSong). Lets the shell
+  // react by opening the full Now Playing sheet — auto-advance and
+  // next/previous do NOT bump it, so the sheet only opens from selection.
+  const [selectionEpoch, setSelectionEpoch] = useState(0)
 
   const lastTimeUpdateRef = useRef(0)
 
@@ -100,11 +108,12 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     const current = currentSongOf(stateRef.current)
     if (current?.id === song.id) {
       dispatch({ type: 'PLAY' })
-      return
+    } else {
+      const startIndex = queue.findIndex((s) => s.id === song.id)
+      if (startIndex < 0) return
+      dispatch({ type: 'PLAY_SONG', queue, startIndex })
     }
-    const startIndex = queue.findIndex((s) => s.id === song.id)
-    if (startIndex < 0) return
-    dispatch({ type: 'PLAY_SONG', queue, startIndex })
+    setSelectionEpoch((epoch) => epoch + 1)
   }, [])
 
   const togglePlay = useCallback(() => {
@@ -200,10 +209,15 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (typeof navigator === 'undefined' || !('mediaSession' in navigator)) return
     const ms = navigator.mediaSession
+    const seekBy = (offsetSeconds: number) => {
+      seek(stateRef.current.currentTime + offsetSeconds)
+    }
     ms.setActionHandler('play', () => togglePlay())
     ms.setActionHandler('pause', () => togglePlay())
     ms.setActionHandler('previoustrack', () => previous())
     ms.setActionHandler('nexttrack', () => next())
+    ms.setActionHandler('seekbackward', (details) => seekBy(-(details.seekOffset ?? 10)))
+    ms.setActionHandler('seekforward', (details) => seekBy(details.seekOffset ?? 10))
     ms.setActionHandler('seekto', (details) => {
       if (details.seekTime !== undefined) seek(details.seekTime)
     })
@@ -212,6 +226,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       ms.setActionHandler('pause', null)
       ms.setActionHandler('previoustrack', null)
       ms.setActionHandler('nexttrack', null)
+      ms.setActionHandler('seekbackward', null)
+      ms.setActionHandler('seekforward', null)
       ms.setActionHandler('seekto', null)
     }
   }, [togglePlay, previous, next, seek])
@@ -245,12 +261,37 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   // Reflect the real play state in the OS UI (pause icon while playing, etc.).
   // 'loading' leads straight into playback, so keep the OS showing "playing".
+  // With no song the session is inactive ('none'), which hides stale controls.
   useEffect(() => {
     if (typeof navigator === 'undefined' || !('mediaSession' in navigator)) return
     const ms = navigator.mediaSession
+    if (currentSong === null) {
+      ms.playbackState = 'none'
+      return
+    }
     ms.playbackState =
       state.status === 'playing' || state.status === 'loading' ? 'playing' : 'paused'
-  }, [state.status])
+  }, [state.status, currentSong])
+
+  // Keep the OS seek-bar position in sync where setPositionState is supported.
+  // Some engines throw for invalid values, so guard the API and finite input.
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !('mediaSession' in navigator)) return
+    const ms = navigator.mediaSession
+    if (currentSong === null || typeof ms.setPositionState !== 'function') return
+    const { duration, currentTime } = state
+    if (!Number.isFinite(duration) || duration <= 0) return
+    try {
+      ms.setPositionState({
+        duration,
+        position: Math.min(Math.max(currentTime, 0), duration),
+        playbackRate: 1,
+      })
+    } catch {
+      // Non-finite positions (e.g. an unseekable stream) are rejected by the
+      // browser — ignore so the session keeps working.
+    }
+  }, [state, currentSong])
 
   // Global keyboard shortcuts (Space, arrows, M) — ignored while typing.
   useEffect(() => {
@@ -298,6 +339,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       repeat: state.repeat,
       error: state.error,
       playSong,
+      selectionEpoch,
       togglePlay,
       next,
       previous,
@@ -318,6 +360,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       state.repeat,
       state.error,
       playSong,
+      selectionEpoch,
       togglePlay,
       next,
       previous,

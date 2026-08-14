@@ -80,9 +80,9 @@ export function PlayerBar({ onOpenSheet }: PlayerBarProps) {
             <IconButton
               label={shuffle ? 'Turn shuffle off' : 'Turn shuffle on'}
               onClick={toggleShuffle}
-              className={shuffle ? 'text-accent' : ''}
+              active={shuffle}
             >
-              <ShuffleIcon className="h-4 w-4" />
+              <ShuffleIcon className={`h-4 w-4 ${shuffle ? 'text-accent' : ''}`} />
             </IconButton>
             <IconButton label="Previous track" onClick={previous}>
               <SkipBackIcon className="h-5 w-5" />
@@ -113,12 +113,14 @@ export function PlayerBar({ onOpenSheet }: PlayerBarProps) {
                     : 'Repeat one — turn repeat off'
               }
               onClick={cycleRepeat}
-              className={repeat !== 'off' ? 'text-accent' : ''}
+              active={repeat !== 'off'}
             >
               <span className="relative">
-                <RepeatIcon className="h-4 w-4" />
+                <RepeatIcon className={`h-4 w-4 ${repeat !== 'off' ? 'text-accent' : ''}`} />
                 {repeat === 'one' ? (
-                  <span className="absolute -right-1.5 -top-1.5 text-[9px] font-bold leading-none">1</span>
+                  <span className="absolute -right-1.5 -top-1.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-accent px-1 text-[9px] font-bold leading-none text-black">
+                    1
+                  </span>
                 ) : null}
               </span>
             </IconButton>

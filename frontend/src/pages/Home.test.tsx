@@ -32,8 +32,8 @@ describe('HomePage', () => {
     expect(screen.getByText('♥')).toBeTruthy()
     expect(screen.getByText(/by Pradip Sonawane/)).toBeTruthy()
 
-    fireEvent.click(screen.getByRole('button', { name: /About SoftyFy/ }))
-    expect(screen.getByRole('dialog', { name: 'About SoftyFy' })).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: /About Pradip/ }))
+    expect(screen.getByRole('dialog', { name: 'About Pradip' })).toBeTruthy()
     expect(screen.getByText('Made by Pradip Sonawane')).toBeTruthy()
 
     fireEvent.keyDown(window, { key: 'Escape' })

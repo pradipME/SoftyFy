@@ -17,8 +17,10 @@ const song = (id: string): Song => ({
 interface MediaSessionMock {
   metadata: { title: string; artist: string; album: string; artwork: { src: string; sizes: string; type: string }[] } | null
   playbackState: string
+  positionState: { duration: number; position: number; playbackRate: number } | null
   handlers: Map<string, ((details: unknown) => void) | null>
   setActionHandler: (action: string, handler: ((details: unknown) => void) | null) => void
+  setPositionState: (state: { duration: number; position: number; playbackRate: number }) => void
 }
 
 let mock: MediaSessionMock
@@ -28,10 +30,14 @@ function installMediaSessionMock() {
   mock = {
     metadata: null,
     playbackState: '',
+    positionState: null,
     handlers: new Map(),
     setActionHandler(action, handler) {
       if (handler === null) this.handlers.delete(action)
       else this.handlers.set(action, handler)
+    },
+    setPositionState(state) {
+      this.positionState = state
     },
   }
   Object.defineProperty(navigator, 'mediaSession', { value: mock, configurable: true })
@@ -103,6 +109,8 @@ describe('Media Session integration', () => {
         <Probe />
       </PlayerProvider>,
     )
+    expect(mock.playbackState).toBe('none')
+
     fireEvent.click(screen.getByText('play'))
     await act(async () => {
       await Promise.resolve()
@@ -125,9 +133,66 @@ describe('Media Session integration', () => {
         <Probe />
       </PlayerProvider>,
     )
-    for (const action of ['play', 'pause', 'previoustrack', 'nexttrack', 'seekto']) {
+    for (const action of ['play', 'pause', 'previoustrack', 'nexttrack', 'seekbackward', 'seekforward', 'seekto']) {
       expect(mock.handlers.has(action)).toBe(true)
     }
+  })
+
+  it('delegates the seekbackward/seekforward handlers to the app seek function', async () => {
+    render(
+      <PlayerProvider>
+        <Probe />
+      </PlayerProvider>,
+    )
+    fireEvent.click(screen.getByText('play'))
+    await act(async () => {
+      await Promise.resolve()
+    })
+    expect(screen.getByTestId('time').textContent).toBe('0')
+
+    await act(async () => {
+      mock.handlers.get('seekforward')?.({ seekOffset: 10 })
+    })
+    expect(screen.getByTestId('time').textContent).toBe('10')
+
+    await act(async () => {
+      mock.handlers.get('seekbackward')?.({ seekOffset: 10 })
+    })
+    expect(screen.getByTestId('time').textContent).toBe('0')
+  })
+
+  it('defaults the seek step to 10 seconds when no offset is given', async () => {
+    render(
+      <PlayerProvider>
+        <Probe />
+      </PlayerProvider>,
+    )
+    fireEvent.click(screen.getByText('play'))
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    await act(async () => {
+      mock.handlers.get('seekforward')?.({})
+    })
+    expect(screen.getByTestId('time').textContent).toBe('10')
+  })
+
+  it('publishes the playback position when the platform supports it', async () => {
+    render(
+      <PlayerProvider>
+        <Probe />
+      </PlayerProvider>,
+    )
+    fireEvent.click(screen.getByText('play'))
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    expect(mock.positionState).not.toBeNull()
+    expect(mock.positionState?.duration).toBe(100)
+    expect(mock.positionState?.position).toBe(0)
+    expect(mock.positionState?.playbackRate).toBe(1)
   })
 
   it('delegates the next/previous handlers to the app playback functions', async () => {

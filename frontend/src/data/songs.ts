@@ -26,7 +26,7 @@ export const SONGS: Song[] = [
   {
     id: 'afsos',
     title: 'Afsos',
-    artist: 'Unknown Artist', // TODO: user will correct this later
+    artist: 'Anuv Jain, AP Dhillon',
     album: '',
     durationSec: 0,
     audioSrc: '/audio/Afsos (PenduJatt.Com.Se).mp3',
@@ -35,7 +35,7 @@ export const SONGS: Song[] = [
   {
     id: 'arz-kiya-hai',
     title: 'Arz Kiya Hai',
-    artist: 'Coke Studio Bharat', // filename indicates the show; TODO: user may want the actual singer's name instead
+    artist: 'Anuv Jain',
     album: 'Coke Studio Bharat',
     durationSec: 0,
     audioSrc: '/audio/Arz Kiya Hai _ Coke Studio Bharat (PenduJatt.Com.Se).mp3',
@@ -44,7 +44,7 @@ export const SONGS: Song[] = [
   {
     id: 'gul',
     title: 'Gul',
-    artist: 'Unknown Artist', // TODO: user will correct this later
+    artist: 'Anuv Jain',
     album: '',
     durationSec: 0,
     audioSrc: '/audio/Gul (PenduJatt.Com.Se).mp3',
@@ -62,7 +62,7 @@ export const SONGS: Song[] = [
   {
     id: 'afsanay',
     title: 'Afsanay',
-    artist: 'Unknown Artist', // TODO: placeholder, verify/correct manually
+    artist: 'Talha Anjum, Talhah Yunus, Young Stunners',
     album: '',
     durationSec: 0,
     audioSrc: '/audio/Afsanay (PenduJatt.Com.Se).mp3',
@@ -89,7 +89,7 @@ export const SONGS: Song[] = [
   {
     id: 'bairan',
     title: 'Bairan',
-    artist: 'Unknown Artist', // TODO: placeholder, verify/correct manually
+    artist: 'Banjaare',
     album: '',
     durationSec: 0,
     audioSrc: '/audio/Bairan - Bairan (320 kbps).mp3',
@@ -98,7 +98,7 @@ export const SONGS: Song[] = [
   {
     id: 'barsaat-banjaare',
     title: 'Barsaat Banjaare',
-    artist: 'Unknown Artist', // TODO: placeholder, verify/correct manually
+    artist: 'Banjaare',
     album: '',
     durationSec: 0,
     audioSrc: '/audio/Barsaat Banjaare 320 Kbps.mp3',
@@ -107,7 +107,7 @@ export const SONGS: Song[] = [
   {
     id: 'departure-lane',
     title: 'Departure Lane',
-    artist: 'Unknown Artist', // TODO: placeholder, verify/correct manually
+    artist: 'Talha Anjum, Umair',
     album: '',
     durationSec: 0,
     audioSrc: '/audio/Departure Lane (PenduJatt.Com.Se).mp3',
@@ -116,7 +116,7 @@ export const SONGS: Song[] = [
   {
     id: 'downers-at-dusk',
     title: 'Downers At Dusk',
-    artist: 'Unknown Artist', // TODO: placeholder, verify/correct manually
+    artist: 'Talha Anjum, Umair',
     album: '',
     durationSec: 0,
     audioSrc: '/audio/Downers At Dusk (PenduJatt.Com.Se).mp3',
@@ -134,7 +134,7 @@ export const SONGS: Song[] = [
   {
     id: 'glass-half-full',
     title: 'Glass Half Full',
-    artist: 'Unknown Artist', // TODO: placeholder, verify/correct manually
+    artist: 'Talha Anjum, JJ47, Talhah Yunus',
     album: '',
     durationSec: 0,
     audioSrc: '/audio/Glass Half Full (PenduJatt.Com.Se).mp3',
@@ -152,7 +152,7 @@ export const SONGS: Song[] = [
   {
     id: 'janam-janam',
     title: 'Janam Janam',
-    artist: 'Unknown Artist', // TODO: placeholder, verify/correct manually
+    artist: 'Arijit Singh, Antara Mitra',
     album: 'Dilwale',
     durationSec: 0,
     audioSrc: '/audio/Janam Janam Dilwale 320 Kbps.mp3',
@@ -170,7 +170,7 @@ export const SONGS: Song[] = [
   {
     id: 'long-time-no-see',
     title: 'Long Time No See',
-    artist: 'Unknown Artist', // TODO: placeholder, verify/correct manually
+    artist: 'Taimour Baig, AUR',
     album: '',
     durationSec: 0,
     audioSrc: '/audio/Long Time No See (PenduJatt.Com.Se).mp3',
@@ -179,7 +179,7 @@ export const SONGS: Song[] = [
   {
     id: 'main-yahaan-hoon',
     title: 'Main Yahaan Hoon',
-    artist: 'Unknown Artist', // TODO: placeholder, verify/correct manually
+    artist: 'Udit Narayan',
     album: 'Veer-Zaara',
     durationSec: 0,
     audioSrc: '/audio/Main Yahaan Hoon Veer Zaara 320 Kbps.mp3',
@@ -188,7 +188,7 @@ export const SONGS: Song[] = [
   {
     id: 'such-keh-raha-hai-rehnaa-hai-terre-dil-mein',
     title: 'Such Keh Raha Hai / Rehnaa Hai Terre Dil Mein',
-    artist: 'Unknown Artist', // TODO: placeholder, verify/correct manually
+    artist: 'Kumar Sanu, Alka Yagnik',
     album: '',
     durationSec: 0,
     audioSrc: '/audio/Such Keh Raha Hai Rehnaa Hai Terre Dil Mein 320 Kbps.mp3',
@@ -206,7 +206,7 @@ export const SONGS: Song[] = [
   {
     id: 'tera-mera-rishta',
     title: 'Tera Mera Rishta',
-    artist: 'Unknown Artist', // TODO: placeholder, verify/correct manually
+    artist: 'Mustafa Zahid',
     album: '',
     durationSec: 0,
     audioSrc: '/audio/Tera Mera Rishta (PenduJatt.Com.Se).mp3',
@@ -215,7 +215,9 @@ export const SONGS: Song[] = [
   {
     id: 'teri-yaad',
     title: 'Teri Yaad',
-    artist: 'Unknown Artist', // TODO: placeholder, verify/correct manually
+    // Left as-is: multiple songs share this title, so the artist needs the
+    // user's confirmation before it is changed.
+    artist: 'Unknown Artist',
     album: '',
     durationSec: 0,
     audioSrc: '/audio/Teri Yaad (PenduJatt.Com.Se).mp3',

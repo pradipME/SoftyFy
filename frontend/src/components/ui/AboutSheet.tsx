@@ -37,7 +37,7 @@ export function AboutSheet({ open, onClose }: AboutSheetProps) {
           key="about"
           role="dialog"
           aria-modal="true"
-          aria-label="About SoftyFy"
+          aria-label="About Pradip"
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -68,9 +68,9 @@ export function AboutSheet({ open, onClose }: AboutSheetProps) {
                 <MusicIcon className="h-7 w-7" />
               </div>
               <div>
-                <h2 className="text-xl font-bold tracking-tight text-fg">SoftyFy</h2>
+                <h2 className="text-xl font-bold tracking-tight text-fg">About Pradip</h2>
                 <p className="mt-1 text-sm font-medium text-fg">Made by Pradip Sonawane</p>
-                <p className="mt-1 text-sm text-muted">A personal music player, built from scratch.</p>
+                <p className="mt-1 text-sm text-muted">SoftyFy, a personal music player built from scratch.</p>
                 <a
                   href={PORTFOLIO_URL}
                   target="_blank"

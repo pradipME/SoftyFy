@@ -20,17 +20,17 @@ describe('Library footer credit', () => {
     expect(screen.getByText(/Made with/)).toBeTruthy()
     expect(screen.getByText('♥')).toBeTruthy()
     expect(screen.getByText(/by Pradip Sonawane/)).toBeTruthy()
-    expect(screen.getByRole('button', { name: /About SoftyFy/ })).toBeTruthy()
+    expect(screen.getByRole('button', { name: /About Pradip/ })).toBeTruthy()
   })
 
   it('opens and closes the About sheet', async () => {
     renderPage()
-    fireEvent.click(screen.getByRole('button', { name: /About SoftyFy/ }))
+    fireEvent.click(screen.getByRole('button', { name: /About Pradip/ }))
 
-    expect(screen.getByRole('dialog', { name: 'About SoftyFy' })).toBeTruthy()
+    expect(screen.getByRole('dialog', { name: 'About Pradip' })).toBeTruthy()
     expect(screen.getByText('Made by Pradip Sonawane')).toBeTruthy()
-    expect(screen.getByText('SoftyFy')).toBeTruthy()
-    expect(screen.getByText('A personal music player, built from scratch.')).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'About Pradip' })).toBeTruthy()
+    expect(screen.getByText('SoftyFy, a personal music player built from scratch.')).toBeTruthy()
 
     const link = screen.getByRole('link', { name: /View my work/ }) as HTMLAnchorElement
     expect(link.href).toBe('https://pradip-portfolio-7xhn.onrender.com/')
@@ -42,8 +42,8 @@ describe('Library footer credit', () => {
 
   it('dismisses the About sheet with the Escape key', async () => {
     renderPage()
-    fireEvent.click(screen.getByRole('button', { name: /About SoftyFy/ }))
-    expect(screen.getByRole('dialog', { name: 'About SoftyFy' })).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: /About Pradip/ }))
+    expect(screen.getByRole('dialog', { name: 'About Pradip' })).toBeTruthy()
 
     fireEvent.keyDown(window, { key: 'Escape' })
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())

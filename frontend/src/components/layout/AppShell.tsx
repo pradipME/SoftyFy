@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { usePlayer } from '../../context/PlayerContext'
 import { AmbientBackground } from '../ambient/AmbientBackground'
 import { CoverBackground } from '../ambient/CoverBackground'
 import { RouteTransition } from '../motion/RouteTransition'
@@ -13,7 +14,15 @@ import { Sidebar } from './Sidebar'
  * cover-glow background behind everything.
  */
 export function AppShell() {
+  const { selectionEpoch } = usePlayer()
   const [sheetOpen, setSheetOpen] = useState(false)
+
+  // Selecting any song (via playSong) opens the full Now Playing sheet
+  // immediately — without a toast/popup. Auto-advance and next/previous do
+  // not bump selectionEpoch, so the sheet only opens on user selection.
+  useEffect(() => {
+    if (selectionEpoch > 0) setSheetOpen(true)
+  }, [selectionEpoch])
 
   return (
     <div className="relative isolate min-h-dvh bg-base text-fg">

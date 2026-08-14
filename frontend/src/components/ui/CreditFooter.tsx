@@ -7,7 +7,7 @@ interface CreditFooterProps {
 }
 
 /**
- * Shared creator credit used on Home and Library: a tappable "About SoftyFy"
+ * Shared creator credit used on Home and Library: a tappable "About Pradip"
  * glass pill that opens the About sheet, plus the always-visible signature.
  */
 export function CreditFooter({ className = '' }: CreditFooterProps) {
@@ -23,7 +23,7 @@ export function CreditFooter({ className = '' }: CreditFooterProps) {
         <span className="flex h-5 w-5 items-center justify-center rounded-md bg-accent/15 text-accent ring-1 ring-accent/30">
           <MusicIcon className="h-3 w-3" />
         </span>
-        About SoftyFy
+        About Pradip
       </button>
       <p className="text-xs text-dim">
         Made with <span className="text-accent">♥</span> by Pradip Sonawane

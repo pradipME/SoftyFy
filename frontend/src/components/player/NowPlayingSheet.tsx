@@ -1,6 +1,8 @@
 import { AnimatePresence, motion, useMotionValue, useReducedMotion, useTransform, type PanInfo } from 'framer-motion'
 import { useEffect } from 'react'
 import { usePlayer } from '../../context/PlayerContext'
+import { useBackInterception } from '../../hooks/useBackInterception'
+import { CoverBackground } from '../ambient/CoverBackground'
 import { CoverGlow } from '../ambient/CoverGlow'
 import { Cover } from '../song/Cover'
 import { IconButton } from '../ui/IconButton'
@@ -27,11 +29,19 @@ interface NowPlayingSheetProps {
  * band) then release — it snaps back under the threshold or dismisses past it.
  * The cover reacts to the drag with a slight scale/lift parallax. Tap the
  * chevron, Escape, or the backdrop to close.
+ *
+ * The sheet is a translucent glass surface over the same ambient blurred
+ * album-cover background (CoverBackground) that sits behind the rest of the
+ * app, so the artwork stays visible behind the Now Playing UI. The browser/
+ * Android Back button is intercepted while open: it dismisses just the sheet,
+ * leaving the app's hash navigation history untouched.
  */
 export function NowPlayingSheet({ open, onClose }: NowPlayingSheetProps) {
   const { currentSong, status, shuffle, repeat, togglePlay, next, previous, toggleShuffle, cycleRepeat } =
     usePlayer()
   const reduced = useReducedMotion()
+
+  useBackInterception(open, onClose)
 
   const y = useMotionValue(0)
   const coverScale = useTransform(y, [0, 360], [1, 0.86])
@@ -77,10 +87,11 @@ export function NowPlayingSheet({ open, onClose }: NowPlayingSheetProps) {
           transition={{ duration: 0.25, ease: 'easeOut' }}
           onClick={onClose}
         >
-          <motion.div aria-hidden className="absolute inset-0 bg-black/60" style={{ opacity: backdropOpacity }} />
+          <CoverBackground />
+          <motion.div aria-hidden className="absolute inset-0 bg-black/30" style={{ opacity: backdropOpacity }} />
 
           <motion.div
-            className="absolute inset-x-0 bottom-0 flex h-full flex-col overflow-hidden border-t border-white/10 bg-[#0c0c10]/70 backdrop-blur-2xl"
+            className="absolute inset-x-0 bottom-0 flex h-full flex-col overflow-hidden border-t border-white/10 bg-[#0c0c10]/45 backdrop-blur-2xl"
             style={{ y }}
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
@@ -142,9 +153,9 @@ export function NowPlayingSheet({ open, onClose }: NowPlayingSheetProps) {
               <IconButton
                 label={shuffle ? 'Turn shuffle off' : 'Turn shuffle on'}
                 onClick={toggleShuffle}
-                className={shuffle ? 'text-accent' : ''}
+                active={shuffle}
               >
-                <ShuffleIcon className="h-5 w-5" />
+                <ShuffleIcon className={`h-5 w-5 ${shuffle ? 'text-accent' : ''}`} />
               </IconButton>
               <div className="flex items-center gap-2">
                 <IconButton label="Previous track" onClick={previous}>
@@ -177,12 +188,14 @@ export function NowPlayingSheet({ open, onClose }: NowPlayingSheetProps) {
                       : 'Repeat one — turn repeat off'
                 }
                 onClick={cycleRepeat}
-                className={repeat !== 'off' ? 'text-accent' : ''}
+                active={repeat !== 'off'}
               >
                 <span className="relative">
-                  <RepeatIcon className="h-5 w-5" />
+                  <RepeatIcon className={`h-5 w-5 ${repeat !== 'off' ? 'text-accent' : ''}`} />
                   {repeat === 'one' ? (
-                    <span className="absolute -right-1.5 -top-1.5 text-[9px] font-bold leading-none">1</span>
+                    <span className="absolute -right-1.5 -top-1.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-accent px-1 text-[9px] font-bold leading-none text-black">
+                      1
+                    </span>
                   ) : null}
                 </span>
               </IconButton>
