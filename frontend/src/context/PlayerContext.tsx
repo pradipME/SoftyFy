@@ -90,18 +90,27 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'NEXT' })
   }, [])
 
+  // Called by the audio hook when an automatic recovery attempt begins (stall
+  // timeout or transient network error). Clears any stale error so the UI
+  // shows the loading spinner instead of a dead error state.
+  const onRecoveryStart = useCallback(() => {
+    dispatch({ type: 'SET_STATUS', status: 'loading' })
+  }, [])
+
   const {
     loadAndPlay,
     clearSource,
     seekTo,
     pauseAudio,
     setVolume: applyVolume,
+    recoverFromBackground,
   } = useAudioPlayer({
     onTimeUpdate,
     onDurationChange,
     onStatusChange,
     onError,
     onEnded,
+    onRecoveryStart,
   })
 
   const playSong = useCallback((song: Song, queue: Song[]) => {
@@ -326,6 +335,21 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [togglePlay, seek, toggleMute])
+
+  // Recover from missed playback events when the page becomes visible again.
+  // Mobile browsers suspend JavaScript timers and may skip/delay the native
+  // `ended` event when the screen is locked or the tab is backgrounded, even
+  // though the <audio> element keeps playing.  When the user returns, we check
+  // whether the song ended (or is essentially at the end) and manually trigger
+  // auto-advance, or resume playback if the browser paused the element.
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      if (document.hidden) return
+      recoverFromBackground()
+    }
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', onVisibilityChange)
+  }, [recoverFromBackground])
 
   const api = useMemo<PlayerApi>(
     () => ({

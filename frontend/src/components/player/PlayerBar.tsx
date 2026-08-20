@@ -65,7 +65,14 @@ export function PlayerBar({ onOpenSheet }: PlayerBarProps) {
             className="flex min-w-0 flex-1 items-center gap-3 rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             <CoverGlow song={currentSong} inset="-inset-4" className="shrink-0">
-              <Cover src={currentSong.coverSrc} alt={currentSong.title} className="h-12 w-12 rounded-xl" />
+              <div className="relative">
+                <Cover src={currentSong.coverSrc} alt={currentSong.title} className="h-12 w-12 rounded-xl" />
+                {isLoading ? (
+                  <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/30">
+                    <LoaderIcon className="h-3.5 w-3.5 animate-spin text-white/80" />
+                  </div>
+                ) : null}
+              </div>
             </CoverGlow>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold text-fg">{currentSong.title}</p>

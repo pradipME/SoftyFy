@@ -7,7 +7,12 @@ export interface AudioPlayerHandlers {
   onStatusChange: (status: PlaybackStatus) => void
   onError: () => void
   onEnded: () => void
+  onRecoveryStart: () => void
 }
+
+const STALL_TIMEOUT_MS = 10_000
+const MAX_RECOVERY_ATTEMPTS = 3
+const NEAR_END_THRESHOLD_S = 2
 
 /**
  * Wraps a single shared HTMLAudioElement. The PlayerProvider owns the result,
@@ -18,6 +23,17 @@ export interface AudioPlayerHandlers {
  *  - if `src` changed, the new source is loaded (a paused load stays paused),
  *  - `startAt` seeks before playback,
  *  - `shouldPlay` triggers play() and reports autoplay-rejection failures.
+ *
+ * ## Stall recovery
+ * When the network stalls mid-playback, the browser fires `waiting` / `stalled`.
+ * Most browsers recover on their own once data arrives, firing `playing`. If
+ * that doesn't happen within {@link STALL_TIMEOUT_MS}, we force-recover by
+ * re-setting `audio.src` to the same URL and calling `load()`, which prompts a
+ * fresh fetch. The playback position is preserved across the reload.
+ *
+ * Transient network `error` events (MEDIA_ERR_NETWORK) are also retried with
+ * the same strategy, up to {@link MAX_RECOVERY_ATTEMPTS} times. Fatal errors
+ * (MEDIA_ERR_DECODE / MEDIA_ERR_SRC_NOT_SUPPORTED) fail immediately.
  */
 export function useAudioPlayer(handlers: AudioPlayerHandlers) {
   const handlersRef = useRef(handlers)
@@ -30,6 +46,44 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
 
   const lastSrcRef = useRef<string | null>(null)
   const suppressLoadingRef = useRef(false)
+  const stallTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const retryCountRef = useRef(0)
+  const recoveringRef = useRef(false)
+  const stallFlagRef = useRef(false)
+
+  const clearStallTimer = useCallback(() => {
+    if (stallTimerRef.current !== null) {
+      clearTimeout(stallTimerRef.current)
+      stallTimerRef.current = null
+    }
+  }, [])
+
+  const attemptRecovery = useCallback(() => {
+    const audio = audioRef.current
+    const src = lastSrcRef.current
+    if (audio === null || src === null) return
+
+    clearStallTimer()
+    stallFlagRef.current = false
+    recoveringRef.current = true
+    handlersRef.current.onRecoveryStart()
+
+    const savedTime = audio.currentTime
+    audio.src = src
+    audio.load()
+
+    const onCanPlay = () => {
+      audio.removeEventListener('canplay', onCanPlay)
+      try {
+        audio.currentTime = savedTime
+      } catch {
+        // Not seekable yet.
+      }
+      recoveringRef.current = false
+      audio.play().catch(() => {})
+    }
+    audio.addEventListener('canplay', onCanPlay)
+  }, [clearStallTimer])
 
   useEffect(() => {
     const audio = audioRef.current
@@ -41,24 +95,54 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
     const onLoadedMetadata = () => handlersRef.current.onDurationChange(audio.duration)
     const onDurationChange = () => handlersRef.current.onDurationChange(audio.duration)
     const onPlay = () => handlersRef.current.onStatusChange('playing')
-    const onPlaying = () => handlersRef.current.onStatusChange('playing')
+    const onPlaying = () => {
+      stallFlagRef.current = false
+      handlersRef.current.onStatusChange('playing')
+    }
     const onPause = () => {
       if (audio.ended) return
       handlersRef.current.onStatusChange('paused')
     }
     const onWaiting = () => {
       if (suppressLoadingRef.current) return
+      stallFlagRef.current = true
       handlersRef.current.onStatusChange('loading')
     }
     const onStalled = () => {
       if (suppressLoadingRef.current) return
+      stallFlagRef.current = true
       handlersRef.current.onStatusChange('loading')
+
+      if (stallTimerRef.current === null) {
+        stallTimerRef.current = setTimeout(() => {
+          stallTimerRef.current = null
+          attemptRecovery()
+        }, STALL_TIMEOUT_MS)
+      }
     }
     const onLoadStart = () => {
       if (suppressLoadingRef.current) return
       handlersRef.current.onStatusChange('loading')
     }
-    const onError = () => handlersRef.current.onError()
+    const onCanPlay = () => {
+      if (stallFlagRef.current && !audio.paused) {
+        handlersRef.current.onStatusChange('paused')
+      }
+    }
+    const onError = () => {
+      clearStallTimer()
+      stallFlagRef.current = false
+      const mediaError = audio.error
+      const isNetwork =
+        mediaError !== null && mediaError.code === MediaError.MEDIA_ERR_NETWORK
+      if (isNetwork && retryCountRef.current < MAX_RECOVERY_ATTEMPTS) {
+        retryCountRef.current += 1
+        attemptRecovery()
+        return
+      }
+      retryCountRef.current = 0
+      handlersRef.current.onError()
+    }
     const onEnded = () => handlersRef.current.onEnded()
 
     audio.addEventListener('timeupdate', onTimeUpdate)
@@ -71,6 +155,7 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
     audio.addEventListener('waiting', onWaiting)
     audio.addEventListener('stalled', onStalled)
     audio.addEventListener('loadstart', onLoadStart)
+    audio.addEventListener('canplay', onCanPlay)
     audio.addEventListener('error', onError)
     audio.addEventListener('ended', onEnded)
 
@@ -85,10 +170,15 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
       audio.removeEventListener('waiting', onWaiting)
       audio.removeEventListener('stalled', onStalled)
       audio.removeEventListener('loadstart', onLoadStart)
+      audio.removeEventListener('canplay', onCanPlay)
       audio.removeEventListener('error', onError)
       audio.removeEventListener('ended', onEnded)
     }
-  }, [])
+  }, [attemptRecovery, clearStallTimer])
+
+  useEffect(() => {
+    return () => clearStallTimer()
+  }, [clearStallTimer])
 
   const loadAndPlay = useCallback(
     (src: string, startAt: number | null, shouldPlay: boolean) => {
@@ -98,6 +188,10 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
       if (srcChanged) {
         lastSrcRef.current = src
         suppressLoadingRef.current = !shouldPlay
+        clearStallTimer()
+        stallFlagRef.current = false
+        retryCountRef.current = 0
+        recoveringRef.current = false
         audio.src = src
         audio.load()
       }
@@ -128,16 +222,20 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
         audio.pause()
       }
     },
-    [],
+    [clearStallTimer],
   )
 
   const clearSource = useCallback(() => {
     const audio = audioRef.current
     if (audio === null) return
+    clearStallTimer()
+    stallFlagRef.current = false
+    retryCountRef.current = 0
+    recoveringRef.current = false
     lastSrcRef.current = null
     audio.removeAttribute('src')
     audio.load()
-  }, [])
+  }, [clearStallTimer])
 
   const seekTo = useCallback((time: number) => {
     const audio = audioRef.current
@@ -162,5 +260,37 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
     audio.muted = muted
   }, [])
 
-  return { audioRef, loadAndPlay, clearSource, seekTo, pauseAudio, setVolume }
+  /**
+   * Called when the page becomes visible after being hidden (screen unlock,
+   * tab switch back). Checks the audio element's actual state and recovers
+   * from any missed events:
+   *
+   * - If the song ended (or is within {@link NEAR_END_THRESHOLD_S} of the
+   *   end) while the page was hidden, the `ended` event may not have fired.
+   *   Manually dispatch `onEnded` to trigger auto-advance.
+   * - If the audio was paused by the browser due to background throttling
+   *   (but the UI still expects playback), attempt `audio.play()`.
+   */
+  const recoverFromBackground = useCallback(() => {
+    const audio = audioRef.current
+    if (audio === null || audio.readyState === 0) return
+
+    const ended = audio.ended
+    const duration = audio.duration
+    const nearEnd =
+      Number.isFinite(duration) &&
+      duration > 0 &&
+      audio.currentTime >= duration - NEAR_END_THRESHOLD_S
+
+    if (ended || nearEnd) {
+      handlersRef.current.onEnded()
+      return
+    }
+
+    if (audio.paused) {
+      audio.play().catch(() => {})
+    }
+  }, [])
+
+  return { audioRef, loadAndPlay, clearSource, seekTo, pauseAudio, setVolume, recoverFromBackground }
 }

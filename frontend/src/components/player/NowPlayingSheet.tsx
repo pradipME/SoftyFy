@@ -127,11 +127,18 @@ export function NowPlayingSheet({ open, onClose }: NowPlayingSheetProps) {
                   transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}
                 >
                   <CoverGlow song={currentSong} inset="-inset-10">
-                    <Cover
-                      src={currentSong.coverSrc}
-                      alt={currentSong.title}
-                      className="aspect-square w-[min(78vw,340px)] rounded-2xl shadow-2xl shadow-black/60"
-                    />
+                    <div className="relative">
+                      <Cover
+                        src={currentSong.coverSrc}
+                        alt={currentSong.title}
+                        className="aspect-square w-[min(78vw,340px)] rounded-2xl shadow-2xl shadow-black/60"
+                      />
+                      {isLoading ? (
+                        <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-black/30">
+                          <LoaderIcon className="h-8 w-8 animate-spin text-white/80" />
+                        </div>
+                      ) : null}
+                    </div>
                   </CoverGlow>
                 </motion.div>
               </motion.div>
