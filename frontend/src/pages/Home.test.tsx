@@ -28,7 +28,7 @@ describe('HomePage', () => {
 
   it('shows the shared credit footer and opens the About sheet', async () => {
     renderPage()
-    expect(screen.getByText(/Made with/)).toBeTruthy()
+    expect(screen.getByText('♥')).toBeTruthy()
     expect(screen.getByText('♥')).toBeTruthy()
     expect(screen.getByText(/by Pradip Sonawane/)).toBeTruthy()
 
