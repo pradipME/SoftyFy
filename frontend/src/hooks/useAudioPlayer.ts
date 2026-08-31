@@ -275,14 +275,15 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
     const audio = audioRef.current
     if (audio === null || audio.readyState === 0) return
 
-    const ended = audio.ended
     const duration = audio.duration
+    const ended = audio.ended
     const nearEnd =
       Number.isFinite(duration) &&
       duration > 0 &&
       audio.currentTime >= duration - NEAR_END_THRESHOLD_S
+    const atEnd = Number.isFinite(duration) && duration > 0 && audio.currentTime >= duration
 
-    if (ended || nearEnd) {
+    if (ended || atEnd || nearEnd) {
       handlersRef.current.onEnded()
       return
     }
