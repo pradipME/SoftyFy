@@ -72,7 +72,7 @@ function StorySection() {
           id="feedbackInput"
           className="feedback-input"
           placeholder="Apna feedback yahan likho..."
-          rows="3"
+          rows={3}
           required
         ></textarea>
         <button type="submit" className="feedback-btn">
