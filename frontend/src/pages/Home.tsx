@@ -41,7 +41,7 @@ function StorySection() {
     const feedback = textarea?.value.trim()
     if (!feedback) return
 
-    const phoneNumber = '8767137519'
+    const phoneNumber = '918767137519'
     const message = encodeURIComponent(`SoftyFy Feedback:\n\n${feedback}`)
     const whatsappUrl = `https://wa.me/${phoneNumber}?text=${message}`
 
