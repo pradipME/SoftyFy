@@ -29,7 +29,6 @@ describe('HomePage', () => {
   it('shows the shared credit footer and opens the About sheet', async () => {
     renderPage()
     expect(screen.getByText('♥')).toBeTruthy()
-    expect(screen.getByText('♥')).toBeTruthy()
     expect(screen.getByText(/by Pradip Sonawane/)).toBeTruthy()
 
     fireEvent.click(screen.getByRole('button', { name: /About Pradip/ }))
