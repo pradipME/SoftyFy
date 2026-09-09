@@ -12,7 +12,7 @@
 //
 // Output (one per line, for easy scripting):
 //   DRIVE_ID      <file id>
-//   AUDIO_URL     https://drive.usercontent.google.com/download?id=...&export=download
+//   AUDIO_URL     https://www.googleapis.com/drive/v3/files/<id>?alt=media&key=...
 //   COVER_URL     https://drive.google.com/thumbnail?id=...&sz=w1000
 
 import { execFile } from 'node:child_process'
@@ -20,13 +20,11 @@ import { promisify } from 'node:util'
 import { existsSync } from 'node:fs'
 import { basename, dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { audioUrl, coverUrl } from './drive-url.mjs'
 
 const run = promisify(execFile)
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = resolve(__dirname, '..')
-
-const USERCONTENT_BASE = 'https://drive.usercontent.google.com/download'
-const THUMBNAIL_BASE = 'https://drive.google.com/thumbnail'
 
 async function findRclone() {
   try {
@@ -94,12 +92,12 @@ async function main() {
   const { stdout } = await run(RCLONE, ['link', remote], { env: process.env })
   const url = String(stdout).trim()
   const fileId = extractFileId(url)
-  const audioUrl = `${USERCONTENT_BASE}?id=${encodeURIComponent(fileId)}&export=download`
-  const coverUrl = `${THUMBNAIL_BASE}?id=${encodeURIComponent(fileId)}&sz=w1000`
+  const audioUrlValue = audioUrl(fileId)
+  const coverUrlValue = coverUrl(fileId)
 
   console.log(`DRIVE_ID\t${fileId}`)
-  console.log(`AUDIO_URL\t${audioUrl}`)
-  console.log(`COVER_URL\t${coverUrl}`)
+  console.log(`AUDIO_URL\t${audioUrlValue}`)
+  console.log(`COVER_URL\t${coverUrlValue}`)
 }
 
 main().catch((err) => {

@@ -17,14 +17,12 @@ import { readFile, writeFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { audioUrl, coverUrl } from './drive-url.mjs'
 
 const run = promisify(execFile)
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = resolve(__dirname, '..')
 const SONGS_PATH = resolve(process.env.SOFTYFY_SONGS_OUT || resolve(ROOT, 'src/data/songs.ts'))
-
-const USERCONTENT_BASE = 'https://drive.usercontent.google.com/download'
-const THUMBNAIL_BASE = 'https://drive.google.com/thumbnail'
 
 async function findRclone() {
   try {
@@ -77,9 +75,7 @@ async function main() {
       missing.push(`${isAudio ? 'audio' : 'cover'} ${local}`)
       return line
     }
-    const url = isAudio
-      ? `${USERCONTENT_BASE}?id=${encodeURIComponent(fileId)}&export=download`
-      : `${THUMBNAIL_BASE}?id=${encodeURIComponent(fileId)}&sz=w1000`
+    const url = isAudio ? audioUrl(fileId) : coverUrl(fileId)
     changed += 1
     return `${prefix}'${url}',`
   }
