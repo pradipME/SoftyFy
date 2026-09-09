@@ -13,6 +13,7 @@ const song = (id: string): Song => ({
   durationSec: 180,
   audioSrc: `/audio/${id}.mp3`,
   coverSrc: `/covers/${id}.jpg`,
+  library: 'Test',
 })
 
 /** Lets the jsdom <audio> drive the player state like a real browser. */

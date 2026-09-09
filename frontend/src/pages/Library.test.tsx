@@ -1,14 +1,17 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it } from 'vitest'
 import { PlayerProvider } from '../context/PlayerContext'
 import { LibraryPage } from './Library'
 
 function renderPage() {
   return render(
-    <PlayerProvider>
-      <LibraryPage />
-    </PlayerProvider>,
+    <MemoryRouter>
+      <PlayerProvider>
+        <LibraryPage />
+      </PlayerProvider>
+    </MemoryRouter>,
   )
 }
 

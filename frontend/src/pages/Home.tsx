@@ -1,8 +1,9 @@
 import { useMemo } from 'react'
-import { StaggerItem } from '../components/motion/Stagger'
-import { SongList } from '../components/song/SongList'
+import { useNavigate } from 'react-router-dom'
+import { Stagger, StaggerItem } from '../components/motion/Stagger'
+import { Cover } from '../components/song/Cover'
 import { CreditFooter } from '../components/ui/CreditFooter'
-import { SONGS } from '../data/songs'
+import { SONGS, SONGS_BY_LIBRARY } from '../data/songs'
 
 function greetingFor(date: Date): string {
   const hour = date.getHours()
@@ -19,18 +20,43 @@ export function HomePage() {
     <div className="flex flex-col gap-8">
       <StaggerItem className="flex flex-col gap-1">
         <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{greeting}</h1>
-        <p className="text-sm text-muted">Your collection, ready offline.</p>
+        <p className="text-sm text-muted">{SONGS.length} songs across {Object.keys(SONGS_BY_LIBRARY).length} albums</p>
       </StaggerItem>
 
-      <section className="flex flex-col gap-3">
-        <h2 className="px-1 text-lg font-bold tracking-tight">Your library</h2>
-        <SongList songs={SONGS} queue={SONGS} />
-      </section>
+      <Stagger className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        {Object.entries(SONGS_BY_LIBRARY).map(([name, songs]) => (
+          <StaggerItem key={name}>
+            <AlbumCard name={name} songs={songs} />
+          </StaggerItem>
+        ))}
+      </Stagger>
 
       <StorySection />
 
       <CreditFooter className="mt-4" />
     </div>
+  )
+}
+
+function AlbumCard({ name, songs }: { name: string; songs: typeof SONGS }) {
+  const navigate = useNavigate()
+  const firstCover = songs[0]?.coverSrc ?? ''
+
+  return (
+    <button
+      onClick={() => navigate(`/library?album=${encodeURIComponent(name)}`)}
+      className="group flex flex-col gap-3 rounded-xl bg-surface/60 p-3 text-left transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+    >
+      <Cover
+        src={firstCover}
+        alt={name}
+        className="aspect-square w-full rounded-lg"
+      />
+      <div className="min-w-0">
+        <p className="truncate text-sm font-semibold text-fg">{name}</p>
+        <p className="truncate text-xs text-muted">{songs.length} songs</p>
+      </div>
+    </button>
   )
 }
 

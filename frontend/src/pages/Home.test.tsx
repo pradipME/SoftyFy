@@ -1,35 +1,38 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it } from 'vitest'
 import { PlayerProvider } from '../context/PlayerContext'
 import { HomePage } from './Home'
 
 function renderPage() {
   return render(
-    <PlayerProvider>
-      <HomePage />
-    </PlayerProvider>,
+    <MemoryRouter>
+      <PlayerProvider>
+        <HomePage />
+      </PlayerProvider>
+    </MemoryRouter>,
   )
 }
 
 afterEach(cleanup)
 
 describe('HomePage', () => {
-  it('no longer shows the "Recently added" rail', () => {
+  it('shows the greeting and album cards', () => {
     renderPage()
-    expect(screen.queryByText('Recently added')).toBeNull()
+    expect(screen.getByText('Bathroom')).toBeTruthy()
+    expect(screen.getByText('Qwali')).toBeTruthy()
   })
 
-  it('still shows the greeting and Your library list', () => {
+  it('no longer shows a flat song list', () => {
     renderPage()
-    expect(screen.getByText('Your library')).toBeTruthy()
-    expect(screen.queryByRole('button', { name: 'Recently added' })).toBeNull()
+    expect(screen.queryByText('Your library')).toBeNull()
   })
 
   it('shows the shared credit footer and opens the About sheet', async () => {
     renderPage()
     expect(screen.getByText('♥')).toBeTruthy()
-    expect(screen.getByText(/by Pradip Sonawane/)).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /About Pradip/ })).toBeTruthy()
 
     fireEvent.click(screen.getByRole('button', { name: /About Pradip/ }))
     expect(screen.getByRole('dialog', { name: 'About Pradip' })).toBeTruthy()

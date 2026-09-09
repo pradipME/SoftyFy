@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { StaggerItem } from '../components/motion/Stagger'
 import { SongList } from '../components/song/SongList'
 import { Button } from '../components/ui/Button'
@@ -30,16 +31,26 @@ function sortSongs(songs: Song[], key: SortKey, ascending: boolean): Song[] {
 }
 
 export function LibraryPage() {
+  const [searchParams] = useSearchParams()
+  const albumFilter = searchParams.get('album')
+
+  const baseSongs = useMemo(
+    () => (albumFilter ? SONGS.filter((s) => s.library === albumFilter) : SONGS),
+    [albumFilter],
+  )
+
   const [sortKey, setSortKey] = useState<SortKey>('title')
   const [ascending, setAscending] = useState(true)
-  const sorted = useMemo(() => sortSongs(SONGS, sortKey, ascending), [sortKey, ascending])
+  const sorted = useMemo(() => sortSongs(baseSongs, sortKey, ascending), [baseSongs, sortKey, ascending])
+
+  const heading = albumFilter ?? 'Your Library'
 
   return (
     <div className="flex flex-col gap-4">
       <StaggerItem className="flex flex-wrap items-end justify-between gap-3">
         <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-bold tracking-tight">Your Library</h1>
-          <p className="text-sm text-muted">{SONGS.length} songs</p>
+          <h1 className="text-2xl font-bold tracking-tight">{heading}</h1>
+          <p className="text-sm text-muted">{baseSongs.length} songs</p>
         </div>
 
         <div className="no-scrollbar flex items-center gap-2 overflow-x-auto">

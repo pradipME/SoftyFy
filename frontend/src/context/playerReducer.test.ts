@@ -15,6 +15,7 @@ const song = (id: string): Song => ({
   durationSec: 180,
   audioSrc: `/audio/${id}.mp3`,
   coverSrc: `/covers/${id}.jpg`,
+  library: 'Test',
 })
 
 function playAll(state: PlayerState, ids: string[]): PlayerState {

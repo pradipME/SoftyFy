@@ -4,7 +4,7 @@ import { SongList } from '../components/song/SongList'
 import { Button } from '../components/ui/Button'
 import { CreditFooter } from '../components/ui/CreditFooter'
 import { ArrowLeftIcon, ArrowRightIcon } from '../components/ui/icons'
-import { SONGS } from '../data/songs'
+import { SONGS_BY_LIBRARY } from '../data/songs'
 import type { Song } from '../types/song'
 
 type SortKey = 'title' | 'artist' | 'duration'
@@ -15,7 +15,7 @@ const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: 'duration', label: 'Duration' },
 ]
 
-const QWALI_SONGS = SONGS.filter((s) => s.library === 'Qwali')
+const QWALI_SONGS = SONGS_BY_LIBRARY['Qwali'] ?? []
 
 function sortSongs(songs: Song[], key: SortKey, ascending: boolean): Song[] {
   const sorted = [...songs].sort((a, b) => {
