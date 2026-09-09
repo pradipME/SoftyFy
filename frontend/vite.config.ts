@@ -10,7 +10,10 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
+      strategies: 'injectManifest',
       includeAssets: ['favicon.png'],
+      srcDir: 'src',
+      filename: 'sw.ts',
       manifest: {
         id: '/',
         name: 'SoftyFy',
@@ -50,43 +53,14 @@ export default defineConfig({
           },
         ],
       },
-      workbox: {
+      injectManifest: {
         // Precache the app shell + build assets only. The full library is
-        // ~225 MB of mp3s, so audio (and covers) are cached lazily at runtime
+        // ~350 MB of mp3s, so audio (and covers) are cached lazily at runtime
         // instead of being precached — keeping install/update light.
+        swSrc: 'src/sw.ts',
         globPatterns: ['**/*.{js,css,html}'],
-        cleanupOutdatedCaches: true,
-        runtimeCaching: [
-          {
-            // Covers: cached on first sight, then served instantly (CacheFirst).
-            urlPattern: /\/covers\/.*/,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'softyfy-covers',
-              expiration: {
-                maxEntries: 100,
-                maxAgeSeconds: 60 * 60 * 24 * 30,
-              },
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
-          {
-            // Audio: cached only after a song is played (CacheFirst with Range
-            // support so seeking works offline). maxEntries bounds the cache so
-            // the collection never forces a huge one-time download.
-            urlPattern: /\/audio\/.*/,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'softyfy-audio',
-              rangeRequests: true,
-              expiration: {
-                maxEntries: 40,
-                maxAgeSeconds: 60 * 60 * 24 * 30,
-              },
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
-        ],
+        globIgnores: ['sw.js', 'workbox-*.js'],
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
       },
     }),
   ],
