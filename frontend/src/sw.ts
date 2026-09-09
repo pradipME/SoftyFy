@@ -1,8 +1,4 @@
 import { cleanupOutdatedCaches, precacheAndRoute } from 'workbox-precaching'
-import { registerRoute } from 'workbox-routing'
-import { CacheFirst } from 'workbox-strategies'
-import { CacheableResponsePlugin } from 'workbox-cacheable-response'
-import { ExpirationPlugin } from 'workbox-expiration'
 
 interface FetchEventLike {
   request: Request
@@ -23,17 +19,41 @@ declare let self: {
 cleanupOutdatedCaches()
 precacheAndRoute(self.__WB_MANIFEST)
 
-// Covers are cached on first sight and served instantly afterwards.
-registerRoute(
-  ({ url }) => url.hostname === 'drive.google.com' && url.pathname.startsWith('/thumbnail'),
-  new CacheFirst({
-    cacheName: 'softyfy-covers',
-    plugins: [
-      new CacheableResponsePlugin({ statuses: [0, 200] }),
-      new ExpirationPlugin({ maxEntries: 120, maxAgeSeconds: 60 * 60 * 24 * 30 }),
-    ],
-  }),
-)
+function hostAndPath(rawUrl: string): { hostname: string; pathname: string } {
+  let url: URL
+  try {
+    url = new URL(rawUrl)
+  } catch {
+    return { hostname: '', pathname: '' }
+  }
+  return { hostname: url.hostname, pathname: url.pathname }
+}
+
+// ── Covers ───────────────────────────────────────────────────────────────────
+// Cached on first sight (they load as no-cors <img> requests, so entries may be
+// opaque — that is fine to cache and serve back unchanged).
+const COVER_CACHE = 'softyfy-covers'
+
+function isCoverUrl(rawUrl: string): boolean {
+  const { hostname, pathname } = hostAndPath(rawUrl)
+  return hostname === 'drive.google.com' && pathname.startsWith('/thumbnail')
+}
+
+async function handleCover(request: Request): Promise<Response> {
+  const cache = await caches.open(COVER_CACHE)
+  const cached = await cache.match(request)
+  if (cached) return cached
+
+  const response = await fetch(request)
+  if (response.status !== 0 && !response.ok) return response
+
+  try {
+    await cache.put(request, response.clone())
+  } catch {
+    // Opaque/quota — keep serving from the network.
+  }
+  return response
+}
 
 // Audio streams through the Drive API. The FULL file is cached (kept as a
 // single 200 response) the first time it is played; every later play, seek and
@@ -45,12 +65,7 @@ const AUDIO_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000
 const CACHED_AT_HEADER = 'x-softyfy-cached-at'
 
 function isAudioUrl(rawUrl: string): boolean {
-  let url: URL
-  try {
-    url = new URL(rawUrl)
-  } catch {
-    return false
-  }
+  const url = new URL(rawUrl)
   return (
     url.hostname === 'www.googleapis.com' &&
     url.pathname.startsWith('/drive/v3/files/') &&
@@ -167,8 +182,13 @@ async function handleAudio(request: Request): Promise<Response> {
 
 self.addEventListener('fetch', (event) => {
   const fetchEvent = event as unknown as FetchEventLike
-  if (fetchEvent.request.method !== 'GET' || !isAudioUrl(fetchEvent.request.url)) return
-  fetchEvent.respondWith(handleAudio(fetchEvent.request).catch(() => fetch(fetchEvent.request)))
+  const { method, url } = fetchEvent.request
+  if (method !== 'GET') return
+  if (isAudioUrl(url)) {
+    fetchEvent.respondWith(handleAudio(fetchEvent.request).catch(() => fetch(fetchEvent.request)))
+  } else if (isCoverUrl(url)) {
+    fetchEvent.respondWith(handleCover(fetchEvent.request).catch(() => fetch(fetchEvent.request)))
+  }
 })
 
 self.addEventListener('install', () => self.skipWaiting())
