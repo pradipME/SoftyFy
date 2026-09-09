@@ -300,6 +300,118 @@ export const SONGS: Song[] = [
     coverSrc: 'https://drive.google.com/thumbnail?id=1K9TCm71L17GeiL3U0Ytj8TlfKzR5zP3X&sz=w1000',
     library: 'Qwali',
   },
+
+  // ── Yours Truly ─────────────────────────────────────────────────────────
+  {
+    id: 'nothing-to-prove',
+    title: 'Nothing to Prove',
+    artist: 'KR$NA, Phenom',
+    album: 'Yours Truly',
+    durationSec: 200,
+    audioSrc: 'https://drive.usercontent.google.com/download?id=1LZwKOLbkHgoSth7qT68EHM4XLOVFdoqy&export=download',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1Jj3oJOkfzS6fWXxPEBI7D2Ny1vD5Oy5f&sz=w1000',
+    library: 'Yours Truly',
+  },
+  {
+    id: 'knock-knock',
+    title: 'Knock Knock',
+    artist: 'KR$NA, Phenom',
+    album: 'Yours Truly',
+    durationSec: 207,
+    audioSrc: 'https://drive.usercontent.google.com/download?id=1Yz8VvnbnN82SGZcc_P7fXoF_qcdspTWU&export=download',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1Jj3oJOkfzS6fWXxPEBI7D2Ny1vD5Oy5f&sz=w1000',
+    library: 'Yours Truly',
+  },
+  {
+    id: 'sensitive',
+    title: 'Sensitive',
+    artist: 'KR$NA, Seedhe Maut, Hurricane',
+    album: 'Yours Truly',
+    durationSec: 224,
+    audioSrc: 'https://drive.usercontent.google.com/download?id=1FoRGjOg-DWi1DW75SzPaT3MCPio2ux-I&export=download',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1Jj3oJOkfzS6fWXxPEBI7D2Ny1vD5Oy5f&sz=w1000',
+    library: 'Yours Truly',
+  },
+  {
+    id: 'never-enough',
+    title: 'Never Enough',
+    artist: 'KR$NA, Phenom',
+    album: 'Yours Truly',
+    durationSec: 173,
+    audioSrc: 'https://drive.usercontent.google.com/download?id=1tp9C49qELLbEzWPz5z7_tbsBMeiwYIpd&export=download',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1Jj3oJOkfzS6fWXxPEBI7D2Ny1vD5Oy5f&sz=w1000',
+    library: 'Yours Truly',
+  },
+  {
+    id: 'buss-down',
+    title: 'Buss Down',
+    artist: 'KR$NA, Raftaar, Phenom',
+    album: 'Yours Truly',
+    durationSec: 185,
+    audioSrc: 'https://drive.usercontent.google.com/download?id=1Sdn90sVwGu8N-7ACKnLa2cjcELu5ge9X&export=download',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1Jj3oJOkfzS6fWXxPEBI7D2Ny1vD5Oy5f&sz=w1000',
+    library: 'Yours Truly',
+  },
+  {
+    id: 'kkbn',
+    title: 'KKBN',
+    artist: 'KR$NA, Lambo Drive',
+    album: 'Yours Truly',
+    durationSec: 172,
+    audioSrc: 'https://drive.usercontent.google.com/download?id=12Np3kxylRJsLN6XNRZIjPOJL6pvDw2Tu&export=download',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1Jj3oJOkfzS6fWXxPEBI7D2Ny1vD5Oy5f&sz=w1000',
+    library: 'Yours Truly',
+  },
+  {
+    id: 'talk-my-shit-guarantee',
+    title: 'Talk My Shit/Guarantee',
+    artist: 'KR$NA, Yashraj, NEVERSOBER',
+    album: 'Yours Truly',
+    durationSec: 239,
+    audioSrc: 'https://drive.usercontent.google.com/download?id=1iiuL3snj7YsWszO5FymC4xe5D6TLx-py&export=download',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1Jj3oJOkfzS6fWXxPEBI7D2Ny1vD5Oy5f&sz=w1000',
+    library: 'Yours Truly',
+  },
+  {
+    id: 'hello',
+    title: 'Hello',
+    artist: 'KR$NA, Awich, Karan Kanchan',
+    album: 'Yours Truly',
+    durationSec: 145,
+    audioSrc: 'https://drive.usercontent.google.com/download?id=1K_5OSlMox73cChGwhm4UYSZCvhUObg3b&export=download',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1Jj3oJOkfzS6fWXxPEBI7D2Ny1vD5Oy5f&sz=w1000',
+    library: 'Yours Truly',
+  },
+  {
+    id: 'vibrate',
+    title: 'Vibrate',
+    artist: 'KR$NA, Badshah, Phenom',
+    album: 'Yours Truly',
+    durationSec: 184,
+    audioSrc: 'https://drive.usercontent.google.com/download?id=1bbkD8LCkHRBnEgKBIPx7WsgfMrmKgguW&export=download',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1Jj3oJOkfzS6fWXxPEBI7D2Ny1vD5Oy5f&sz=w1000',
+    library: 'Yours Truly',
+  },
+  {
+    id: 'who-you-are',
+    title: 'Who You Are',
+    artist: 'KR$NA, Aitch, Phenom',
+    album: 'Yours Truly',
+    durationSec: 170,
+    audioSrc: 'https://drive.usercontent.google.com/download?id=1XAc7vULA-4z2ULwZUZg2f22aYuvyA0SI&export=download',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1Jj3oJOkfzS6fWXxPEBI7D2Ny1vD5Oy5f&sz=w1000',
+    library: 'Yours Truly',
+  },
+  {
+    id: 'yours-truly',
+    title: 'Yours Truly',
+    artist: 'KR$NA',
+    album: 'Yours Truly',
+    durationSec: 294,
+    audioSrc: 'https://drive.usercontent.google.com/download?id=1jtTRRf1NgmOhnA-wbQVL8bRIIKeIn3ib&export=download',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1Jj3oJOkfzS6fWXxPEBI7D2Ny1vD5Oy5f&sz=w1000',
+    library: 'Yours Truly',
+  },
 ]
 
 /** Quick lookup by id (used by the player to restore a saved queue). */
@@ -314,3 +426,14 @@ export const LIBRARIES = [...new Set(SONGS.map((s) => s.library))]
 export const SONGS_BY_LIBRARY: Record<string, Song[]> = Object.fromEntries(
   LIBRARIES.map((lib) => [lib, SONGS.filter((s) => s.library === lib)]),
 )
+
+
+
+
+
+
+
+
+
+
+
