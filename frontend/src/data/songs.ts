@@ -5,19 +5,33 @@ import type { Song } from '../types/song'
 // ---------------------------------------------------------------------------
 // This is the ONLY file you normally need to edit. To add a song:
 //
-//   1. Copy your audio file into  public/audio/   (any format the browser can
-//      play: .mp3, .m4a, .ogg, .wav, .flac — mp3/m4a are safest).
-//   2. (Optional) Copy a square cover image into  public/covers/  (.jpg, .png,
-//      .svg, .webp). If you skip this the placeholder cover is used.
-//   3. Add a new entry below with:
+//   audioSrc / coverSrc accept BOTH:
+//     - local files  "/audio/YOUR-FILE.mp3"  +  "/covers/YOUR-COVER.jpg"
+//       (copy the files into public/audio and public/covers)
+//     - full URLs    "https://.../song.mp3"  +  "https://.../cover.jpg"
+//       (host songs on any external host — Google Drive, Dropbox, etc. —
+//        nothing gets uploaded to this repo; playback works the same)
+//
+//   The fields per entry:
 //        id         any short unique text (letters, numbers, dashes)
 //        title      the song title
 //        artist     the artist name
 //        durationSec rough length in seconds — the real duration is read from
 //                    the audio file automatically, so this is just a fallback
-//        audioSrc   "/audio/YOUR-FILE.mp3"          (the file from step 1)
-//        coverSrc   "/covers/YOUR-COVER.jpg"        (the file from step 2)
+//        audioSrc   audio file: "/audio/X.mp3" or "https://..."
+//        coverSrc   cover image: "/covers/X.jpg" or "https://..."
 //        library    album name shown on Home (e.g. "Bathroom", "Qwali")
+//
+// Easiest way to add a song WITHOUT manual uploading:
+//   node scripts/add-youtube-song.mjs --url "https://youtu.be/..." \
+//     --title "Title" --artist "Artist" [--library "Bathroom"] [--id "id"]
+//   → downloads, uploads to your Google Drive, links it publicly and adds
+//     the entry for you.
+//
+// One-off / pre-existing files you already have:
+//   node scripts/drive-upload.mjs --file "public/audio/X.mp3" --kind audio
+//   node scripts/drive-upload.mjs --file "public/covers/X.jpg" --kind cover
+//   then pass the printed AUDIO_URL / COVER_URL to add-song.mjs.
 //
 // Order matters — it's the order shown in Home and Library. Adding or removing
 // entries will not break anything else.
@@ -31,8 +45,8 @@ export const SONGS: Song[] = [
     artist: 'Anuv Jain, AP Dhillon',
     album: '',
     durationSec: 0,
-    audioSrc: '/audio/Afsos (PenduJatt.Com.Se).mp3',
-    coverSrc: '/covers/afsos.jpg',
+    audioSrc: 'https://drive.usercontent.google.com/download?id=1XJlhmndIryOq2DhITg1vyP4lfG2TCI0P&export=download',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1UA8oK-Su_eDMcuEicnXv_PuF2LJy2n5Q&sz=w1000',
     library: 'Bathroom',
   },
   {
@@ -41,8 +55,8 @@ export const SONGS: Song[] = [
     artist: 'Anuv Jain',
     album: 'Coke Studio Bharat',
     durationSec: 0,
-    audioSrc: '/audio/Arz Kiya Hai _ Coke Studio Bharat (PenduJatt.Com.Se).mp3',
-    coverSrc: '/covers/arz-kiya-hai.jpg',
+    audioSrc: 'https://drive.usercontent.google.com/download?id=1wakXiNlUK0Zsj0jrVsy_F2Ek4rAIxfyd&export=download',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1iTqZWvAHrKRGh4mONBtMmzgwzZivIeOA&sz=w1000',
     library: 'Bathroom',
   },
   {
@@ -51,8 +65,8 @@ export const SONGS: Song[] = [
     artist: 'Anuv Jain',
     album: '',
     durationSec: 0,
-    audioSrc: '/audio/Gul (PenduJatt.Com.Se).mp3',
-    coverSrc: '/covers/gul.jpg',
+    audioSrc: 'https://drive.usercontent.google.com/download?id=1hWBkKhzwUx4tYvumzh398wBtnHQC9iCP&export=download',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1OTu8wPbKH2CXpHRs7fu2XiLrXq8ZOCB0&sz=w1000',
     library: 'Bathroom',
   },
   {
@@ -61,8 +75,8 @@ export const SONGS: Song[] = [
     artist: 'Anuv Jain',
     album: 'Inaam',
     durationSec: 0,
-    audioSrc: '/audio/Inaam Anuv Jain 320 Kbps.mp3',
-    coverSrc: '/covers/inaam-anuv-jain.jpg',
+    audioSrc: 'https://drive.usercontent.google.com/download?id=1pNg8sB09ZPfgH5gGTn4a7XRx7mKtFGar&export=download',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1rNBDp4fp9qimg0RWPdzCIxWTeq7Y1NHD&sz=w1000',
     library: 'Bathroom',
   },
   {
@@ -71,8 +85,8 @@ export const SONGS: Song[] = [
     artist: 'Talha Anjum, Talhah Yunus, Young Stunners',
     album: '',
     durationSec: 0,
-    audioSrc: '/audio/Afsanay (PenduJatt.Com.Se).mp3',
-    coverSrc: '/covers/afsanay.jpg',
+    audioSrc: 'https://drive.usercontent.google.com/download?id=1THbK-3iBX9olhW9sURgMm28fFIJS2cOc&export=download',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1RCJHQFznFXj1nlkg_xYN89JHw0zPCDEN&sz=w1000',
     library: 'Bathroom',
   },
   {
@@ -81,8 +95,8 @@ export const SONGS: Song[] = [
     artist: 'Ahmed Jahanzeb',
     album: 'Ishq Murshid',
     durationSec: 0,
-    audioSrc: '/audio/Ahmed_Jahanzeb_-_Tera_Mera_Hai_Pyar_From_Ishq_Murshid_(mp3.pm).mp3',
-    coverSrc: '/covers/tera-mera-hai-pyar.jpg',
+    audioSrc: 'https://drive.usercontent.google.com/download?id=1Zonu1bijXe30VuhkksrSd6pENkCyiP13&export=download',
+    coverSrc: 'https://drive.google.com/thumbnail?id=19FZD_0nIEGwK_B13OZBEIhsUvZdu_8QB&sz=w1000',
     library: 'Bathroom',
   },
   {
@@ -91,8 +105,8 @@ export const SONGS: Song[] = [
     artist: 'Alec Benjamin',
     album: '',
     durationSec: 0,
-    audioSrc: '/audio/Alec_Benjamin_-_If_We_Have_Each_Other_(mp3.pm).mp3',
-    coverSrc: '/covers/if-we-have-each-other.jpg',
+    audioSrc: 'https://drive.usercontent.google.com/download?id=15Kiu6Nlf_BohzlrVmDtlsUoSvB9IS4zy&export=download',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1ZJ83d81h2Uqagr7ieyZQwXoCcYzDNrVg&sz=w1000',
     library: 'Bathroom',
   },
   {
@@ -101,8 +115,8 @@ export const SONGS: Song[] = [
     artist: 'Banjaare',
     album: '',
     durationSec: 0,
-    audioSrc: '/audio/Bairan - Bairan (320 kbps).mp3',
-    coverSrc: '/covers/bairan.jpg',
+    audioSrc: 'https://drive.usercontent.google.com/download?id=1f-zenEg2ZA6eR5b6mbVm0YKa9ygCjZqQ&export=download',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1rmn9bXECqm_Epw2kFRn8CrYEU6cK4Mwv&sz=w1000',
     library: 'Bathroom',
   },
   {
@@ -111,8 +125,8 @@ export const SONGS: Song[] = [
     artist: 'Banjaare',
     album: '',
     durationSec: 0,
-    audioSrc: '/audio/Barsaat Banjaare 320 Kbps.mp3',
-    coverSrc: '/covers/Barsaat Banjaare.jpg',
+    audioSrc: 'https://drive.usercontent.google.com/download?id=1P9Mqk4PQwmHj3zLKfF2rkccADs0xXKcY&export=download',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1evCdGbroyYWXNYh8xhcj9_bF6NtYWyUo&sz=w1000',
     library: 'Bathroom',
   },
   {
@@ -121,8 +135,8 @@ export const SONGS: Song[] = [
     artist: 'Talha Anjum, Umair',
     album: '',
     durationSec: 0,
-    audioSrc: '/audio/Departure Lane (PenduJatt.Com.Se).mp3',
-    coverSrc: '/covers/departure-lane.jpg',
+    audioSrc: 'https://drive.usercontent.google.com/download?id=1tCjsk6wBA30eWWDoj6TVsl0V1-HJ6CXz&export=download',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1HDEj5xFE0JMjxWMjDjKwkTnjf4NeeXQY&sz=w1000',
     library: 'Bathroom',
   },
   {
@@ -131,8 +145,8 @@ export const SONGS: Song[] = [
     artist: 'Talha Anjum, Umair',
     album: '',
     durationSec: 0,
-    audioSrc: '/audio/Downers At Dusk (PenduJatt.Com.Se).mp3',
-    coverSrc: '/covers/downers-at-dusk.jpg',
+    audioSrc: 'https://drive.usercontent.google.com/download?id=1PLu87dXFTmHxzTXAYfrPa4xMKALkfbMD&export=download',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1P5CyelMvL_l7NhHz_qe2NPfRGpyIZ2A3&sz=w1000',
     library: 'Bathroom',
   },
   {
@@ -141,8 +155,8 @@ export const SONGS: Song[] = [
     artist: 'G-Eazy feat. Halsey',
     album: '',
     durationSec: 0,
-    audioSrc: '/audio/G-Easy_feat._Halsey_-_Him_And_I_(mp3.pm).mp3',
-    coverSrc: '/covers/him-and-i.jpg',
+    audioSrc: 'https://drive.usercontent.google.com/download?id=1oXdTWpsPOfxR2j8HlBpKN6AvbOUXWJ26&export=download',
+    coverSrc: 'https://drive.google.com/thumbnail?id=141-vdSeJBTDO7ESBhU7iYk5yg9kR7bgH&sz=w1000',
     library: 'Bathroom',
   },
   {
@@ -151,8 +165,8 @@ export const SONGS: Song[] = [
     artist: 'Talha Anjum, JJ47, Talhah Yunus',
     album: '',
     durationSec: 0,
-    audioSrc: '/audio/Glass Half Full (PenduJatt.Com.Se).mp3',
-    coverSrc: '/covers/glass-half-full.jpg',
+    audioSrc: 'https://drive.usercontent.google.com/download?id=19ivUVqyT41mdSp6w7wUAfTEAtAX7a-1F&export=download',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1HKkgUG055mR75hhsJT9HC64xrq0swqkp&sz=w1000',
     library: 'Bathroom',
   },
   {
@@ -161,8 +175,8 @@ export const SONGS: Song[] = [
     artist: 'Anuv Jain',
     album: '',
     durationSec: 0,
-    audioSrc: '/audio/Husn Anuv Jain 320 Kbps.mp3',
-    coverSrc: '/covers/husn.jpg',
+    audioSrc: 'https://drive.usercontent.google.com/download?id=1wojcz1LDQXOrVBQl3GcFtJBUXevp1Ek3&export=download',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1k14IieyC6x1yPV6IK4kY01o7OwgEru-f&sz=w1000',
     library: 'Bathroom',
   },
   {
@@ -171,8 +185,8 @@ export const SONGS: Song[] = [
     artist: 'Arijit Singh, Antara Mitra',
     album: 'Dilwale',
     durationSec: 0,
-    audioSrc: '/audio/Janam Janam Dilwale 320 Kbps.mp3',
-    coverSrc: '/covers/janam-janam.jpg',
+    audioSrc: 'https://drive.usercontent.google.com/download?id=13_br_jipTqzqKBuHDnQqsmw2_m5N3cuA&export=download',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1K9Z85AXeOvQDt3Rb6xoqEqWapx7prxDF&sz=w1000',
     library: 'Bathroom',
   },
   {
@@ -181,8 +195,8 @@ export const SONGS: Song[] = [
     artist: 'Anuv Jain',
     album: '',
     durationSec: 0,
-    audioSrc: '/audio/Jo Tum Mere Ho Anuv Jain 320 Kbps.mp3',
-    coverSrc: '/covers/jo-tum-mere-ho.jpg',
+    audioSrc: 'https://drive.usercontent.google.com/download?id=1Rc4f9n3S4_Lqky-W_5_gJ_ZEx-48ZH3Z&export=download',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1TLja5b7n50D1oWThfVG_9b5PfNNRIubD&sz=w1000',
     library: 'Bathroom',
   },
   {
@@ -191,8 +205,8 @@ export const SONGS: Song[] = [
     artist: 'Taimour Baig, AUR',
     album: '',
     durationSec: 0,
-    audioSrc: '/audio/Long Time No See (PenduJatt.Com.Se).mp3',
-    coverSrc: '/covers/long-time-no-see.jpg',
+    audioSrc: 'https://drive.usercontent.google.com/download?id=1ugSYzEqeUh47PsRTAmw7FKNuGtMQAncg&export=download',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1UDkxKofzrnC7Acf-YTiGaIKRzzZaJMnS&sz=w1000',
     library: 'Bathroom',
   },
   {
@@ -201,8 +215,8 @@ export const SONGS: Song[] = [
     artist: 'Udit Narayan',
     album: 'Veer-Zaara',
     durationSec: 0,
-    audioSrc: '/audio/Main Yahaan Hoon Veer Zaara 320 Kbps.mp3',
-    coverSrc: '/covers/main-yahaan-hoon.jpg',
+    audioSrc: 'https://drive.usercontent.google.com/download?id=1ewAhSTamkJ7LOdNnvA8o17EVwT9NvfBC&export=download',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1xgKoryp7KOnY2bnPruMrfAK4rdVoPvgO&sz=w1000',
     library: 'Bathroom',
   },
   {
@@ -211,8 +225,8 @@ export const SONGS: Song[] = [
     artist: 'Kumar Sanu, Alka Yagnik',
     album: '',
     durationSec: 0,
-    audioSrc: '/audio/Such Keh Raha Hai Rehnaa Hai Terre Dil Mein 320 Kbps.mp3',
-    coverSrc: '/covers/such-keh-raha-hai-rehnaa-hai-terre-dil-mein.jpg',
+    audioSrc: 'https://drive.usercontent.google.com/download?id=1KI9PCIJ9mXSGix07-GPT9CEPnuJHqOtI&export=download',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1U1KVXFH-sDHIbr1C8m22wrXkBZ_QbBgZ&sz=w1000',
     library: 'Bathroom',
   },
   {
@@ -221,8 +235,8 @@ export const SONGS: Song[] = [
     artist: 'Talha Anjum, Talhah Yunus, Young Stunners',
     album: '',
     durationSec: 0,
-    audioSrc: '/audio/Talha_Anjum_Talhah_Yunus_Young_Stunners_-_Gumaan_(mp3.pm).mp3',
-    coverSrc: '/covers/gumaan.jpg',
+    audioSrc: 'https://drive.usercontent.google.com/download?id=1ZNseuIPvIiC-Vv0DDNcrAho1dmk8Iot2&export=download',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1ElUeKEndMBltxidD9iyj9YESGMpB5_ba&sz=w1000',
     library: 'Bathroom',
   },
   {
@@ -231,8 +245,8 @@ export const SONGS: Song[] = [
     artist: 'Mustafa Zahid',
     album: '',
     durationSec: 0,
-    audioSrc: '/audio/Tera Mera Rishta (PenduJatt.Com.Se).mp3',
-    coverSrc: '/covers/tera-mera-rishta.jpg',
+    audioSrc: 'https://drive.usercontent.google.com/download?id=1uAM4kY71oI-wb2H1Z73OaR7cgLffxBY8&export=download',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1AxvxpwYcyPOrHCVayNkA-wB4sJqwGkb7&sz=w1000',
     library: 'Bathroom',
   },
   {
@@ -241,8 +255,8 @@ export const SONGS: Song[] = [
     artist: 'Unknown Artist',
     album: '',
     durationSec: 0,
-    audioSrc: '/audio/Teri Yaad (PenduJatt.Com.Se).mp3',
-    coverSrc: '/covers/teri-yaad.jpg',
+    audioSrc: 'https://drive.usercontent.google.com/download?id=1pNunucEE6WH1J1skcVtDrgMLQDLiO1gD&export=download',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1l2yXo2kN29gSSHnDCKj0jj5SHGYxDrGF&sz=w1000',
     library: 'Bathroom',
   },
   {
@@ -251,8 +265,8 @@ export const SONGS: Song[] = [
     artist: 'The Marias',
     album: '',
     durationSec: 0,
-    audioSrc: '/audio/The_Mar_as_-_No_One_Noticed_Extended_English_(mp3.pm).mp3',
-    coverSrc: '/covers/no-one-noticed.jpg',
+    audioSrc: 'https://drive.usercontent.google.com/download?id=1TylUNGi2oO-ecMvJViSkE5OV7qTbldzA&export=download',
+    coverSrc: 'https://drive.google.com/thumbnail?id=13u8gm6VGKz8E1cmo54EJaC2NPIEC7mVz&sz=w1000',
     library: 'Bathroom',
   },
   {
@@ -261,8 +275,8 @@ export const SONGS: Song[] = [
     artist: 'New West',
     album: '',
     durationSec: 0,
-    audioSrc: '/audio/Those_Eyes_-_New_West_(mp3.pm).mp3',
-    coverSrc: '/covers/those-eyes.jpg',
+    audioSrc: 'https://drive.usercontent.google.com/download?id=1lb8GpRqjfvQ3BIbpOrLnGX2fBXdJR7Lm&export=download',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1aex7q2wY1_M9VecqNtiU9PXCI2xFQx0K&sz=w1000',
     library: 'Bathroom',
   },
   // ── Qwali ────────────────────────────────────────────────────────────────
@@ -272,8 +286,8 @@ export const SONGS: Song[] = [
     artist: 'Nusrat Fateh Ali Khan, Purnam Allahabadi',
     album: '',
     durationSec: 983,
-    audioSrc: '/audio/Tumhe Dillagi Bhool Jani Padegi.mp3',
-    coverSrc: '/covers/tumhe-dillagi.jpg',
+    audioSrc: 'https://drive.usercontent.google.com/download?id=1KRMfJvVth7MPzaQ83JlH4-Ma7Iy5hflX&export=download',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1aJfzomw0sagr_AcGDV8OQqgap4E1LJc7&sz=w1000',
     library: 'Qwali',
   },
   {
@@ -282,8 +296,8 @@ export const SONGS: Song[] = [
     artist: 'Lata Mangeshkar, Udit Narayan',
     album: '',
     durationSec: 437,
-    audioSrc: '/audio/Main Teri Bahon Ke Jhule Me Pali Babul.mp3',
-    coverSrc: '/covers/main-teri-bahon.jpg',
+    audioSrc: 'https://drive.usercontent.google.com/download?id=10_fX_L-lWCzrMbOj4w3C-mHMuF7D65Dc&export=download',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1K9TCm71L17GeiL3U0Ytj8TlfKzR5zP3X&sz=w1000',
     library: 'Qwali',
   },
 ]

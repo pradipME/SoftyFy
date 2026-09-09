@@ -15,9 +15,16 @@ export interface Song {
   album?: string
   /** Rough duration in seconds. Used only until the real duration is read from the audio file. */
   durationSec: number
-  /** Absolute path to the audio file, e.g. "/audio/track-01.mp3". */
+  /**
+   * Absolute path to the audio file, e.g. "/audio/track-01.mp3" — or a full
+   * external URL for songs hosted outside this repo (e.g. "https://cdn/.../a.mp3").
+   */
   audioSrc: string
-  /** Absolute path to the cover image, e.g. "/covers/track-01.jpg". */
+  /**
+   * Absolute path to the cover image, e.g. "/covers/track-01.jpg" — or a full
+   * external URL (e.g. "https://cdn/.../a.jpg"). External covers that block
+   * CORS fall back to a generated palette/placeholder, never breaking the UI.
+   */
   coverSrc: string
   /** Album/collection name shown as a card on the Home page (e.g. "Bathroom", "Qwali"). */
   library: string
