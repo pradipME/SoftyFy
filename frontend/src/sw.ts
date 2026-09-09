@@ -3,6 +3,7 @@ import { cleanupOutdatedCaches, precacheAndRoute } from 'workbox-precaching'
 interface FetchEventLike {
   request: Request
   respondWith: (promise: Promise<Response>) => void
+  waitUntil: (promise: Promise<unknown>) => void
 }
 
 interface ExtendableEventLike {
@@ -55,8 +56,9 @@ async function handleCover(request: Request): Promise<Response> {
   return response
 }
 
-// Audio streams through the Drive API. The FULL file is cached (kept as a
-// single 200 response) the first time it is played; every later play, seek and
+// Audio streams through the Drive API. On a cache miss the response is passed
+// through UNCHANGED (streaming — playback starts immediately), while the full
+// file is copied into the cache in the background. Every later play, seek and
 // re-open is served from the cache as a proper byte-range slice. Capping the
 // cache keeps mobile storage usage in check.
 const AUDIO_CACHE = 'softyfy-audio'
@@ -140,7 +142,30 @@ function buildRangeResponse(
   })
 }
 
-async function handleAudio(request: Request): Promise<Response> {
+// Copies a fresh response's body into the cache without blocking playback.
+// Runs on a separate reading branch (clone), so serving the original response
+// to the media element is unaffected and playback starts immediately.
+async function cacheAudioInBackground(response: Response, key: Request): Promise<void> {
+  try {
+    const cache = await caches.open(AUDIO_CACHE)
+    const body = await response.arrayBuffer()
+    const full = new Response(body, {
+      status: 200,
+      statusText: response.statusText,
+      headers: new Headers(response.headers),
+    })
+    full.headers.set(CACHED_AT_HEADER, String(Date.now()))
+    await cache.put(key, full)
+    await trimAudioCache(cache, key.url)
+  } catch {
+    // Aborted / quota — playback continues; this entry just stays uncached.
+  }
+}
+
+async function handleAudio(
+  request: Request,
+  track: (promise: Promise<unknown>) => void,
+): Promise<Response> {
   const cache = await caches.open(AUDIO_CACHE)
   const key = new Request(request.url)
   const rangeHeader = request.headers.get('Range')
@@ -162,22 +187,12 @@ async function handleAudio(request: Request): Promise<Response> {
   const response = await fetch(key, { mode: 'cors', credentials: 'omit' })
   if (!response.ok) return response
 
-  const body = await response.arrayBuffer()
-  const full = new Response(body, {
-    status: 200,
-    statusText: response.statusText,
-    headers: new Headers(response.headers),
-  })
-  full.headers.set(CACHED_AT_HEADER, String(Date.now()))
+  // Only the initial whole-file request builds the cache entry; mid-stream seek
+  // requests (which carry a real Range) must keep streaming through untouched.
+  const isInitial = !rangeHeader || rangeHeader.trim() === 'bytes=0-'
+  if (isInitial) track(cacheAudioInBackground(response.clone(), key))
 
-  try {
-    await cache.put(key, full.clone())
-    await trimAudioCache(cache, key.url)
-  } catch {
-    // Quota or aborted — keep playing anyway.
-  }
-
-  return buildRangeResponse(body, response.headers.get('Content-Type') || 'audio/mpeg', rangeHeader)
+  return response
 }
 
 self.addEventListener('fetch', (event) => {
@@ -185,7 +200,11 @@ self.addEventListener('fetch', (event) => {
   const { method, url } = fetchEvent.request
   if (method !== 'GET') return
   if (isAudioUrl(url)) {
-    fetchEvent.respondWith(handleAudio(fetchEvent.request).catch(() => fetch(fetchEvent.request)))
+    fetchEvent.respondWith(
+      handleAudio(fetchEvent.request, (p) => fetchEvent.waitUntil(p)).catch(() =>
+        fetch(fetchEvent.request),
+      ),
+    )
   } else if (isCoverUrl(url)) {
     fetchEvent.respondWith(handleCover(fetchEvent.request).catch(() => fetch(fetchEvent.request)))
   }
