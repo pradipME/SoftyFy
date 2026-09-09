@@ -4,6 +4,7 @@ import { AppShell } from './components/layout/AppShell'
 import { PlayerProvider } from './context/PlayerContext'
 import { HomePage } from './pages/Home'
 import { LibraryPage } from './pages/Library'
+import { QwaliPage } from './pages/Qwali'
 import { SearchPage } from './pages/Search'
 
 export default function App() {
@@ -16,6 +17,7 @@ export default function App() {
               <Route index element={<HomePage />} />
               <Route path="search" element={<SearchPage />} />
               <Route path="library" element={<LibraryPage />} />
+              <Route path="qwali" element={<QwaliPage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Routes>

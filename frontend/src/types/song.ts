@@ -19,4 +19,6 @@ export interface Song {
   audioSrc: string
   /** Absolute path to the cover image, e.g. "/covers/track-01.jpg". */
   coverSrc: string
+  /** Optional library/category name (e.g. "Qwali"). Songs without one belong to the general library. */
+  library?: string
 }

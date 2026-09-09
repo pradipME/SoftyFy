@@ -139,6 +139,14 @@ export const LoaderIcon = icon(
   </>,
 )
 
+export const Music2Icon = icon(
+  <>
+    <circle cx="5.5" cy="17.5" r="2.5" />
+    <circle cx="17.5" cy="15.5" r="2.5" />
+    <path d="M8 17.5V5l12-2.5v12.5" />
+  </>,
+)
+
 export const ExternalLinkIcon = icon(
   <>
     <path d="M15 3h6v6" />

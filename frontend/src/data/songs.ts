@@ -241,6 +241,17 @@ export const SONGS: Song[] = [
     audioSrc: '/audio/Those_Eyes_-_New_West_(mp3.pm).mp3',
     coverSrc: '/covers/those-eyes.jpg',
   },
+  // ── Qwali ────────────────────────────────────────────────────────────────
+  {
+    id: 'tumhe-dillagi',
+    title: 'Tumhe Dillagi Bhool Jani Padegi',
+    artist: 'Nusrat Fateh Ali Khan, Purnam Allahabadi',
+    album: '',
+    durationSec: 983,
+    audioSrc: '/audio/Tumhe Dillagi Bhool Jani Padegi.mp3',
+    coverSrc: '/covers/tumhe-dillagi.jpg',
+    library: 'Qwali',
+  },
 ]
 
 /** Quick lookup by id (used by the player to restore a saved queue). */
