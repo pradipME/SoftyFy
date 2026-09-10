@@ -3,6 +3,7 @@ import { cleanupOutdatedCaches, precacheAndRoute } from 'workbox-precaching'
 interface FetchEventLike {
   request: Request
   respondWith: (promise: Promise<Response>) => void
+  waitUntil: (promise: Promise<unknown>) => void
 }
 
 interface ExtendableEventLike {
@@ -13,7 +14,7 @@ declare let self: {
   __WB_MANIFEST: Array<{ url: string; revision: string | null } | string>
   addEventListener: (type: string, listener: (event: Event) => void) => void
   skipWaiting: () => void
-  clients?: { claim: () => Promise<void> }
+  clients?: { claim: () => Promise<void>; matchAll: () => Promise<Array<{ postMessage: (m: unknown) => void }>> }
 }
 
 cleanupOutdatedCaches()
@@ -30,8 +31,6 @@ function hostAndPath(rawUrl: string): { hostname: string; pathname: string } {
 }
 
 // ── Covers ───────────────────────────────────────────────────────────────────
-// Cached on first sight (they load as no-cors <img> requests, so entries may be
-// opaque — that is fine to cache and serve back unchanged).
 const COVER_CACHE = 'softyfy-covers'
 
 function isCoverUrl(rawUrl: string): boolean {
@@ -55,17 +54,9 @@ async function handleCover(request: Request): Promise<Response> {
   return response
 }
 
-// ── Audio (serving only — cache is populated by the app in lib/audioCache.ts) ─
-// The SW only reads from the audio cache; it never writes.  A background
-// (waitUntil) cross-origin fetch is throttled / hibernated in some engines and
-// stalls, so the app fills the cache instead.
-//
-// Cache hit  → byte-range slice (200 / 206 / 416).
-// Cache miss → the original request is passed through UNCHANGED (Range header
-//   kept) so Google answers with its true byte-range semantics.  Before this
-//   fix every miss returned a full 200 which snapped the media timeline back
-//   ("can't drag ahead").
+// ── Audio ────────────────────────────────────────────────────────────────────
 const AUDIO_CACHE = 'softyfy-audio'
+const AUDIO_MAX_ENTRIES = 8
 const AUDIO_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000
 const CACHED_AT_HEADER = 'x-softyfy-cached-at'
 
@@ -76,6 +67,31 @@ function isAudioUrl(rawUrl: string): boolean {
     url.pathname.startsWith('/drive/v3/files/') &&
     url.searchParams.get('alt') === 'media'
   )
+}
+
+async function trimAudioCache(cache: Cache, keepUrl: string): Promise<void> {
+  const entries = await cache.keys()
+  const others = entries.filter((r) => r.url !== keepUrl)
+  while (others.length >= AUDIO_MAX_ENTRIES) {
+    const oldest = others.shift()
+    if (!oldest) break
+    await cache.delete(oldest)
+  }
+}
+
+async function cacheAudioInBackground(response: Response, key: Request): Promise<void> {
+  try {
+    const cache = await caches.open(AUDIO_CACHE)
+    const body = await response.arrayBuffer()
+    const headers = new Headers()
+    headers.set('Content-Type', response.headers.get('Content-Type') || 'audio/mpeg')
+    headers.set('Content-Length', String(body.byteLength))
+    headers.set(CACHED_AT_HEADER, String(Date.now()))
+    await cache.put(key, new Response(body, { status: 200, statusText: 'OK', headers }))
+    await trimAudioCache(cache, key.url)
+  } catch {
+    // Aborted / quota — playback continues; this entry just stays uncached.
+  }
 }
 
 // Builds the byte-range response (200 full, 206 slice, or 416) from the file's
@@ -153,9 +169,19 @@ async function handleAudio(request: Request): Promise<Response> {
   }
 
   // Forward the original request (Range header included) so Google answers
-  // with true byte-range semantics: seeking on an uncached song streams from
-  // the requested offset instead of re-serving the whole file as a 200.
-  return fetch(request, { mode: 'cors', credentials: 'omit' })
+  // with true byte-range semantics. Before this fix every miss returned a
+  // full 200 which snapped the media timeline back ("can't drag ahead").
+  const response = await fetch(request, { mode: 'cors', credentials: 'omit' })
+  if (!response.ok) return response
+
+  // Cache the full file in the background for instant repeat plays.
+  const isInitial = !rangeHeader || rangeHeader.trim() === 'bytes=0-'
+  if (isInitial) {
+    const copy = response.clone()
+    void cacheAudioInBackground(copy, key)
+  }
+
+  return response
 }
 
 self.addEventListener('fetch', (event) => {
