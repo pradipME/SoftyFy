@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react'
 import { StaggerItem } from '../components/motion/Stagger'
 import { SongList } from '../components/song/SongList'
 import { Button } from '../components/ui/Button'
-import { CreditFooter } from '../components/ui/CreditFooter'
 import { ArrowLeftIcon, ArrowRightIcon } from '../components/ui/icons'
 import { SONGS_BY_LIBRARY } from '../data/songs'
 import type { Song } from '../types/song'
@@ -80,8 +79,6 @@ export function QwaliPage() {
       </StaggerItem>
 
       <SongList songs={sorted} queue={sorted} />
-
-      <CreditFooter className="mt-10 md:mt-12" />
     </div>
   )
 }
