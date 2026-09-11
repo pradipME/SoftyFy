@@ -12,7 +12,7 @@ export interface AudioPlayerHandlers {
   onSourceReady: (songId: string, src: string) => void
 }
 
-const STALL_TIMEOUT_MS = 15_000
+const STALL_TIMEOUT_MS = 30_000
 const MAX_RECOVERY_ATTEMPTS = 3
 const NEAR_END_THRESHOLD_S = 2
 
