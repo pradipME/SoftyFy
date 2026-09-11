@@ -15,7 +15,6 @@ import {
   ShuffleIcon,
   SkipBackIcon,
   SkipForwardIcon,
-  VibrateIcon,
 } from '../ui/icons'
 import { ProgressBar } from './ProgressBar'
 import { VolumeControl } from './VolumeControl'
@@ -38,20 +37,8 @@ interface NowPlayingSheetProps {
  * leaving the app's hash navigation history untouched.
  */
 export function NowPlayingSheet({ open, onClose }: NowPlayingSheetProps) {
-  const {
-    currentSong,
-    status,
-    shuffle,
-    repeat,
-    hapticsEnabled,
-    hapticsSupported,
-    togglePlay,
-    next,
-    previous,
-    toggleShuffle,
-    toggleHaptics,
-    cycleRepeat,
-  } = usePlayer()
+  const { currentSong, status, shuffle, repeat, togglePlay, next, previous, toggleShuffle, cycleRepeat } =
+    usePlayer()
   const reduced = useReducedMotion()
 
   useBackInterception(open, onClose)
@@ -220,22 +207,6 @@ export function NowPlayingSheet({ open, onClose }: NowPlayingSheetProps) {
                 </span>
               </IconButton>
             </div>
-
-            {hapticsSupported ? (
-              <div className="flex shrink-0 items-center justify-center gap-4 pb-1">
-                <IconButton
-                  label={
-                    hapticsEnabled
-                      ? 'Beat vibration on — turn it off'
-                      : 'Beat vibration off — turn it on'
-                  }
-                  onClick={toggleHaptics}
-                  active={hapticsEnabled}
-                >
-                  <VibrateIcon className={`h-5 w-5 ${hapticsEnabled ? 'text-accent' : ''}`} />
-                </IconButton>
-              </div>
-            ) : null}
 
             <div className="shrink-0 pb-[calc(env(safe-area-inset-bottom)+10px)]">
               <div className="flex justify-center">
