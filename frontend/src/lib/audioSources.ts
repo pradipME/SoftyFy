@@ -1,14 +1,15 @@
 /**
  * Resolves the ordered list of downloadable URLs to try for a song's audio.
  *
- * Songs streamed from Google Drive (`www.googleapis.com/drive/v3/files/...?alt=media`)
- * are served by a host that can drop long connections. Each Drive URL therefore
- * expands into two extra public hosts so the player can fall back when one host
- * fails mid-stream:
+ * Songs streamed from Google Drive are tried host-by-host so the player can
+ * fall back when one host drops or is throttled:
  *
- *   1. the original Drive API media URL,
- *   2. Google's direct-download host used by the Drive web UI,
- *   3. the classic `drive.google.com/uc` public link.
+ *   1. Google's direct-download host used by the Drive web UI (
+ *      `drive.usercontent.google.com`) — keyless, real byte-range support,
+ *   2. the classic `drive.google.com/uc` public link — keyless,
+ *   3. the Drive API media URL (`www.googleapis.com/drive/v3/files/...?alt=media`)
+ *      as a last resort; that endpoint is throttled for public hotlinking and
+ *      needs a Google Cloud API key, so playback never depends on it.
  *
  * Any other source (local `/audio/...` files, arbitrary HTTPS) is returned
  * untouched — only the player retries it verbatim.
@@ -21,12 +22,11 @@ export function buildAudioCandidates(source: string): string[] {
   const match = DRIVE_API_RE.exec(source)
   if (match === null) return [source]
   const [, fileId] = match
-  const keyPart = match[2] ?? ''
   const apiUrl = match[0]
   const userContentUrl =
-    `https://drive.usercontent.google.com/download?id=${fileId}&export=download${keyPart}`
+    `https://drive.usercontent.google.com/download?id=${fileId}&export=download`
   const publicLinkUrl = `https://drive.google.com/uc?export=download&confirm=t&id=${fileId}`
-  return [apiUrl, userContentUrl, publicLinkUrl]
+  return [userContentUrl, publicLinkUrl, apiUrl]
 }
 
 /**

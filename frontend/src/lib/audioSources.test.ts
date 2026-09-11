@@ -12,12 +12,11 @@ describe('buildAudioCandidates', () => {
     ])
   })
 
-  it('expands a Drive API URL into three hosts starting with the original', () => {
-    const [first, ...rest] = buildAudioCandidates(DRIVE_API)
-    expect(first).toBe(DRIVE_API)
-    expect(rest).toEqual([
-      'https://drive.usercontent.google.com/download?id=ABC123&export=download&key=SECRET',
+  it('tries the keyless download hosts first, the keyed API URL last', () => {
+    expect(buildAudioCandidates(DRIVE_API)).toEqual([
+      'https://drive.usercontent.google.com/download?id=ABC123&export=download',
       'https://drive.google.com/uc?export=download&confirm=t&id=ABC123',
+      DRIVE_API,
     ])
   })
 

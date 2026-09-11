@@ -192,6 +192,11 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
     const onLoadStart = () => {
       if (suppressLoadingRef.current) return
       handlersRef.current.onStatusChange('loading')
+      // Some hosts answer with an error body (e.g. a throttled Drive API URL
+      // returning 403 HTML) that the media element never turns into an `error`
+      // event — it just sits loading. Arming the watchdog on `loadstart` too
+      // guarantees we switch hosts even when no event ever fires.
+      armBufferTimer()
     }
     const onCanPlay = () => {
       clearStallTimer()
