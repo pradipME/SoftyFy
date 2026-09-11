@@ -20,49 +20,12 @@ declare let self: {
 cleanupOutdatedCaches()
 precacheAndRoute(self.__WB_MANIFEST)
 
-function hostAndPath(rawUrl: string): { hostname: string; pathname: string } {
-  let url: URL
-  try {
-    url = new URL(rawUrl)
-  } catch {
-    return { hostname: '', pathname: '' }
-  }
-  return { hostname: url.hostname, pathname: url.pathname }
-}
-
 // ── Covers ───────────────────────────────────────────────────────────────────
-const COVER_CACHE = 'softyfy-covers'
-const COVER_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000
-
-function isCoverUrl(rawUrl: string): boolean {
-  const { hostname, pathname } = hostAndPath(rawUrl)
-  return hostname === 'drive.google.com' && pathname.startsWith('/thumbnail')
-}
-
-async function handleCover(request: Request): Promise<Response> {
-  const cache = await caches.open(COVER_CACHE)
-  const cached = await cache.match(request)
-  if (cached) {
-    const at = Number(cached.headers.get(CACHED_AT_HEADER) || 0)
-    if (at > 0 && Date.now() - at < COVER_MAX_AGE_MS) return cached
-    void cache.delete(request)
-  }
-
-  const response = await fetch(request)
-  if (response.status !== 0 && !response.ok) return response
-
-  try {
-    const headers = new Headers()
-    const type = response.headers.get('Content-Type') || 'image/jpeg'
-    if (!/^image\//.test(type.toLowerCase())) return response
-    headers.set('Content-Type', type)
-    headers.set(CACHED_AT_HEADER, String(Date.now()))
-    await cache.put(request, new Response(response.clone().body, { status: 200, statusText: 'OK', headers }))
-  } catch {
-    // Opaque/quota — keep serving from the network.
-  }
-  return response
-}
+// No longer intercepted by the service worker. Drive thumbnails were being
+// cached as opaque/empty bodies by older SW versions and served forever as
+// broken images. Letting the browser's normal HTTP cache fetch them directly
+// (the same path local/dev uses) is more reliable, and `activate` below purges
+// any legacy cover-cache entries.
 
 // ── Audio ────────────────────────────────────────────────────────────────────
 const AUDIO_CACHE = 'softyfy-audio'
@@ -216,8 +179,6 @@ self.addEventListener('fetch', (event) => {
   if (method !== 'GET') return
   if (isAudioUrl(url)) {
     fetchEvent.respondWith(handleAudio(fetchEvent.request).catch(() => fetch(fetchEvent.request)))
-  } else if (isCoverUrl(url)) {
-    fetchEvent.respondWith(handleCover(fetchEvent.request).catch(() => fetch(fetchEvent.request)))
   }
 })
 
@@ -225,7 +186,18 @@ self.addEventListener('install', () => self.skipWaiting())
 
 self.addEventListener('activate', (event) => {
   const activateEvent = event as unknown as ExtendableEventLike
-  activateEvent.waitUntil(self.clients ? self.clients.claim() : Promise.resolve())
+  activateEvent.waitUntil(
+    caches
+      .keys()
+      .then((keys) =>
+        Promise.all(
+          keys
+            .filter((name) => name.startsWith('softyfy-covers'))
+            .map((name) => caches.delete(name)),
+        ),
+      )
+      .then(() => (self.clients ? self.clients.claim() : Promise.resolve())),
+  )
 })
 
 self.addEventListener('message', (event) => {
