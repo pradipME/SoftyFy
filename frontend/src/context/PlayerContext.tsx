@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from 'react'
 import { useAudioPlayer } from '../hooks/useAudioPlayer'
+import { useBeatHaptics } from '../hooks/useBeatHaptics'
 import {
   loadPreferences,
   loadResumePositions,
@@ -40,6 +41,9 @@ export interface PlayerApi {
   muted: boolean
   shuffle: boolean
   repeat: RepeatMode
+  hapticsEnabled: boolean
+  /** Whether the device can vibrate to the beat (Android Chrome only). */
+  hapticsSupported: boolean
   error: string | null
   /** Plays `song` within `queue` (the queue is used for next/prev/auto-advance). */
   playSong: (song: Song, queue: Song[]) => void
@@ -52,6 +56,7 @@ export interface PlayerApi {
   setVolume: (volume: number) => void
   toggleMute: () => void
   toggleShuffle: () => void
+  toggleHaptics: () => void
   cycleRepeat: () => void
 }
 
@@ -133,6 +138,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const {
+    audioRef,
     loadAndPlay,
     clearSource,
     seekTo,
@@ -148,7 +154,14 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     onRecoveryStart,
   })
 
+  const { isSupported: hapticsSupported, resume: hapticsResume } = useBeatHaptics(
+    audioRef,
+    state.status,
+    state.hapticsEnabled,
+  )
+
   const playSong = useCallback((song: Song, queue: Song[]) => {
+    hapticsResume()
     const current = currentSongOf(stateRef.current)
     if (current?.id === song.id) {
       dispatch({ type: 'PLAY' })
@@ -167,23 +180,30 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       dispatch({ type: 'PLAY_SONG', queue, startIndex, startAt })
     }
     setSelectionEpoch((epoch) => epoch + 1)
-  }, [])
+  }, [hapticsResume])
 
   const togglePlay = useCallback(() => {
     if (currentSongOf(stateRef.current) === null) return
+    hapticsResume()
     if (stateRef.current.status === 'playing') {
       dispatch({ type: 'PAUSE' })
     } else {
       dispatch({ type: 'PLAY' })
     }
-  }, [])
+  }, [hapticsResume])
 
   const next = useCallback(() => {
+    hapticsResume()
     dispatch({ type: 'NEXT' })
-  }, [])
+  }, [hapticsResume])
 
   const previous = useCallback(() => {
+    hapticsResume()
     dispatch({ type: 'PREVIOUS', currentTime: stateRef.current.currentTime })
+  }, [hapticsResume])
+
+  const toggleHaptics = useCallback(() => {
+    dispatch({ type: 'TOGGLE_HAPTICS' })
   }, [])
 
   const seek = useCallback(
@@ -249,10 +269,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         muted: state.muted,
         repeat: state.repeat,
         shuffle: state.shuffle,
+        hapticsEnabled: state.hapticsEnabled,
       },
       safeStorage(),
     )
-  }, [state.volume, state.muted, state.repeat, state.shuffle])
+  }, [state.volume, state.muted, state.repeat, state.shuffle, state.hapticsEnabled])
 
   // Persist resume position immediately on pause (covers the "close app while paused" case).
   useEffect(() => {
@@ -436,6 +457,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       muted: state.muted,
       shuffle: state.shuffle,
       repeat: state.repeat,
+      hapticsEnabled: state.hapticsEnabled,
+      hapticsSupported,
       error: state.error,
       playSong,
       selectionEpoch,
@@ -446,6 +469,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       setVolume,
       toggleMute,
       toggleShuffle,
+      toggleHaptics,
       cycleRepeat,
     }),
     [
@@ -457,6 +481,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       state.muted,
       state.shuffle,
       state.repeat,
+      state.hapticsEnabled,
+      hapticsSupported,
       state.error,
       playSong,
       selectionEpoch,
@@ -467,6 +493,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       setVolume,
       toggleMute,
       toggleShuffle,
+      toggleHaptics,
       cycleRepeat,
     ],
   )

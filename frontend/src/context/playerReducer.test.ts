@@ -49,6 +49,16 @@ describe('playerReducer', () => {
     expect(state.shuffle).toBe(true)
   })
 
+  it('TOGGLE_HAPTICS flips the haptics flag', () => {
+    expect(playerReducer(createInitialState(), { type: 'TOGGLE_HAPTICS' }).hapticsEnabled).toBe(
+      true,
+    )
+    expect(
+      playerReducer(createInitialState({ hapticsEnabled: true }), { type: 'TOGGLE_HAPTICS' })
+        .hapticsEnabled,
+    ).toBe(false)
+  })
+
   it('PLAY_SONG starts the requested song and sets a play intent', () => {
     const state = playAll(createInitialState(), ['a', 'b', 'c'])
     expect(state.status).toBe('loading')

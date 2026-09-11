@@ -19,6 +19,7 @@ export interface PlayerState {
   repeat: RepeatMode
   /** One-shot flag that tells the audio layer to start playing the current song. */
   playIntent: { startAt: number | null } | null
+  hapticsEnabled: boolean
   error: string | null
 }
 
@@ -27,6 +28,7 @@ export interface PersistedPreferences {
   muted?: boolean
   repeat?: RepeatMode
   shuffle?: boolean
+  hapticsEnabled?: boolean
 }
 
 export const DEFAULT_PLAYBACK_ERROR = 'Unable to play this song.'
@@ -44,6 +46,7 @@ export function createInitialState(preferences: PersistedPreferences = {}): Play
     muted: preferences.muted ?? false,
     repeat: preferences.repeat ?? 'off',
     shuffle: preferences.shuffle ?? false,
+    hapticsEnabled: preferences.hapticsEnabled ?? false,
     playIntent: null,
     error: null,
   }
@@ -162,6 +165,7 @@ export type PlayerAction =
   | { type: 'PREVIOUS'; currentTime: number }
   | { type: 'TOGGLE_SHUFFLE' }
   | { type: 'CYCLE_REPEAT' }
+  | { type: 'TOGGLE_HAPTICS' }
   | { type: 'SET_VOLUME'; volume: number }
   | { type: 'TOGGLE_MUTE' }
   | { type: 'SEEK'; time: number }
@@ -255,6 +259,10 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
 
     case 'CYCLE_REPEAT': {
       return { ...state, repeat: nextRepeatMode(state.repeat) }
+    }
+
+    case 'TOGGLE_HAPTICS': {
+      return { ...state, hapticsEnabled: !state.hapticsEnabled }
     }
 
     case 'SET_VOLUME': {

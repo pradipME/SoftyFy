@@ -117,6 +117,14 @@ export const RepeatIcon = icon(
   </>,
 )
 
+export const VibrateIcon = icon(
+  <>
+    <path d="m2 8 2 2-2 2 2 2-2 2" />
+    <path d="m22 8-2 2 2 2-2 2 2 2" />
+    <rect x="8" y="5" width="8" height="14" rx="1.5" />
+  </>,
+)
+
 export const VolumeIcon = icon(
   <>
     <path d="M11 5 6 9H2v6h4l5 4V5Z" />
