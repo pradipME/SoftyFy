@@ -286,7 +286,7 @@ export const SONGS: Song[] = [
     album: 'Sometimes',
     durationSec: 222,
     audioSrc: 'https://www.googleapis.com/drive/v3/files/15_n5fHV0hgwGCdAWYakXnFhjoAV6SdiI?alt=media&key=AIzaSyAxAkYvJVFy_5HXwvejOlMi0yno613rtK8',
-    coverSrc: 'https://drive.google.com/thumbnail?id=1y9opfiHML5e_v5yEe0gIc0N3ihSswkCL&sz=w1000',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1W1Qtz-WdNDYKeog-DAgxcgE7j9vdJxeB&sz=w1000',
     library: 'Sometimes',
   },
   {
@@ -296,7 +296,7 @@ export const SONGS: Song[] = [
     album: 'Sometimes',
     durationSec: 193,
     audioSrc: 'https://www.googleapis.com/drive/v3/files/1b7wYxlO0ctWCuV05PQSpbk1eGsHKFocM?alt=media&key=AIzaSyAxAkYvJVFy_5HXwvejOlMi0yno613rtK8',
-    coverSrc: 'https://drive.google.com/thumbnail?id=1y9opfiHML5e_v5yEe0gIc0N3ihSswkCL&sz=w1000',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1vLWQTzYNPtxBUaeWkh6xEjeRoJLuIJ7x&sz=w1000',
     library: 'Sometimes',
   },
   {
@@ -306,7 +306,7 @@ export const SONGS: Song[] = [
     album: 'Sometimes',
     durationSec: 70,
     audioSrc: 'https://www.googleapis.com/drive/v3/files/1tyEdqc5NxnN-6ZZyacYAre0Pm_lxu4ey?alt=media&key=AIzaSyAxAkYvJVFy_5HXwvejOlMi0yno613rtK8',
-    coverSrc: 'https://drive.google.com/thumbnail?id=1y9opfiHML5e_v5yEe0gIc0N3ihSswkCL&sz=w1000',
+    coverSrc: 'https://drive.google.com/thumbnail?id=14Du1qJxtkxXpCtOXF0xJxZOBj6Nt2KSJ&sz=w1000',
     library: 'Sometimes',
   },
   {
@@ -316,7 +316,7 @@ export const SONGS: Song[] = [
     album: 'Sometimes',
     durationSec: 220,
     audioSrc: 'https://www.googleapis.com/drive/v3/files/1TS7OCBmsrDWEdNmFRfA-WVgqpxjIe5q_?alt=media&key=AIzaSyAxAkYvJVFy_5HXwvejOlMi0yno613rtK8',
-    coverSrc: 'https://drive.google.com/thumbnail?id=1y9opfiHML5e_v5yEe0gIc0N3ihSswkCL&sz=w1000',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1bbbZGpx6aIhqkWsOusHHpKvzJThu3mjg&sz=w1000',
     library: 'Sometimes',
   },
   {
@@ -326,7 +326,7 @@ export const SONGS: Song[] = [
     album: 'Sometimes',
     durationSec: 185,
     audioSrc: 'https://www.googleapis.com/drive/v3/files/1ShI8MAReQeaCJz0X-IhPdvC5sqgj4Qnn?alt=media&key=AIzaSyAxAkYvJVFy_5HXwvejOlMi0yno613rtK8',
-    coverSrc: 'https://drive.google.com/thumbnail?id=1y9opfiHML5e_v5yEe0gIc0N3ihSswkCL&sz=w1000',
+    coverSrc: 'https://drive.google.com/thumbnail?id=19gxm-4vsrqU07HBImclH-Y9MnS6CS-H8&sz=w1000',
     library: 'Sometimes',
   },
   {
@@ -336,7 +336,7 @@ export const SONGS: Song[] = [
     album: 'Sometimes',
     durationSec: 235,
     audioSrc: 'https://www.googleapis.com/drive/v3/files/16mK_C95soNSJIcOvE_EXAjdFKfSUcuwA?alt=media&key=AIzaSyAxAkYvJVFy_5HXwvejOlMi0yno613rtK8',
-    coverSrc: 'https://drive.google.com/thumbnail?id=1y9opfiHML5e_v5yEe0gIc0N3ihSswkCL&sz=w1000',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1XVxgZMXBnDXae2NwFiZQmDAv_kHNVLZT&sz=w1000',
     library: 'Sometimes',
   },
   {
@@ -346,7 +346,7 @@ export const SONGS: Song[] = [
     album: 'Sometimes',
     durationSec: 203,
     audioSrc: 'https://www.googleapis.com/drive/v3/files/1COF8mG9CuRbm-QUU9eangXv6EoOVRZ2U?alt=media&key=AIzaSyAxAkYvJVFy_5HXwvejOlMi0yno613rtK8',
-    coverSrc: 'https://drive.google.com/thumbnail?id=1y9opfiHML5e_v5yEe0gIc0N3ihSswkCL&sz=w1000',
+    coverSrc: 'https://drive.google.com/thumbnail?id=10handHRTmjfVL-UaSsCIH7ArN9s3fcFr&sz=w1000',
     library: 'Sometimes',
   },
   {
@@ -356,7 +356,7 @@ export const SONGS: Song[] = [
     album: 'Sometimes',
     durationSec: 243,
     audioSrc: 'https://www.googleapis.com/drive/v3/files/1yz3TJ5PiumL_BdYjNouZeUizqHbvkS9h?alt=media&key=AIzaSyAxAkYvJVFy_5HXwvejOlMi0yno613rtK8',
-    coverSrc: 'https://drive.google.com/thumbnail?id=1y9opfiHML5e_v5yEe0gIc0N3ihSswkCL&sz=w1000',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1S8SLqEa0gb8qd69UlJKynR0bbbPzp7L5&sz=w1000',
     library: 'Sometimes',
   },
   {
@@ -366,7 +366,7 @@ export const SONGS: Song[] = [
     album: 'Sometimes',
     durationSec: 169,
     audioSrc: 'https://www.googleapis.com/drive/v3/files/1-fDJuKKmq4WJcIUMAsahZZAIsrmhdDQ7?alt=media&key=AIzaSyAxAkYvJVFy_5HXwvejOlMi0yno613rtK8',
-    coverSrc: 'https://drive.google.com/thumbnail?id=1y9opfiHML5e_v5yEe0gIc0N3ihSswkCL&sz=w1000',
+    coverSrc: 'https://drive.google.com/thumbnail?id=15EB8rmb7VDFtb-C_DCf-0kASeawt-dHI&sz=w1000',
     library: 'Sometimes',
   },
   {
@@ -376,7 +376,7 @@ export const SONGS: Song[] = [
     album: 'Sometimes',
     durationSec: 243,
     audioSrc: 'https://www.googleapis.com/drive/v3/files/12DokqYj_cm-vdNEIApLSCok5ef9G3DRd?alt=media&key=AIzaSyAxAkYvJVFy_5HXwvejOlMi0yno613rtK8',
-    coverSrc: 'https://drive.google.com/thumbnail?id=1y9opfiHML5e_v5yEe0gIc0N3ihSswkCL&sz=w1000',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1z9YNIMv9WoNqPdzMYEyzRTqWeYld-5BB&sz=w1000',
     library: 'Sometimes',
   },
   {
@@ -386,7 +386,7 @@ export const SONGS: Song[] = [
     album: 'Sometimes',
     durationSec: 135,
     audioSrc: 'https://www.googleapis.com/drive/v3/files/1TXmfKmFzPnZqPJtIuxMns7mx2uPPLIAo?alt=media&key=AIzaSyAxAkYvJVFy_5HXwvejOlMi0yno613rtK8',
-    coverSrc: 'https://drive.google.com/thumbnail?id=1y9opfiHML5e_v5yEe0gIc0N3ihSswkCL&sz=w1000',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1Ral3anzqNgW78tJ8aGCQUUv5UWpSmuPJ&sz=w1000',
     library: 'Sometimes',
   },
   {
@@ -396,7 +396,7 @@ export const SONGS: Song[] = [
     album: 'Sometimes',
     durationSec: 311,
     audioSrc: 'https://www.googleapis.com/drive/v3/files/1YNKRQXc_vpF3HyflDdkgRIZK1MLg7DTn?alt=media&key=AIzaSyAxAkYvJVFy_5HXwvejOlMi0yno613rtK8',
-    coverSrc: 'https://drive.google.com/thumbnail?id=1y9opfiHML5e_v5yEe0gIc0N3ihSswkCL&sz=w1000',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1_rjy3aMabtPQr4jVhNqeSAAf74uE9sUz&sz=w1000',
     library: 'Sometimes',
   },
   {
@@ -406,7 +406,7 @@ export const SONGS: Song[] = [
     album: 'Sometimes',
     durationSec: 165,
     audioSrc: 'https://www.googleapis.com/drive/v3/files/1K-AYhxoDzv920jqk2NDdlrksFkLo0gPb?alt=media&key=AIzaSyAxAkYvJVFy_5HXwvejOlMi0yno613rtK8',
-    coverSrc: 'https://drive.google.com/thumbnail?id=1y9opfiHML5e_v5yEe0gIc0N3ihSswkCL&sz=w1000',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1d2nYwLOQQnqGIvVSIgHUV0BIemBOkato&sz=w1000',
     library: 'Sometimes',
   },
   // ── Qwali ────────────────────────────────────────────────────────────────
@@ -556,6 +556,7 @@ export const LIBRARIES = [...new Set(SONGS.map((s) => s.library))]
 export const SONGS_BY_LIBRARY: Record<string, Song[]> = Object.fromEntries(
   LIBRARIES.map((lib) => [lib, SONGS.filter((s) => s.library === lib)]),
 )
+
 
 
 
