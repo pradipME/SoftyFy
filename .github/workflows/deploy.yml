@@ -35,6 +35,8 @@ jobs:
       - name: Build
         working-directory: frontend
         run: npm run build
+        env:
+          SOFTYFY_BASE: /SoftyFy/
 
       - name: Configure Pages
         uses: actions/configure-pages@v5

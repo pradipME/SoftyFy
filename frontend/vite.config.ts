@@ -3,10 +3,14 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
+// The app is hosted at different base paths: Render serves it from the root
+// and GitHub Pages from the /SoftyFy/ subpath. The Pages workflow sets
+// SOFTYFY_BASE explicitly; every other build (Render, local dev) uses '/'.
+const SOFTYFY_BASE = process.env.SOFTYFY_BASE ?? '/'
+
 // https://vite.dev/config/
 export default defineConfig({
-  // The app is published to GitHub Pages under the repository subpath.
-  base: '/SoftyFy/',
+  base: SOFTYFY_BASE,
   plugins: [
     react(),
     tailwindcss(),
@@ -17,7 +21,7 @@ export default defineConfig({
       srcDir: 'src',
       filename: 'sw.ts',
       manifest: {
-        id: '/SoftyFy/',
+        id: SOFTYFY_BASE,
         name: 'SoftyFy',
         short_name: 'SoftyFy',
         description:
@@ -26,8 +30,8 @@ export default defineConfig({
         background_color: '#121212',
         display: 'standalone',
         orientation: 'portrait',
-        start_url: '/SoftyFy/',
-        scope: '/SoftyFy/',
+        start_url: SOFTYFY_BASE,
+        scope: SOFTYFY_BASE,
         lang: 'en',
         categories: ['music', 'entertainment'],
         icons: [
