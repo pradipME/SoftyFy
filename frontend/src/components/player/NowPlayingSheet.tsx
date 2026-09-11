@@ -17,7 +17,6 @@ import {
   SkipForwardIcon,
 } from '../ui/icons'
 import { ProgressBar } from './ProgressBar'
-import { VisualizerBars } from './VisualizerBars'
 import { VolumeControl } from './VolumeControl'
 
 interface NowPlayingSheetProps {
@@ -38,7 +37,7 @@ interface NowPlayingSheetProps {
  * leaving the app's hash navigation history untouched.
  */
 export function NowPlayingSheet({ open, onClose }: NowPlayingSheetProps) {
-  const { currentSong, status, shuffle, repeat, visualizer, togglePlay, next, previous, toggleShuffle, cycleRepeat } =
+  const { currentSong, status, shuffle, repeat, togglePlay, next, previous, toggleShuffle, cycleRepeat } =
     usePlayer()
   const reduced = useReducedMotion()
 
@@ -121,18 +120,9 @@ export function NowPlayingSheet({ open, onClose }: NowPlayingSheetProps) {
               <span className="w-11" aria-hidden />
             </div>
 
-            <div className="relative flex min-h-0 flex-1 items-center justify-center px-6">
-              <VisualizerBars
-                getData={visualizer.getData}
-                status={status}
-                className="pointer-events-none absolute inset-x-0 bottom-0 h-28 w-full opacity-60"
-              />
-              <motion.div
-                className="relative"
-                style={{ scale: coverScale, rotate: coverRotate, y: coverLift }}
-              >
+            <div className="flex min-h-0 flex-1 items-center justify-center px-6">
+              <motion.div style={{ scale: coverScale, rotate: coverRotate, y: coverLift }}>
                 <motion.div
-                  className="relative z-10"
                   animate={reduced ? undefined : { y: [0, -8, 0] }}
                   transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}
                 >

@@ -10,7 +10,6 @@ import {
   type ReactNode,
 } from 'react'
 import { useAudioPlayer } from '../hooks/useAudioPlayer'
-import { useAudioVisualizer } from '../hooks/useAudioVisualizer'
 import {
   loadPreferences,
   loadResumePositions,
@@ -32,11 +31,6 @@ import {
 
 export type { PlaybackStatus, RepeatMode } from './playerReducer'
 
-export interface VisualizerApi {
-  getData: () => Uint8Array | null
-  resume: () => void
-}
-
 export interface PlayerApi {
   currentSong: Song | null
   status: PlaybackStatus
@@ -47,8 +41,6 @@ export interface PlayerApi {
   shuffle: boolean
   repeat: RepeatMode
   error: string | null
-  audio: HTMLAudioElement | null
-  visualizer: VisualizerApi
   /** Plays `song` within `queue` (the queue is used for next/prev/auto-advance). */
   playSong: (song: Song, queue: Song[]) => void
   /** Increments whenever the user selects a song via `playSong`. */
@@ -141,7 +133,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const {
-    audioRef: audioElementRef,
     loadAndPlay,
     clearSource,
     seekTo,
@@ -157,14 +148,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     onRecoveryStart,
   })
 
-  const { getData: visualizerGetData, resume: visualizerResume } = useAudioVisualizer(audioElementRef)
-  const visualizerRef = useRef<VisualizerApi>({ getData: visualizerGetData, resume: visualizerResume })
-  visualizerRef.current = { getData: visualizerGetData, resume: visualizerResume }
-
   const playSong = useCallback((song: Song, queue: Song[]) => {
-    // Resume the AudioContext for the visualizer (user gesture = valid gesture for autoplay policy).
-    visualizerResume()
-
     const current = currentSongOf(stateRef.current)
     if (current?.id === song.id) {
       dispatch({ type: 'PLAY' })
@@ -183,27 +167,24 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       dispatch({ type: 'PLAY_SONG', queue, startIndex, startAt })
     }
     setSelectionEpoch((epoch) => epoch + 1)
-  }, [visualizerResume])
+  }, [])
 
   const togglePlay = useCallback(() => {
     if (currentSongOf(stateRef.current) === null) return
-    visualizerResume()
     if (stateRef.current.status === 'playing') {
       dispatch({ type: 'PAUSE' })
     } else {
       dispatch({ type: 'PLAY' })
     }
-  }, [visualizerResume])
+  }, [])
 
   const next = useCallback(() => {
-    visualizerResume()
     dispatch({ type: 'NEXT' })
-  }, [visualizerResume])
+  }, [])
 
   const previous = useCallback(() => {
-    visualizerResume()
     dispatch({ type: 'PREVIOUS', currentTime: stateRef.current.currentTime })
-  }, [visualizerResume])
+  }, [])
 
   const seek = useCallback(
     (time: number) => {
@@ -456,8 +437,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       shuffle: state.shuffle,
       repeat: state.repeat,
       error: state.error,
-      audio: audioElementRef.current,
-      visualizer: visualizerRef.current,
       playSong,
       selectionEpoch,
       togglePlay,
@@ -489,8 +468,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       toggleMute,
       toggleShuffle,
       cycleRepeat,
-      audioElementRef,
-      visualizerRef,
     ],
   )
 

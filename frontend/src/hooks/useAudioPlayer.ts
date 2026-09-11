@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react'
 import type { PlaybackStatus } from '../context/playerReducer'
-import { fillAudioCache } from '../lib/audioCache'
 
 export interface AudioPlayerHandlers {
   onTimeUpdate: (time: number) => void
@@ -205,7 +204,6 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
       }
       if (shouldPlay) {
         suppressLoadingRef.current = false
-        fillAudioCache(src)
         const promise = audio.play()
         if (promise !== undefined && typeof promise.catch === 'function') {
           promise.catch((err: unknown) => {
