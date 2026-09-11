@@ -18,6 +18,7 @@ import {
   nativeUpdateNowPlaying,
   nativeUpdatePosition,
   nativeSetPlaybackState,
+  onNativePlaybackAction,
 } from '../lib/mediaSessionBridge'
 import {
   loadPreferences,
