@@ -192,7 +192,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     const candidates = buildAudioCandidates(warmSong.audioSrc)
     const knownGood = workingSourcesRef.current[warmSong.id]
     const preferred = preferKnownGood(candidates, knownGood)[0]
-    warmEl.preload = 'metadata'
+    warmEl.preload = 'auto'
     warmEl.src = preferred
   }, [])
 

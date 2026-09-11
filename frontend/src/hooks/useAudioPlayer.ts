@@ -143,7 +143,7 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
   useEffect(() => {
     const audio = audioRef.current
     if (audio === null) return
-    audio.preload = 'metadata'
+    audio.preload = 'auto'
 
     // Watchdog for "buffering that never resolves". Drive throttles some
     // connections so slowly that the element sits in `waiting` and never fires
