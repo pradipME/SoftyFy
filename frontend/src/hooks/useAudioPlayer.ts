@@ -319,11 +319,19 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
   const seekTo = useCallback((time: number) => {
     const audio = audioRef.current
     if (audio === null) return
+    // Suppress loading UI while actively seeking – the audio element may fire
+    // waiting/stalled events briefly during a seek, which otherwise would toggle
+    // the loading spinner and cause a visual flicker.
+    suppressLoadingRef.current = true
     try {
       audio.currentTime = time
     } catch {
       // Ignore — nothing is loaded yet.
     }
+    // Reset after a short grace period (500 ms) to re‑enable stall handling.
+    setTimeout(() => {
+      suppressLoadingRef.current = false
+    }, 500)
   }, [])
 
   const pauseAudio = useCallback(() => {
