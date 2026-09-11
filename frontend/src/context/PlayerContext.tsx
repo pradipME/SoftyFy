@@ -187,20 +187,23 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   const togglePlay = useCallback(() => {
     if (currentSongOf(stateRef.current) === null) return
+    visualizerResume()
     if (stateRef.current.status === 'playing') {
       dispatch({ type: 'PAUSE' })
     } else {
       dispatch({ type: 'PLAY' })
     }
-  }, [])
+  }, [visualizerResume])
 
   const next = useCallback(() => {
+    visualizerResume()
     dispatch({ type: 'NEXT' })
-  }, [])
+  }, [visualizerResume])
 
   const previous = useCallback(() => {
+    visualizerResume()
     dispatch({ type: 'PREVIOUS', currentTime: stateRef.current.currentTime })
-  }, [])
+  }, [visualizerResume])
 
   const seek = useCallback(
     (time: number) => {

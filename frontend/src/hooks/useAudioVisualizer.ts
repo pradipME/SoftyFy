@@ -58,14 +58,20 @@ export function useAudioVisualizer(audioRef: React.RefObject<HTMLAudioElement | 
   }, [audioRef])
 
   /**
-   * Resume the AudioContext (required after a user gesture for autoplay policy).
+   * Ensure the graph exists, then resume the AudioContext.
+   *
+   * Must be called from within a user gesture (song tap) so autoplay policy
+   * lets the context run — once a media element is routed through a
+   * suspended AudioContext its audio goes silent, so creating AND resuming
+   * the graph here (inside the gesture) is what keeps sound flowing.
    * Safe to call repeatedly; resolves when context is running.
    */
   const resume = useCallback(() => {
+    ensureGraph()
     const ctx = contextRef.current
     if (ctx === null || ctx.state === 'running') return
     ctx.resume().catch(() => {})
-  }, [])
+  }, [ensureGraph])
 
   /**
    * Returns the current frequency bin data (Uint8Array of FFT_SIZE/2 values 0–255),
