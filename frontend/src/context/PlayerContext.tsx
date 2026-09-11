@@ -66,6 +66,9 @@ const RESUME_PERSIST_INTERVAL_MS = 10_000
 const RESUME_MIN_TIME = 15
 const RESUME_MIN_DURATION = 60
 const RESUME_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000 // 30 days
+/** How long after a song change to hold off preloading the next one, so rapid
+ *  skipping never competes with the active stream for bandwidth. */
+const WARM_DELAY_MS = 10_000
 
 export function PlayerProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(playerReducer, undefined, () =>
@@ -86,6 +89,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   // starts from (service-worker) cache instead of a fresh network stall.
   const warmAudioRef = useRef<HTMLAudioElement | null>(null)
   const warmTargetRef = useRef('')
+  const warmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const lastSongChangeRef = useRef(0)
 
   // Bumped on every user-initiated song selection (playSong). Lets the shell
   // react by opening the full Now Playing sheet — auto-advance and
@@ -149,6 +154,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   // position `position` (respecting repeat). Returns the target song id used
   // for idempotency, or null when there is nothing / nobody to warm.
   const warmNextSong = useCallback(() => {
+    const s = stateRef.current
+    if (s.status !== 'playing') return
+    if (Date.now() - lastSongChangeRef.current < WARM_DELAY_MS) return
+
     const el = warmAudioRef.current
     if (el === null) {
       warmAudioRef.current = typeof Audio !== 'undefined' ? new Audio() : null
@@ -156,7 +165,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     const warmEl = warmAudioRef.current
     if (warmEl === null) return
 
-    const s = stateRef.current
     const target = nextPosition({ playOrder: s.playOrder, position: s.position, repeat: s.repeat })
     const warmSong = target === null
       ? null
@@ -175,7 +183,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     const candidates = buildAudioCandidates(warmSong.audioSrc)
     const knownGood = workingSourcesRef.current[warmSong.id]
     const preferred = preferKnownGood(candidates, knownGood)[0]
-    warmEl.preload = 'auto'
+    warmEl.preload = 'metadata'
     warmEl.src = preferred
   }, [])
 
@@ -280,10 +288,15 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const { queue, playOrder, position, playIntent } = state
   useEffect(() => {
     const song = currentSongOf({ queue, playOrder, position })
+    if (warmTimerRef.current !== null) {
+      clearTimeout(warmTimerRef.current)
+      warmTimerRef.current = null
+    }
     if (song === null) {
       clearSource()
       return
     }
+    lastSongChangeRef.current = Date.now()
     const candidates = buildAudioCandidates(song.audioSrc)
     const orderedCandidates = preferKnownGood(
       candidates,
@@ -293,7 +306,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     if (playIntent !== null) {
       dispatch({ type: 'CONSUME_PLAY_INTENT' })
     }
-  }, [queue, playOrder, position, playIntent, loadAndPlay, clearSource])
+    warmTimerRef.current = setTimeout(() => {
+      warmTimerRef.current = null
+      warmNextSong()
+    }, WARM_DELAY_MS)
+  }, [queue, playOrder, position, playIntent, loadAndPlay, clearSource, warmNextSong])
 
   // Pause the real <audio> element whenever the reducer resolves to a paused
   // state (user pause, or next/previous that must stay stopped). The load
@@ -355,6 +372,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   // Release the hidden next-song preloader on unmount.
   useEffect(() => {
     return () => {
+      if (warmTimerRef.current !== null) clearTimeout(warmTimerRef.current)
       const el = warmAudioRef.current
       if (el) {
         el.pause()

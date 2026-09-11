@@ -28,11 +28,13 @@ const NEAR_END_THRESHOLD_S = 2
  * a re-selected one — the list resets back to its first entry.
  *
  * ## Stall / error recovery
- * When the network stalls mid-playback (`waiting` / `stalled`), the browser
- * usually recovers on its own. If no progress happens within
- * {@link STALL_TIMEOUT_MS} we force-recover by re-loading the *next* URL in the
- * list, preserving the playback position. Transient media errors do the same.
- * Once every URL in a list has failed, `onError` fires so the UI can give up.
+ * When the network stalls mid-playback (`waiting` / `stalled`) a watchdog
+ * timer starts; if no progress happens within {@link STALL_TIMEOUT_MS} we
+ * force-recover by re-loading the *next* URL in the list, preserving the
+ * playback position. Drive throttles some connections so slowly that only
+ * `waiting` fires (never `stalled`), so both events arm the watchdog.
+ * Transient media errors do the same. Once every URL in a list has failed,
+ * `onError` fires so the UI can give up.
  * A single-entry list simply retries the same URL up to
  * {@link MAX_RECOVERY_ATTEMPTS} times before failing, as before.
  */
@@ -143,12 +145,26 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
     if (audio === null) return
     audio.preload = 'metadata'
 
+    // Watchdog for "buffering that never resolves". Drive throttles some
+    // connections so slowly that the element sits in `waiting` and never fires
+    // `stalled`; without this nothing ever advances. Armed by both events,
+    // disarmed by `playing`/`canplay`/`pause` or when the user pauses.
+    const armBufferTimer = () => {
+      if (stallTimerRef.current !== null) return
+      if (suppressLoadingRef.current) return
+      stallTimerRef.current = setTimeout(() => {
+        stallTimerRef.current = null
+        attemptRecovery()
+      }, STALL_TIMEOUT_MS)
+    }
+
     const onTimeUpdate = () => handlersRef.current.onTimeUpdate(audio.currentTime)
     const onSeeked = () => handlersRef.current.onTimeUpdate(audio.currentTime)
     const onLoadedMetadata = () => handlersRef.current.onDurationChange(audio.duration)
     const onDurationChange = () => handlersRef.current.onDurationChange(audio.duration)
     const onPlay = () => handlersRef.current.onStatusChange('playing')
     const onPlaying = () => {
+      clearStallTimer()
       stallFlagRef.current = false
       retryCountRef.current = 0
       handlersRef.current.onStatusChange('playing')
@@ -157,6 +173,7 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
       }
     }
     const onPause = () => {
+      clearStallTimer()
       if (audio.ended) return
       handlersRef.current.onStatusChange('paused')
     }
@@ -164,24 +181,20 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
       if (suppressLoadingRef.current) return
       stallFlagRef.current = true
       handlersRef.current.onStatusChange('loading')
+      armBufferTimer()
     }
     const onStalled = () => {
       if (suppressLoadingRef.current) return
       stallFlagRef.current = true
       handlersRef.current.onStatusChange('loading')
-
-      if (stallTimerRef.current === null) {
-        stallTimerRef.current = setTimeout(() => {
-          stallTimerRef.current = null
-          attemptRecovery()
-        }, STALL_TIMEOUT_MS)
-      }
+      armBufferTimer()
     }
     const onLoadStart = () => {
       if (suppressLoadingRef.current) return
       handlersRef.current.onStatusChange('loading')
     }
     const onCanPlay = () => {
+      clearStallTimer()
       if (stallFlagRef.current && !audio.paused) {
         handlersRef.current.onStatusChange('paused')
       }

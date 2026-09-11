@@ -5,6 +5,11 @@
 // Usage:
 //   node scripts/link-drive-songs.mjs
 //
+// The audio URLs come from ./drive-url.mjs, which round-robins across the
+// configured API keys (see .env.example). Load your keys first so the rewritten
+// songs.ts spreads the library across them:
+//   node --env-file=.env scripts/link-drive-songs.mjs
+//
 // Files were uploaded in one bulk `rclone copy` and the parent folders were
 // shared ("anyone with the link"), so every file inside is publicly reachable
 // — no per-file linking step needed.
@@ -62,9 +67,20 @@ async function main() {
   let missing = []
 
   const replacer = (line) => {
+    // Already-linked Drive API URL → rebuild via audioUrl(fileId) so the key is
+    // round-robin rotated across the library (see .env.example).
+    const audioDrive = line.match(
+      /^(\s*audioSrc:\s*)'(https:\/\/www\.googleapis\.com\/drive\/v3\/files\/([A-Za-z0-9_-]+)\?alt=media)[^']*',?\s*$/,
+    )
     const audio = line.match(/^(\s*audioSrc:\s*)'(\/audio\/[^']+)',?\s*$/)
     const cover = line.match(/^(\s*coverSrc:\s*)'(\/covers\/[^']+)',?\s*$/)
-    if (!audio && !cover) return line
+    if (!audioDrive && !audio && !cover) return line
+
+    if (audioDrive) {
+      changed += 1
+      return `${audioDrive[1]}'${audioUrl(audioDrive[3])}',`
+    }
+
     const isAudio = Boolean(audio)
     const pairs = isAudio ? [audioId, audio] : [coverId, cover]
     const idMap = pairs[0]

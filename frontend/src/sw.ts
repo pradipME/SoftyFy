@@ -32,6 +32,7 @@ function hostAndPath(rawUrl: string): { hostname: string; pathname: string } {
 
 // ── Covers ───────────────────────────────────────────────────────────────────
 const COVER_CACHE = 'softyfy-covers'
+const COVER_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000
 
 function isCoverUrl(rawUrl: string): boolean {
   const { hostname, pathname } = hostAndPath(rawUrl)
@@ -41,13 +42,22 @@ function isCoverUrl(rawUrl: string): boolean {
 async function handleCover(request: Request): Promise<Response> {
   const cache = await caches.open(COVER_CACHE)
   const cached = await cache.match(request)
-  if (cached) return cached
+  if (cached) {
+    const at = Number(cached.headers.get(CACHED_AT_HEADER) || 0)
+    if (at > 0 && Date.now() - at < COVER_MAX_AGE_MS) return cached
+    void cache.delete(request)
+  }
 
   const response = await fetch(request)
   if (response.status !== 0 && !response.ok) return response
 
   try {
-    await cache.put(request, response.clone())
+    const headers = new Headers()
+    const type = response.headers.get('Content-Type') || 'image/jpeg'
+    if (!/^image\//.test(type.toLowerCase())) return response
+    headers.set('Content-Type', type)
+    headers.set(CACHED_AT_HEADER, String(Date.now()))
+    await cache.put(request, new Response(response.clone().body, { status: 200, statusText: 'OK', headers }))
   } catch {
     // Opaque/quota — keep serving from the network.
   }
