@@ -57,6 +57,26 @@ describe('playerReducer', () => {
     expect(state.playOrder).toEqual([0, 1, 2])
   })
 
+  it('PLAY_SONG with startAt sets playIntent.startAt to the given value', () => {
+    const state = playerReducer(createInitialState(), {
+      type: 'PLAY_SONG',
+      queue: ['a'].map(song),
+      startIndex: 0,
+      startAt: 90,
+    })
+    expect(state.playIntent).toEqual({ startAt: 90 })
+  })
+
+  it('PLAY_SONG with startAt null defaults to startAt null', () => {
+    const state = playerReducer(createInitialState(), {
+      type: 'PLAY_SONG',
+      queue: ['a'].map(song),
+      startIndex: 0,
+      startAt: null,
+    })
+    expect(state.playIntent).toEqual({ startAt: null })
+  })
+
   it('PLAY_SONG preserves the shuffle preference and keeps the pick first', () => {
     const base = createInitialState({ shuffle: true })
     const state = playerReducer(base, {

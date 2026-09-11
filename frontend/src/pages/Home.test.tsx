@@ -20,7 +20,7 @@ afterEach(cleanup)
 describe('HomePage', () => {
   it('shows the greeting and album cards', () => {
     renderPage()
-    expect(screen.getByText('Bathroom')).toBeTruthy()
+    expect(screen.getByText('Sometimes')).toBeTruthy()
     expect(screen.getByText('Qwali')).toBeTruthy()
   })
 

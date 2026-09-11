@@ -155,7 +155,7 @@ export function nextRepeatMode(mode: RepeatMode): RepeatMode {
 }
 
 export type PlayerAction =
-  | { type: 'PLAY_SONG'; queue: Song[]; startIndex: number }
+  | { type: 'PLAY_SONG'; queue: Song[]; startIndex: number; startAt?: number | null }
   | { type: 'PLAY' }
   | { type: 'PAUSE' }
   | { type: 'NEXT' }
@@ -190,7 +190,7 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
         status: 'loading',
         currentTime: 0,
         duration: 0,
-        playIntent: { startAt: null },
+        playIntent: { startAt: action.startAt ?? null },
         error: null,
       }
     }

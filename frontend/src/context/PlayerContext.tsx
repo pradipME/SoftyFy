@@ -10,7 +10,16 @@ import {
   type ReactNode,
 } from 'react'
 import { useAudioPlayer } from '../hooks/useAudioPlayer'
-import { loadPreferences, safeStorage, savePreferences } from '../lib/storage'
+import { useAudioVisualizer } from '../hooks/useAudioVisualizer'
+import {
+  loadPreferences,
+  loadResumePositions,
+  removeResumePosition,
+  safeStorage,
+  savePreferences,
+  saveResumePosition,
+  type ResumePositions,
+} from '../lib/storage'
 import type { Song } from '../types/song'
 import {
   clamp,
@@ -23,6 +32,11 @@ import {
 
 export type { PlaybackStatus, RepeatMode } from './playerReducer'
 
+export interface VisualizerApi {
+  getData: () => Uint8Array | null
+  resume: () => void
+}
+
 export interface PlayerApi {
   currentSong: Song | null
   status: PlaybackStatus
@@ -33,6 +47,8 @@ export interface PlayerApi {
   shuffle: boolean
   repeat: RepeatMode
   error: string | null
+  audio: HTMLAudioElement | null
+  visualizer: VisualizerApi
   /** Plays `song` within `queue` (the queue is used for next/prev/auto-advance). */
   playSong: (song: Song, queue: Song[]) => void
   /** Increments whenever the user selects a song via `playSong`. */
@@ -50,6 +66,10 @@ export interface PlayerApi {
 const PlayerContext = createContext<PlayerApi | null>(null)
 
 const TIMEUPDATE_THROTTLE_MS = 250
+const RESUME_PERSIST_INTERVAL_MS = 10_000
+const RESUME_MIN_TIME = 15
+const RESUME_MIN_DURATION = 60
+const RESUME_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000 // 30 days
 
 export function PlayerProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(playerReducer, undefined, () =>
@@ -57,6 +77,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   )
   const stateRef = useRef(state)
   stateRef.current = state
+
+  // Resume-position store (trackId → { time, duration, updatedAt }).
+  const resumePositionsRef = useRef<ResumePositions>(loadResumePositions(safeStorage()))
+  const lastPersistRef = useRef(0)
 
   // Bumped on every user-initiated song selection (playSong). Lets the shell
   // react by opening the full Now Playing sheet — auto-advance and
@@ -70,6 +94,20 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     if (now - lastTimeUpdateRef.current < TIMEUPDATE_THROTTLE_MS) return
     lastTimeUpdateRef.current = now
     dispatch({ type: 'SET_CURRENT_TIME', time })
+
+    // Sub-throttled resume-position persistence (~every 10s).
+    const s = stateRef.current
+    if (now - lastPersistRef.current > RESUME_PERSIST_INTERVAL_MS) {
+      lastPersistRef.current = now
+      const song = currentSongOf(s)
+      const duration = s.duration
+      if (song !== null && duration > RESUME_MIN_DURATION && time > RESUME_MIN_TIME && time < duration - 10) {
+        const positions = { ...resumePositionsRef.current }
+        positions[song.id] = { time, duration, updatedAt: Date.now() }
+        resumePositionsRef.current = positions
+        saveResumePosition(safeStorage(), positions)
+      }
+    }
   }, [])
 
   const onDurationChange = useCallback((duration: number) => {
@@ -84,9 +122,14 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'PLAY_FAILED' })
   }, [])
 
-  // A song ended: let the reducer resolve the next song (auto-advance, repeat,
-  // or stop). A subsequent play() on an ended element restarts from the top.
+  // A song ended: clear its resume entry and let the reducer resolve the next
+  // song (auto-advance, repeat, or stop). A subsequent play() on an ended
+  // element restarts from the top.
   const onEnded = useCallback(() => {
+    const song = currentSongOf(stateRef.current)
+    if (song !== null) {
+      resumePositionsRef.current = removeResumePosition(safeStorage(), resumePositionsRef.current, song.id)
+    }
     dispatch({ type: 'NEXT' })
   }, [])
 
@@ -98,6 +141,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const {
+    audioRef: audioElementRef,
     loadAndPlay,
     clearSource,
     seekTo,
@@ -113,17 +157,33 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     onRecoveryStart,
   })
 
+  const { getData: visualizerGetData, resume: visualizerResume } = useAudioVisualizer(audioElementRef)
+  const visualizerRef = useRef<VisualizerApi>({ getData: visualizerGetData, resume: visualizerResume })
+  visualizerRef.current = { getData: visualizerGetData, resume: visualizerResume }
+
   const playSong = useCallback((song: Song, queue: Song[]) => {
+    // Resume the AudioContext for the visualizer (user gesture = valid gesture for autoplay policy).
+    visualizerResume()
+
     const current = currentSongOf(stateRef.current)
     if (current?.id === song.id) {
       dispatch({ type: 'PLAY' })
     } else {
       const startIndex = queue.findIndex((s) => s.id === song.id)
       if (startIndex < 0) return
-      dispatch({ type: 'PLAY_SONG', queue, startIndex })
+      // Look up saved resume position for this song.
+      let startAt: number | undefined
+      const saved = resumePositionsRef.current[song.id]
+      if (saved) {
+        const isFresh = Date.now() - saved.updatedAt < RESUME_MAX_AGE_MS
+        if (isFresh && saved.time > RESUME_MIN_TIME && saved.duration > RESUME_MIN_DURATION) {
+          startAt = saved.time
+        }
+      }
+      dispatch({ type: 'PLAY_SONG', queue, startIndex, startAt })
     }
     setSelectionEpoch((epoch) => epoch + 1)
-  }, [])
+  }, [visualizerResume])
 
   const togglePlay = useCallback(() => {
     if (currentSongOf(stateRef.current) === null) return
@@ -209,6 +269,37 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       safeStorage(),
     )
   }, [state.volume, state.muted, state.repeat, state.shuffle])
+
+  // Persist resume position immediately on pause (covers the "close app while paused" case).
+  useEffect(() => {
+    const s = stateRef.current
+    if (s.status !== 'paused') return
+    const song = currentSongOf(s)
+    const { duration, currentTime } = s
+    if (song !== null && duration > RESUME_MIN_DURATION && currentTime > RESUME_MIN_TIME && currentTime < duration - 10) {
+      const positions = { ...resumePositionsRef.current }
+      positions[song.id] = { time: currentTime, duration, updatedAt: Date.now() }
+      resumePositionsRef.current = positions
+      saveResumePosition(safeStorage(), positions)
+    }
+  }, [])
+
+  // Persist resume position on pagehide (browser tab close / navigation).
+  useEffect(() => {
+    const onPageHide = () => {
+      const s = stateRef.current
+      const song = currentSongOf(s)
+      const { duration, currentTime } = s
+      if (song !== null && duration > RESUME_MIN_DURATION && currentTime > RESUME_MIN_TIME && currentTime < duration - 10) {
+        const positions = { ...resumePositionsRef.current }
+        positions[song.id] = { time: currentTime, duration, updatedAt: Date.now() }
+        resumePositionsRef.current = positions
+        saveResumePosition(safeStorage(), positions)
+      }
+    }
+    window.addEventListener('pagehide', onPageHide)
+    return () => window.removeEventListener('pagehide', onPageHide)
+  }, [])
 
   const currentSong = currentSongOf(state)
 
@@ -362,6 +453,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       shuffle: state.shuffle,
       repeat: state.repeat,
       error: state.error,
+      audio: audioElementRef.current,
+      visualizer: visualizerRef.current,
       playSong,
       selectionEpoch,
       togglePlay,
@@ -393,6 +486,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       toggleMute,
       toggleShuffle,
       cycleRepeat,
+      audioElementRef,
+      visualizerRef,
     ],
   )
 

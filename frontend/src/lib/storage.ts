@@ -1,6 +1,18 @@
 import type { PersistedPreferences } from '../context/playerReducer'
 
+export interface ResumePosition {
+  /** Seconds played into the song when it was last left. */
+  time: number
+  /** Known duration of the song at that point (0 if unknown). */
+  duration: number
+  /** Epoch ms of the last update — used for staleness checks. */
+  updatedAt: number
+}
+
+export type ResumePositions = Record<string, ResumePosition>
+
 const PREFS_KEY = 'softyfy:preferences'
+const RESUME_KEY = 'softyfy:resumePositions'
 
 /** Returns localStorage when it is available and usable, otherwise null. */
 export function safeStorage(): Storage | null {
@@ -43,4 +55,53 @@ export function savePreferences(
   } catch {
     // Ignore write failures (private browsing, quota, etc.)
   }
+}
+
+export function loadResumePositions(storage: Storage | null): ResumePositions {
+  if (storage === null) return {}
+  try {
+    const raw = storage.getItem(RESUME_KEY)
+    if (!raw) return {}
+    const parsed = JSON.parse(raw) as Record<string, unknown>
+    if (typeof parsed !== 'object' || parsed === null) return {}
+    const result: ResumePositions = {}
+    for (const [id, value] of Object.entries(parsed)) {
+      if (typeof value !== 'object' || value === null) continue
+      const entry = value as Partial<ResumePosition>
+      const time = entry.time
+      if (typeof time !== 'number' || !Number.isFinite(time)) continue
+      result[id] = {
+        time,
+        duration: Number.isFinite(entry.duration) ? (entry.duration as number) : 0,
+        updatedAt: Number.isFinite(entry.updatedAt) ? (entry.updatedAt as number) : 0,
+      }
+    }
+    return result
+  } catch {
+    return {}
+  }
+}
+
+export function saveResumePosition(
+  storage: Storage | null,
+  positions: ResumePositions,
+): void {
+  if (storage === null) return
+  try {
+    storage.setItem(RESUME_KEY, JSON.stringify(positions))
+  } catch {
+    // Ignore write failures (private browsing, quota, etc.)
+  }
+}
+
+export function removeResumePosition(
+  storage: Storage | null,
+  positions: ResumePositions,
+  id: string,
+): ResumePositions {
+  if (!(id in positions)) return positions
+  const next = { ...positions }
+  delete next[id]
+  saveResumePosition(storage, next)
+  return next
 }
