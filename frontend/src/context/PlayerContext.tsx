@@ -17,7 +17,7 @@ import {
   nativeClearNowPlaying,
   nativeUpdateNowPlaying,
   nativeUpdatePosition,
-  onNativePlaybackAction,
+  nativeSetPlaybackState,
 } from '../lib/mediaSessionBridge'
 import {
   loadPreferences,
@@ -510,6 +510,15 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   // 'loading' leads straight into playback, so keep the OS showing "playing".
   // With no song the session is inactive ('none'), which hides stale controls.
   useEffect(() => {
+    if (typeof navigator === 'undefined' || !hasNativeMediaSession()) return
+    if (currentSong === null) return
+    const playing = state.status === 'playing' || state.status === 'loading'
+    void nativeSetPlaybackState(playing)
+  }, [state.status, currentSong])
+
+
+  // Reflect playback state for browsers using the Media Session API
+  useEffect(() => {
     if (typeof navigator === 'undefined' || !('mediaSession' in navigator)) return
     const ms = navigator.mediaSession
     if (currentSong === null) {
@@ -520,25 +529,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       state.status === 'playing' || state.status === 'loading' ? 'playing' : 'paused'
   }, [state.status, currentSong])
 
-  // Keep the OS seek-bar position in sync where setPositionState is supported.
-  // Some engines throw for invalid values, so guard the API and finite input.
-  useEffect(() => {
-    if (typeof navigator === 'undefined' || !('mediaSession' in navigator)) return
-    const ms = navigator.mediaSession
-    if (currentSong === null || typeof ms.setPositionState !== 'function') return
-    const { duration, currentTime } = state
-    if (!Number.isFinite(duration) || duration <= 0) return
-    try {
-      ms.setPositionState({
-        duration,
-        position: Math.min(Math.max(currentTime, 0), duration),
-        playbackRate: 1,
-      })
-    } catch {
-      // Non-finite positions (e.g. an unseekable stream) are rejected by the
-      // browser — ignore so the session keeps working.
-    }
-  }, [state, currentSong])
 
   // Global keyboard shortcuts (Space, arrows, M) — ignored while typing.
   useEffect(() => {

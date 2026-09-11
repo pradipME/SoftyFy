@@ -122,25 +122,20 @@ export function NowPlayingSheet({ open, onClose }: NowPlayingSheetProps) {
 
             <div className="flex min-h-0 flex-1 items-center justify-center px-6">
               <motion.div style={{ scale: coverScale, rotate: coverRotate, y: coverLift }}>
-                <motion.div
-                  animate={reduced ? undefined : { y: [0, -8, 0] }}
-                  transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}
-                >
-                  <CoverGlow song={currentSong} inset="-inset-10">
-                    <div className="relative">
-                      <Cover
-                        src={currentSong.coverSrc}
-                        alt={currentSong.title}
-                        className="aspect-square w-[min(78vw,340px)] rounded-2xl shadow-2xl shadow-black/60"
-                      />
-                      {isLoading ? (
-                        <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-black/30">
-                          <LoaderIcon className="h-8 w-8 animate-spin text-white/80" />
-                        </div>
-                      ) : null}
+              <CoverGlow song={currentSong} inset="-inset-10">
+                <div className="relative">
+                  <Cover
+                    src={currentSong.coverSrc}
+                    alt={currentSong.title}
+                    className="aspect-square w-[min(78vw,340px)] rounded-2xl shadow-2xl shadow-black/60"
+                  />
+                  {isLoading ? (
+                    <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-black/30">
+                      <LoaderIcon className="h-8 w-8 animate-spin text-white/80" />
                     </div>
-                  </CoverGlow>
-                </motion.div>
+                  ) : null}
+                </div>
+              </CoverGlow>
               </motion.div>
             </div>
 
