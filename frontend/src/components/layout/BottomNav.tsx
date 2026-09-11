@@ -11,7 +11,7 @@ export function BottomNav() {
       className="fixed inset-x-0 bottom-0 z-40 border-t border-white/5 bg-base/65 backdrop-blur-xl md:hidden"
       aria-label="Main"
     >
-      <div className="grid grid-cols-4 pb-[env(safe-area-inset-bottom)]">
+      <div className="grid grid-cols-3 pb-[env(safe-area-inset-bottom)]">
         {NAV_ITEMS.map(({ to, label, icon: Icon, end }) => (
           <NavLink
             key={to}
