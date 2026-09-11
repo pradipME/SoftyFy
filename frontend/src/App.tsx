@@ -13,10 +13,12 @@ function LaunchToHome() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    // Launches always land on Home even when the browser/PWA restores a
-    // previous session's hash (e.g. /#/library).
+    // Launch redirect, not a route guard: runs once on mount so a restored
+    // session hash (e.g. /#/library) lands on Home, while in-app navigation
+    // to Library/Search/Qwali keeps working.
     if (location.pathname !== '/') navigate('/', { replace: true })
-  }, [location.pathname, navigate])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return null
 }
