@@ -5,6 +5,8 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 export default defineConfig({
+  // The app is published to GitHub Pages under the repository subpath.
+  base: '/SoftyFy/',
   plugins: [
     react(),
     tailwindcss(),
@@ -15,7 +17,7 @@ export default defineConfig({
       srcDir: 'src',
       filename: 'sw.ts',
       manifest: {
-        id: '/',
+        id: '/SoftyFy/',
         name: 'SoftyFy',
         short_name: 'SoftyFy',
         description:
@@ -24,8 +26,8 @@ export default defineConfig({
         background_color: '#121212',
         display: 'standalone',
         orientation: 'portrait',
-        start_url: '/',
-        scope: '/',
+        start_url: '/SoftyFy/',
+        scope: '/SoftyFy/',
         lang: 'en',
         categories: ['music', 'entertainment'],
         icons: [
