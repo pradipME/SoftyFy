@@ -1,4 +1,3 @@
-import { useReducedMotion } from 'framer-motion'
 import { useCallback, useEffect, useRef } from 'react'
 import type { PlaybackStatus } from '../../context/playerReducer'
 
@@ -26,7 +25,6 @@ export function VisualizerBars({ getData, status, className }: VisualizerBarsPro
   const prevDataRef = useRef<number[]>(Array(BAR_COUNT).fill(0))
   const targetDataRef = useRef<number[]>(Array(BAR_COUNT).fill(0))
   const rafRef = useRef<number | null>(null)
-  const reduced = useReducedMotion()
   const activeRef = useRef(false)
   activeRef.current = status === 'playing'
 
@@ -36,13 +34,28 @@ export function VisualizerBars({ getData, status, className }: VisualizerBarsPro
 
     const dpr = window.devicePixelRatio || 1
     const rect = canvas.getBoundingClientRect()
-    if (canvas.width !== rect.width * dpr || canvas.height !== rect.height * dpr) {
-      canvas.width = rect.width * dpr
-      canvas.height = rect.height * dpr
+    if (canvas.width !== Math.round(rect.width * dpr) || canvas.height !== Math.round(rect.height * dpr)) {
+      canvas.width = Math.round(rect.width * dpr)
+      canvas.height = Math.round(rect.height * dpr)
     }
 
     const ctx = canvas.getContext('2d')
     if (ctx === null) return
+
+    // Older WebViews lack roundRect — fall back to plain rects.
+    const roundedRect = (
+      x: number,
+      y: number,
+      w: number,
+      h: number,
+      r: number,
+    ) => {
+      if (typeof ctx.roundRect === 'function') {
+        ctx.roundRect(x, y, w, h, r)
+      } else {
+        ctx.rect(x, y, w, h)
+      }
+    }
 
     const w = canvas.width
     const h = canvas.height
@@ -94,7 +107,7 @@ export function VisualizerBars({ getData, status, className }: VisualizerBarsPro
       const y = h - barH
 
       ctx.beginPath()
-      ctx.roundRect(x, y, barW, barH, cornerRadius)
+      roundedRect(x, y, barW, barH, cornerRadius)
       ctx.fillStyle = `rgba(${COLOR}, ${0.3 + value * 0.7})`
       ctx.fill()
     }
@@ -105,47 +118,13 @@ export function VisualizerBars({ getData, status, className }: VisualizerBarsPro
   }, [getData])
 
   useEffect(() => {
-    // Always start the render loop — it will draw idle/falling bars when paused
-    // and stop itself once fully settled.
+    // (Re)start the render loop when status changes too — pausing settles it to
+    // idle bars, resuming must kick it off again so bars react to live audio.
     rafRef.current = requestAnimationFrame(draw)
     return () => {
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
     }
-  }, [draw])
-
-  if (reduced) {
-    // Render a static idle canvas — no animation loop.
-    return (
-      <canvas
-        ref={(c) => {
-          canvasRef.current = c
-          if (c === null) return
-          const dpr = window.devicePixelRatio || 1
-          const rect = c.getBoundingClientRect()
-          c.width = rect.width * dpr
-          c.height = rect.height * dpr
-          const ctx = c.getContext('2d')
-          if (ctx === null) return
-          const w = c.width
-          const h = c.height
-          const barW = Math.max(2, (w - (BAR_COUNT - 1) * BAR_GAP * dpr) / BAR_COUNT)
-          const gap = BAR_GAP * dpr
-          const cornerRadius = barW * 0.35
-          for (let i = 0; i < BAR_COUNT; i++) {
-            const barH = IDLE_HEIGHT * dpr
-            const x = i * (barW + gap)
-            const y = h - barH
-            ctx.beginPath()
-            ctx.roundRect(x, y, barW, barH, cornerRadius)
-            ctx.fillStyle = `rgba(${COLOR}, 0.3)`
-            ctx.fill()
-          }
-        }}
-        className={className}
-        aria-hidden="true"
-      />
-    )
-  }
+  }, [draw, status])
 
   return <canvas ref={canvasRef} className={className} aria-hidden="true" />
 }
