@@ -4,11 +4,11 @@ import type { PlaybackStatus } from '../context/playerReducer'
 const FFT_SIZE = 1024
 const BAND_START = 2
 const BAND_END = 16
-const ONSET_THRESHOLD = 1.4
+const ONSET_THRESHOLD = 1.35
 const MIN_ENERGY = 12
 const BEAT_INTERVAL_MS = 260
-const VIBRATE_MS = 12
-const AVERAGE_SMOOTHING = 0.95
+const VIBRATE_MS = 20
+const AVERAGE_SMOOTHING = 0.92
 
 type AudioContextCtor = typeof AudioContext
 type CapturableAudio = HTMLAudioElement & { captureStream?: () => MediaStream }
@@ -69,7 +69,7 @@ export function useBeatHaptics(
       const source = ctx.createMediaStreamSource(stream)
       const analyser = ctx.createAnalyser()
       analyser.fftSize = FFT_SIZE
-      analyser.smoothingTimeConstant = 0.8
+      analyser.smoothingTimeConstant = 0
       source.connect(analyser)
       contextRef.current = ctx
       analyserRef.current = analyser
