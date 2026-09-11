@@ -62,11 +62,21 @@ const CACHED_AT_HEADER = 'x-softyfy-cached-at'
 
 function isAudioUrl(rawUrl: string): boolean {
   const url = new URL(rawUrl)
-  return (
+  if (
     url.hostname === 'www.googleapis.com' &&
     url.pathname.startsWith('/drive/v3/files/') &&
     url.searchParams.get('alt') === 'media'
-  )
+  ) {
+    return true
+  }
+  // Fallback hosts the player switches to when the Drive API URL drops.
+  if (url.hostname === 'drive.usercontent.google.com' && url.pathname.startsWith('/download')) {
+    return true
+  }
+  if (url.hostname === 'drive.google.com' && url.pathname.startsWith('/uc')) {
+    return true
+  }
+  return false
 }
 
 async function trimAudioCache(cache: Cache, keepUrl: string): Promise<void> {
@@ -81,6 +91,12 @@ async function trimAudioCache(cache: Cache, keepUrl: string): Promise<void> {
 
 async function cacheAudioInBackground(response: Response, key: Request): Promise<void> {
   try {
+    // Some hosts answer audio URLs with an HTML interstitial in place of the
+    // file (e.g. a Drive virus-scan page). Never cache those — playback still
+    // streams, but the cache must not ever serve HTML as audio.
+    const contentType = (response.headers.get('Content-Type') || '').toLowerCase()
+    if (!/^audio\/|^application\/octet-stream/.test(contentType)) return
+
     const cache = await caches.open(AUDIO_CACHE)
     const body = await response.arrayBuffer()
     const headers = new Headers()

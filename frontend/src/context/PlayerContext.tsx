@@ -10,13 +10,16 @@ import {
   type ReactNode,
 } from 'react'
 import { useAudioPlayer } from '../hooks/useAudioPlayer'
+import { buildAudioCandidates, preferKnownGood } from '../lib/audioSources'
 import {
   loadPreferences,
   loadResumePositions,
+  loadWorkingSources,
   removeResumePosition,
   safeStorage,
   savePreferences,
   saveResumePosition,
+  saveWorkingSource,
   type ResumePositions,
 } from '../lib/storage'
 import type { Song } from '../types/song'
@@ -24,6 +27,7 @@ import {
   clamp,
   createInitialState,
   currentSongOf,
+  nextPosition,
   playerReducer,
   type PlaybackStatus,
   type RepeatMode,
@@ -73,6 +77,15 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   // Resume-position store (trackId → { time, duration, updatedAt }).
   const resumePositionsRef = useRef<ResumePositions>(loadResumePositions(safeStorage()))
   const lastPersistRef = useRef(0)
+
+  // Per-song "this URL played successfully" memory — repeat plays start on a
+  // host that is known to work instead of re-battling a flaky one.
+  const workingSourcesRef = useRef<Record<string, string>>(loadWorkingSources(safeStorage()))
+
+  // Hidden element that preloads the upcoming song so auto-advance / next
+  // starts from (service-worker) cache instead of a fresh network stall.
+  const warmAudioRef = useRef<HTMLAudioElement | null>(null)
+  const warmTargetRef = useRef('')
 
   // Bumped on every user-initiated song selection (playSong). Lets the shell
   // react by opening the full Now Playing sheet — auto-advance and
@@ -132,6 +145,54 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'SET_STATUS', status: 'loading' })
   }, [])
 
+  // Points the hidden preloader at the song that comes after `playOrder`
+  // position `position` (respecting repeat). Returns the target song id used
+  // for idempotency, or null when there is nothing / nobody to warm.
+  const warmNextSong = useCallback(() => {
+    const el = warmAudioRef.current
+    if (el === null) {
+      warmAudioRef.current = typeof Audio !== 'undefined' ? new Audio() : null
+    }
+    const warmEl = warmAudioRef.current
+    if (warmEl === null) return
+
+    const s = stateRef.current
+    const target = nextPosition({ playOrder: s.playOrder, position: s.position, repeat: s.repeat })
+    const warmSong = target === null
+      ? null
+      : s.queue[s.playOrder[target]] ?? null
+
+    const targetKey = warmSong === null ? '' : warmSong.id
+    if (warmTargetRef.current === targetKey) return
+    warmTargetRef.current = targetKey
+
+    if (warmSong === null) {
+      warmEl.removeAttribute('src')
+      warmEl.load()
+      return
+    }
+
+    const candidates = buildAudioCandidates(warmSong.audioSrc)
+    const knownGood = workingSourcesRef.current[warmSong.id]
+    const preferred = preferKnownGood(candidates, knownGood)[0]
+    warmEl.preload = 'auto'
+    warmEl.src = preferred
+  }, [])
+
+  // A source became playable — remember the winning URL and start preloading
+  // the next song so the buffering experience stays smooth.
+  const onSourceReady = useCallback(
+    (songId: string, src: string) => {
+      if (buildAudioCandidates(src).length > 1) {
+        const sources = { ...workingSourcesRef.current, [songId]: src }
+        workingSourcesRef.current = sources
+        saveWorkingSource(safeStorage(), sources)
+      }
+      warmNextSong()
+    },
+    [warmNextSong],
+  )
+
   const {
     loadAndPlay,
     clearSource,
@@ -146,6 +207,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     onError,
     onEnded,
     onRecoveryStart,
+    onSourceReady,
   })
 
   const playSong = useCallback((song: Song, queue: Song[]) => {
@@ -222,7 +284,12 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       clearSource()
       return
     }
-    loadAndPlay(song.audioSrc, playIntent?.startAt ?? null, playIntent !== null)
+    const candidates = buildAudioCandidates(song.audioSrc)
+    const orderedCandidates = preferKnownGood(
+      candidates,
+      workingSourcesRef.current[song.id],
+    )
+    loadAndPlay(song.id, orderedCandidates, playIntent?.startAt ?? null, playIntent !== null)
     if (playIntent !== null) {
       dispatch({ type: 'CONSUME_PLAY_INTENT' })
     }
@@ -283,6 +350,18 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }
     window.addEventListener('pagehide', onPageHide)
     return () => window.removeEventListener('pagehide', onPageHide)
+  }, [])
+
+  // Release the hidden next-song preloader on unmount.
+  useEffect(() => {
+    return () => {
+      const el = warmAudioRef.current
+      if (el) {
+        el.pause()
+        el.removeAttribute('src')
+        el.load()
+      }
+    }
   }, [])
 
   const currentSong = currentSongOf(state)

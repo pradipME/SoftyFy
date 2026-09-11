@@ -8,9 +8,11 @@ export interface AudioPlayerHandlers {
   onError: () => void
   onEnded: () => void
   onRecoveryStart: () => void
+  /** Called once a source becomes playable so callers remember the working URL. */
+  onSourceReady: (songId: string, src: string) => void
 }
 
-const STALL_TIMEOUT_MS = 10_000
+const STALL_TIMEOUT_MS = 8_000
 const MAX_RECOVERY_ATTEMPTS = 3
 const NEAR_END_THRESHOLD_S = 2
 
@@ -19,21 +21,20 @@ const NEAR_END_THRESHOLD_S = 2
  * so exactly one audio element lives for the whole app and playback survives
  * page navigation.
  *
- * `loadAndPlay(src, startAt, shouldPlay)` is the only playback entry point:
- *  - if `src` changed, the new source is loaded (a paused load stays paused),
- *  - `startAt` seeks before playback,
- *  - `shouldPlay` triggers play() and reports autoplay-rejection failures.
+ * `loadAndPlay(songId, srcs, startAt, shouldPlay)` is the only playback entry
+ * point. `srcs` is an ordered list of URLs for one song (see
+ * `buildAudioCandidates`): the first URL is tried first, then each failing host
+ * is skipped in turn. When a different source list is requested — a new song or
+ * a re-selected one — the list resets back to its first entry.
  *
- * ## Stall recovery
- * When the network stalls mid-playback, the browser fires `waiting` / `stalled`.
- * Most browsers recover on their own once data arrives, firing `playing`. If
- * that doesn't happen within {@link STALL_TIMEOUT_MS}, we force-recover by
- * re-setting `audio.src` to the same URL and calling `load()`, which prompts a
- * fresh fetch. The playback position is preserved across the reload.
- *
- * Transient network `error` events (MEDIA_ERR_NETWORK) are also retried with
- * the same strategy, up to {@link MAX_RECOVERY_ATTEMPTS} times. Fatal errors
- * (MEDIA_ERR_DECODE / MEDIA_ERR_SRC_NOT_SUPPORTED) fail immediately.
+ * ## Stall / error recovery
+ * When the network stalls mid-playback (`waiting` / `stalled`), the browser
+ * usually recovers on its own. If no progress happens within
+ * {@link STALL_TIMEOUT_MS} we force-recover by re-loading the *next* URL in the
+ * list, preserving the playback position. Transient media errors do the same.
+ * Once every URL in a list has failed, `onError` fires so the UI can give up.
+ * A single-entry list simply retries the same URL up to
+ * {@link MAX_RECOVERY_ATTEMPTS} times before failing, as before.
  */
 export function useAudioPlayer(handlers: AudioPlayerHandlers) {
   const handlersRef = useRef(handlers)
@@ -45,6 +46,9 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
   }
 
   const lastSrcRef = useRef<string | null>(null)
+  const candidatesRef = useRef<string[]>([])
+  const candidateIndexRef = useRef(0)
+  const songIdRef = useRef<string | null>(null)
   const suppressLoadingRef = useRef(false)
   const stallTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const retryCountRef = useRef(0)
@@ -58,32 +62,81 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
     }
   }, [])
 
+  /**
+   * Loads the candidates list at the given index, seeking back to `savedTime`
+   * once playable, then starts playback. Shared by stall recovery, error
+   * recovery, and the initial load-with-resume path.
+   */
+  const recoverToCandidate = useCallback(
+    (index: number, savedTime: number) => {
+      const audio = audioRef.current
+      const src = candidatesRef.current[index]
+      if (audio === null || src === undefined) return
+
+      clearStallTimer()
+      stallFlagRef.current = false
+      candidateIndexRef.current = index
+      lastSrcRef.current = src
+      audio.src = src
+      audio.load()
+
+      const onCanPlay = () => {
+        audio.removeEventListener('canplay', onCanPlay)
+        try {
+          audio.currentTime = savedTime
+        } catch {
+          // Not seekable yet.
+        }
+        recoveringRef.current = false
+        audio.play().catch((err: unknown) => {
+          const isAbort =
+            typeof DOMException !== 'undefined' &&
+            err instanceof DOMException &&
+            err.name === 'AbortError'
+          if (isAbort && audio.paused && audio.error === null) {
+            handlersRef.current.onStatusChange('paused')
+            return
+          }
+          handlersRef.current.onError()
+        })
+      }
+      audio.addEventListener('canplay', onCanPlay)
+    },
+    [clearStallTimer],
+  )
+
+  /** Advances to the next URL for the current song, or reports failure. */
   const attemptRecovery = useCallback(() => {
     const audio = audioRef.current
-    const src = lastSrcRef.current
-    if (audio === null || src === null) return
+    if (audio === null) return
 
-    clearStallTimer()
-    stallFlagRef.current = false
-    recoveringRef.current = true
     handlersRef.current.onRecoveryStart()
+    recoveringRef.current = true
 
-    const savedTime = audio.currentTime
-    audio.src = src
-    audio.load()
+    const list = candidatesRef.current
+    const currentIndex = candidateIndexRef.current
+    const nextIndex = Math.min(currentIndex + 1, list.length - 1)
+    const sameHost = nextIndex === currentIndex
 
-    const onCanPlay = () => {
-      audio.removeEventListener('canplay', onCanPlay)
-      try {
-        audio.currentTime = savedTime
-      } catch {
-        // Not seekable yet.
+    if (sameHost) {
+      // Single-entry (e.g. local files): retry the same URL a bounded number of
+      // times before giving up, mirroring the old behavior.
+      retryCountRef.current += 1
+      if (retryCountRef.current > MAX_RECOVERY_ATTEMPTS) {
+        retryCountRef.current = 0
+        recoveringRef.current = false
+        clearStallTimer()
+        handlersRef.current.onError()
+        return
       }
-      recoveringRef.current = false
-      audio.play().catch(() => {})
+    } else {
+      // Multi-host list: each failure just moves to the next URL; the list
+      // bounds the total attempts.
+      retryCountRef.current = 0
     }
-    audio.addEventListener('canplay', onCanPlay)
-  }, [clearStallTimer])
+
+    recoverToCandidate(nextIndex, audio.currentTime)
+  }, [clearStallTimer, recoverToCandidate])
 
   useEffect(() => {
     const audio = audioRef.current
@@ -97,7 +150,11 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
     const onPlay = () => handlersRef.current.onStatusChange('playing')
     const onPlaying = () => {
       stallFlagRef.current = false
+      retryCountRef.current = 0
       handlersRef.current.onStatusChange('playing')
+      if (songIdRef.current !== null && lastSrcRef.current !== null) {
+        handlersRef.current.onSourceReady(songIdRef.current, lastSrcRef.current)
+      }
     }
     const onPause = () => {
       if (audio.ended) return
@@ -133,15 +190,11 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
       clearStallTimer()
       stallFlagRef.current = false
       const mediaError = audio.error
-      const isNetwork =
-        mediaError !== null && mediaError.code === MediaError.MEDIA_ERR_NETWORK
-      if (isNetwork && retryCountRef.current < MAX_RECOVERY_ATTEMPTS) {
-        retryCountRef.current += 1
-        attemptRecovery()
-        return
-      }
+      // MEDIA_ERR_ABORTED fires when *we* reload mid-request — that is not a
+      // real failure. Anything else is worth trying on the next URL.
+      if (mediaError !== null && mediaError.code === MediaError.MEDIA_ERR_ABORTED) return
       retryCountRef.current = 0
-      handlersRef.current.onError()
+      attemptRecovery()
     }
     const onEnded = () => handlersRef.current.onEnded()
 
@@ -181,18 +234,23 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
   }, [clearStallTimer])
 
   const loadAndPlay = useCallback(
-    (src: string, startAt: number | null, shouldPlay: boolean) => {
+    (songId: string, srcs: string[], startAt: number | null, shouldPlay: boolean) => {
       const audio = audioRef.current
       if (audio === null) return
-      const srcChanged = lastSrcRef.current !== src
+      if (srcs.length === 0) return
+      const preferred = srcs[0]
+      const srcChanged = lastSrcRef.current !== preferred
       if (srcChanged) {
-        lastSrcRef.current = src
+        lastSrcRef.current = preferred
+        songIdRef.current = songId
+        candidatesRef.current = srcs
+        candidateIndexRef.current = 0
         suppressLoadingRef.current = !shouldPlay
         clearStallTimer()
         stallFlagRef.current = false
         retryCountRef.current = 0
         recoveringRef.current = false
-        audio.src = src
+        audio.src = preferred
         audio.load()
       }
       if (startAt != null && startAt > 0) {
@@ -215,14 +273,14 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
               handlersRef.current.onStatusChange('paused')
               return
             }
-            handlersRef.current.onError()
+            attemptRecovery()
           })
         }
       } else if (srcChanged && !audio.paused) {
         audio.pause()
       }
     },
-    [clearStallTimer],
+    [attemptRecovery, clearStallTimer],
   )
 
   const clearSource = useCallback(() => {
@@ -233,6 +291,9 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
     retryCountRef.current = 0
     recoveringRef.current = false
     lastSrcRef.current = null
+    songIdRef.current = null
+    candidatesRef.current = []
+    candidateIndexRef.current = 0
     audio.removeAttribute('src')
     audio.load()
   }, [clearStallTimer])

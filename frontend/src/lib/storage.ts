@@ -13,6 +13,7 @@ export type ResumePositions = Record<string, ResumePosition>
 
 const PREFS_KEY = 'softyfy:preferences'
 const RESUME_KEY = 'softyfy:resumePositions'
+const WORKING_SRC_KEY = 'softyfy:workingSources'
 
 /** Returns localStorage when it is available and usable, otherwise null. */
 export function safeStorage(): Storage | null {
@@ -104,4 +105,35 @@ export function removeResumePosition(
   delete next[id]
   saveResumePosition(storage, next)
   return next
+}
+
+/**
+ * Songs that stream from flaky external hosts remember the exact URL that
+ * actually played, so the next session starts there instead of retrying hosts
+ * that failed before. Keyed by song id; stores the winning audio URL.
+ */
+export function loadWorkingSources(storage: Storage | null): Record<string, string> {
+  if (storage === null) return {}
+  try {
+    const raw = storage.getItem(WORKING_SRC_KEY)
+    if (!raw) return {}
+    const parsed = JSON.parse(raw) as Record<string, unknown>
+    if (typeof parsed !== 'object' || parsed === null) return {}
+    const result: Record<string, string> = {}
+    for (const [id, value] of Object.entries(parsed)) {
+      if (typeof value === 'string' && value.length > 0) result[id] = value
+    }
+    return result
+  } catch {
+    return {}
+  }
+}
+
+export function saveWorkingSource(storage: Storage | null, sources: Record<string, string>): void {
+  if (storage === null) return
+  try {
+    storage.setItem(WORKING_SRC_KEY, JSON.stringify(sources))
+  } catch {
+    // Ignore write failures (private browsing, quota, etc.)
+  }
 }
