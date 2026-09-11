@@ -29,6 +29,8 @@ precacheAndRoute(self.__WB_MANIFEST)
 
 // ── Audio ────────────────────────────────────────────────────────────────────
 const AUDIO_CACHE = 'softyfy-audio'
+/** Must match the cache name declared in `lib/downloads.ts`. */
+const DOWNLOADS_CACHE = 'so.softyfy-downloads'
 const AUDIO_MAX_ENTRIES = 8
 const AUDIO_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000
 const CACHED_AT_HEADER = 'x-softyfy-cached-at'
@@ -139,10 +141,24 @@ function buildRangeResponse(
 }
 
 async function handleAudio(request: Request): Promise<Response> {
-  const cache = await caches.open(AUDIO_CACHE)
-  const key = new Request(request.url)
   const rangeHeader = request.headers.get('Range')
+  const key = new Request(request.url)
 
+  // Explicit user downloads take precedence: the entry lives in its own cache
+  // (never pruned by the runtime audio cache) so an offline play of a saved
+  // song resolves here even when the network is gone.
+  const downloadCache = await caches.open(DOWNLOADS_CACHE)
+  const downloaded = await downloadCache.match(key)
+  if (downloaded && downloaded.ok) {
+    const body = await downloaded.arrayBuffer()
+    return buildRangeResponse(
+      body,
+      downloaded.headers.get('Content-Type') || 'audio/mpeg',
+      rangeHeader,
+    )
+  }
+
+  const cache = await caches.open(AUDIO_CACHE)
   const cached = await cache.match(key)
   if (cached && cached.ok) {
     const at = Number(cached.headers.get(CACHED_AT_HEADER) || 0)

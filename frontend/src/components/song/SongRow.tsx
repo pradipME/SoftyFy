@@ -1,6 +1,13 @@
+import { useState } from 'react'
 import { usePlayer } from '../../context/PlayerContext'
+import {
+  downloadSong,
+  removeDownload,
+  useDownloads,
+} from '../../lib/downloads'
 import type { Song } from '../../types/song'
-import { PlayIcon } from '../ui/icons'
+import { IconButton } from '../ui/IconButton'
+import { CheckIcon, DownloadIcon, LoaderIcon, PlayIcon } from '../ui/icons'
 import { Cover } from './Cover'
 
 interface SongRowProps {
@@ -42,6 +49,7 @@ export function SongRow({ song, queue }: SongRowProps) {
         </p>
         <p className="truncate text-xs text-muted">{song.artist}</p>
       </div>
+      <DownloadButton song={song} />
       {isCurrent ? (
         <span className="flex h-8 w-8 shrink-0 items-center justify-center text-accent">
           {isPlaying ? <EqualizerBars /> : <PlayIcon className="h-4 w-4" />}
@@ -55,6 +63,54 @@ export function SongRow({ song, queue }: SongRowProps) {
         {formatDuration(song.durationSec)}
       </span>
     </div>
+  )
+}
+
+function DownloadButton({ song }: { song: Song }) {
+  const { downloadedIds } = useDownloads()
+  const [busy, setBusy] = useState(false)
+  const downloaded = downloadedIds.includes(song.id)
+
+  const toggle = async () => {
+    if (busy) return
+    setBusy(true)
+    try {
+      if (downloaded) {
+        await removeDownload(song)
+      } else {
+        await downloadSong(song)
+      }
+    } catch {
+      // Download failed on every host — the row just keeps its play icon.
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <IconButton
+      label={downloaded ? `Remove "${song.title}" from downloads` : `Download "${song.title}"`}
+      size="sm"
+      active={downloaded}
+      onClick={(event) => {
+        event.stopPropagation()
+        void toggle()
+      }}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.stopPropagation()
+        }
+      }}
+      className="shrink-0"
+    >
+      {busy ? (
+        <LoaderIcon className="h-4 w-4 animate-spin" />
+      ) : downloaded ? (
+        <CheckIcon className="h-4 w-4" />
+      ) : (
+        <DownloadIcon className="h-4 w-4" />
+      )}
+    </IconButton>
   )
 }
 

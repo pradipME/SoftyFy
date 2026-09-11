@@ -11,6 +11,7 @@ import {
 } from 'react'
 import { useAudioPlayer } from '../hooks/useAudioPlayer'
 import { buildAudioCandidates, preferKnownGood } from '../lib/audioSources'
+import { haptic } from '../lib/haptics'
 import {
   loadPreferences,
   loadResumePositions,
@@ -243,17 +244,21 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     if (currentSongOf(stateRef.current) === null) return
     if (stateRef.current.status === 'playing') {
       dispatch({ type: 'PAUSE' })
+      haptic(12)
     } else {
       dispatch({ type: 'PLAY' })
+      haptic(8)
     }
   }, [])
 
   const next = useCallback(() => {
     dispatch({ type: 'NEXT' })
+    haptic([8, 40, 8])
   }, [])
 
   const previous = useCallback(() => {
     dispatch({ type: 'PREVIOUS', currentTime: stateRef.current.currentTime })
+    haptic([8, 40, 8])
   }, [])
 
   const seek = useCallback(
@@ -262,6 +267,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       const target = clamp(time, 0, Math.max(0, s.duration))
       seekTo(target)
       dispatch({ type: 'SEEK', time: target })
+      haptic(4)
     },
     [seekTo],
   )
