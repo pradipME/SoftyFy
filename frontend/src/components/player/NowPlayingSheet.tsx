@@ -103,11 +103,11 @@ export function NowPlayingSheet({ open, onClose }: NowPlayingSheetProps) {
             onDragEnd={onDragEnd}
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="flex shrink-0 justify-center pt-3">
+            <div className="flex shrink-0 justify-center pt-[calc(env(safe-area-inset-top)+12px)]">
               <div className="h-1.5 w-10 rounded-full bg-white/20" />
             </div>
 
-            <div className="flex shrink-0 items-center justify-between px-4 pt-2">
+            <div className="flex shrink-0 items-center justify-between px-4 pb-2 pt-1">
               <button
                 type="button"
                 onClick={onClose}

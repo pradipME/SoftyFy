@@ -29,7 +29,7 @@ export function AppShell() {
       <AmbientBackground />
       <CoverBackground />
       <Sidebar />
-      <main className="relative z-10 pb-48 pt-4 md:ml-64 md:pb-32 md:pt-6">
+      <main className="relative z-10 pb-48 pt-[calc(env(safe-area-inset-top)+16px)] md:ml-64 md:pb-32 md:pt-6">
         <div className="mx-auto w-full max-w-6xl px-4">
           <RouteTransition />
         </div>

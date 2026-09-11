@@ -13,6 +13,13 @@ import { useAudioPlayer } from '../hooks/useAudioPlayer'
 import { buildAudioCandidates, preferKnownGood } from '../lib/audioSources'
 import { haptic } from '../lib/haptics'
 import {
+  hasNativeMediaSession,
+  nativeClearNowPlaying,
+  nativeUpdateNowPlaying,
+  nativeUpdatePosition,
+  onNativePlaybackAction,
+} from '../lib/mediaSessionBridge'
+import {
   loadPreferences,
   loadResumePositions,
   loadWorkingSources,
@@ -445,6 +452,59 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       ],
     })
   }, [currentSong])
+
+  // Native Android MediaSession (Capacitor): push fresh metadata whenever the
+  // song changes, and tear the system session down when playback is cleared.
+  // Without this the WebView alone does not surface a media notification.
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !hasNativeMediaSession()) return
+    if (currentSong === null) {
+      void nativeClearNowPlaying()
+      return
+    }
+    let artworkSrc = currentSong.coverSrc
+    try {
+      artworkSrc = new URL(currentSong.coverSrc, window.location.origin).href
+    } catch {
+      // Resolution failed — send the raw path.
+    }
+    const s = stateRef.current
+    void nativeUpdateNowPlaying({
+      title: currentSong.title,
+      artist: currentSong.artist,
+      album: currentSong.album ?? '',
+      artwork: artworkSrc,
+      duration: currentSong.durationSec,
+      position: Math.max(0, Math.floor(s.currentTime)),
+      playing: s.status === 'playing' || s.status === 'loading',
+    })
+  }, [currentSong])
+
+  // Keep the native session's transport position/state in step with the web
+  // player on each timeupdate so the system media UI scrubs live.
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !hasNativeMediaSession() || currentSong === null) return
+    const s = stateRef.current
+    const duration = s.duration > 0 ? s.duration : currentSong.durationSec
+    const playing = s.status === 'playing' || s.status === 'loading'
+    void nativeUpdatePosition(
+      Math.max(0, Math.min(Math.floor(s.currentTime), duration)),
+      duration,
+      playing,
+    )
+  }, [state.status, state.currentTime, state.duration, currentSong])
+
+  // Native transport events (notification / quick settings / lock-screen
+  // buttons) drive the same actions the in-app controls use.
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !hasNativeMediaSession()) return
+    return onNativePlaybackAction(({ action, position }) => {
+      if (action === 'play' || action === 'pause') togglePlay()
+      else if (action === 'next') next()
+      else if (action === 'previous') previous()
+      else if (action === 'seekto' && typeof position === 'number') seek(position)
+    })
+  }, [togglePlay, next, previous, seek])
 
   // Reflect the real play state in the OS UI (pause icon while playing, etc.).
   // 'loading' leads straight into playback, so keep the OS showing "playing".
