@@ -17,6 +17,7 @@ import {
 } from '../lib/audioCache'
 import { buildAudioCandidates, preferKnownGood } from '../lib/audioSources'
 import { haptic } from '../lib/haptics'
+import { isSlowConnection, logApp } from '../lib/mediaDebug'
 import {
   loadPreferences,
   loadResumePositions,
@@ -75,6 +76,9 @@ const RESUME_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000 // 30 days
 /** How long after a song change to hold off preloading the next one, so rapid
  *  skipping never competes with the active stream for bandwidth. */
 const WARM_DELAY_MS = 10_000
+/** On a fast connection, don't start warming until the current song is this
+ *  close to its end. Slow connections trigger earlier (see warmNextSong). */
+const WARM_NEAR_END_S = 20
 
 export function PlayerProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(playerReducer, undefined, () =>
@@ -97,6 +101,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const warmTargetRef = useRef('')
   const warmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastSongChangeRef = useRef(0)
+  const lastWarmProbeRef = useRef(0)
 
   // Bumped on every user-initiated song selection (playSong). Lets the shell
   // react by opening the full Now Playing sheet — auto-advance and
@@ -190,11 +195,13 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     const targetKey = `${warmSong.id}:${preferred}`
     if (warmTargetRef.current === targetKey) return
 
-    // Only preload the next song when it is ALREADY in the audio cache. A
-    // cache-miss preload would make the service worker start a full ~8 MB
-    // background download of the next track *while the current one is
-    // streaming* — the mid-playback stutter/freeze. An in-cache preload starts
-    // cold from cache, which is exactly the point of warming.
+    // Throttle the cache probe so a repeating miss doesn't re-fire on every
+    // 250 ms timeupdate while playback is progressing.
+    if (Date.now() - lastWarmProbeRef.current < 3000) return
+    lastWarmProbeRef.current = Date.now()
+
+    const slow = isSlowConnection()
+
     void (async () => {
       let cached = false
       try {
@@ -207,22 +214,55 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       } catch {
         // Cache API unavailable — the fallback below streams on advance.
       }
+
+      if (warmTargetRef.current !== '' && warmTargetRef.current !== targetKey) return
+
       if (cached) {
-        // If a newer warm call claimed a different target while we awaited the
-        // cache read, don't clobber it with this (now stale) one.
-        if (warmTargetRef.current !== '' && warmTargetRef.current !== targetKey) return
+        // Already cached: start the <audio> from cache so the next song begins
+        // with data in hand. This never costs network bandwidth while playing.
         warmTargetRef.current = targetKey
         warmEl.preload = 'auto'
         warmEl.src = preferred
-      } else if (warmTargetRef.current === targetKey) {
-        // Not cached: leave the target unclaimed so a later play of the current
-        // song re-attempts warming once the file is in cache.
-        warmTargetRef.current = ''
-        warmEl.removeAttribute('src')
-        warmEl.load()
+        logApp('warm.decide', { songId: warmSong.id, cached: true, slow, action: 'cached' })
+        return
       }
+
+      if (slow) {
+        // Slow cellular: preload the ONE upcoming track now so it downloads
+        // ahead of reaching the buffer edge instead of stalling when the current
+        // song ends. Exactly one next track — never more — and the service
+        // worker's single-in-flight-fill rule aborts it the moment we skip.
+        warmTargetRef.current = targetKey
+        warmEl.preload = 'auto'
+        warmEl.src = preferred
+        logApp('warm.decide', { songId: warmSong.id, cached: false, slow, action: 'network-warm' })
+        return
+      }
+
+      // Fast network + miss: starting a full-file background download of the
+      // next track would compete with the live stream for bandwidth. Leave the
+      // target unclaimed so a later pass (once the file is actually in cache)
+      // can still warm it cheaply.
+      warmTargetRef.current = ''
+      warmEl.removeAttribute('src')
+      warmEl.load()
+      logApp('warm.decide', { songId: warmSong.id, cached: false, slow, action: 'defer' })
     })()
   }, [])
+
+  // Network-aware warm trigger point: on a slow connection start the next-track
+  // preload at ~50% of the current song so it has real lead time before the
+  // buffer edge; on a fast connection wait until the last few seconds. Fires
+  // off the throttled timeupdate (250 ms) so warmNextSong's own probes are the
+  // only cost, and it is idempotent per target.
+  useEffect(() => {
+    const s = stateRef.current
+    if (s.status !== 'playing' || s.duration <= 0) return
+    const threshold = isSlowConnection() ? 0.5 : 1
+    const reached =
+      threshold === 1 ? s.currentTime >= s.duration - WARM_NEAR_END_S : s.currentTime / s.duration >= threshold
+    if (reached) warmNextSong()
+  }, [state.currentTime, state.status, state.duration, warmNextSong])
 
   // A source became playable — remember the winning URL and start preloading
   // the next song so the buffering experience stays smooth.
@@ -346,6 +386,12 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     )
     loadAndPlay(song.id, orderedCandidates, playIntent?.startAt ?? null, playIntent !== null)
     if (playIntent !== null) {
+      logApp('song.start', {
+        songId: song.id,
+        title: song.title,
+        candidateCount: orderedCandidates.length,
+        slow: isSlowConnection(),
+      })
       dispatch({ type: 'CONSUME_PLAY_INTENT' })
     }
     warmTimerRef.current = setTimeout(() => {

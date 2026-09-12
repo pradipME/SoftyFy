@@ -1,5 +1,13 @@
 import { useCallback, useEffect, useRef } from 'react'
 import type { PlaybackStatus } from '../context/playerReducer'
+import {
+  bufferedAheadOf,
+  bufferedMeasurableAhead,
+  bufferedRangesText,
+  connectionSummary,
+  logApp,
+  round,
+} from '../lib/mediaDebug'
 
 export interface AudioPlayerHandlers {
   onTimeUpdate: (time: number) => void
@@ -15,6 +23,11 @@ export interface AudioPlayerHandlers {
 const STALL_TIMEOUT_MS = 10_000
 const MAX_RECOVERY_ATTEMPTS = 3
 const NEAR_END_THRESHOLD_S = 2
+
+/** Minimum buffer (seconds) required before a fresh song is reported "playing". */
+const MIN_START_BUFFER_S = 5
+const BUFFER_GUARD_POLL_MS = 300
+const BUFFER_GUARD_MAX_MS = 12_000
 
 /**
  * Wraps a single shared HTMLAudioElement. The PlayerProvider owns the result,
@@ -56,12 +69,92 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
   const retryCountRef = useRef(0)
   const recoveringRef = useRef(false)
   const stallFlagRef = useRef(false)
+  const pendingStartBufferRef = useRef(false)
+  const bufferGuardTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const bufferGuardDeadlineRef = useRef(0)
+  const lastEventLogAtRef = useRef<Record<string, number>>({})
 
   const clearStallTimer = useCallback(() => {
     if (stallTimerRef.current !== null) {
       clearTimeout(stallTimerRef.current)
       stallTimerRef.current = null
     }
+  }, [])
+
+  const clearBufferGuard = useCallback(() => {
+    pendingStartBufferRef.current = false
+    if (bufferGuardTimerRef.current !== null) {
+      clearTimeout(bufferGuardTimerRef.current)
+      bufferGuardTimerRef.current = null
+    }
+  }, [])
+
+  /** Buffer is healthy - transition to 'playing' and remember the working URL. */
+  const completeBufferedStart = useCallback(() => {
+    pendingStartBufferRef.current = false
+    if (bufferGuardTimerRef.current !== null) {
+      clearTimeout(bufferGuardTimerRef.current)
+      bufferGuardTimerRef.current = null
+    }
+    const audio = audioRef.current
+    const songId = songIdRef.current
+    const src = lastSrcRef.current
+    if (audio === null) return
+    handlersRef.current.onStatusChange('playing')
+    if (songId !== null && src !== null) {
+      handlersRef.current.onSourceReady(songId, src)
+    }
+  }, [])
+
+  /**
+   * Initial-startup buffer guard: when a song starts with less than
+   * {@link MIN_START_BUFFER_S} of media buffered ahead (cellular, large file,
+   * first play), keep the loading state up until there is real runway instead
+   * of flagging "playing" exactly at the buffering edge and stalling a moment
+   * later. Never blocks forever - past {@link BUFFER_GUARD_MAX_MS} it plays
+   * regardless.
+   */
+  const startBufferedStart = useCallback(() => {
+    const audio = audioRef.current
+    if (audio === null) return
+    const healthy = () => {
+      const current = audioRef.current
+      if (current === null) return false
+      const ahead = bufferedMeasurableAhead(current, current.currentTime)
+      return ahead === null || ahead >= MIN_START_BUFFER_S
+    }
+    const poll = () => {
+      bufferGuardTimerRef.current = null
+      if (!pendingStartBufferRef.current) return
+      const current = audioRef.current
+      if (current === null) return
+      if (current.paused) {
+        // Paused while guarding (user or browser) - the pause event already
+        // reported 'paused'; stop steering status.
+        clearBufferGuard()
+        return
+      }
+      if (healthy() || Date.now() >= bufferGuardDeadlineRef.current) {
+        completeBufferedStart()
+        return
+      }
+      bufferGuardTimerRef.current = setTimeout(poll, BUFFER_GUARD_POLL_MS)
+    }
+    if (healthy()) {
+      completeBufferedStart()
+      return
+    }
+    handlersRef.current.onStatusChange('loading')
+    bufferGuardTimerRef.current = setTimeout(poll, BUFFER_GUARD_POLL_MS)
+  }, [clearBufferGuard, completeBufferedStart])
+
+  /** Debug logging with per-tag throttling (media events can fire in bursts). */
+  const logEvent = useCallback((tag: string, data: () => Record<string, unknown>): void => {
+    const now = Date.now()
+    const last = lastEventLogAtRef.current[tag] ?? 0
+    if (now - last < 2000) return
+    lastEventLogAtRef.current[tag] = now
+    logApp(tag, data())
   }, [])
 
   /**
@@ -76,6 +169,7 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
       if (audio === null || src === undefined) return
 
       clearStallTimer()
+      clearBufferGuard()
       stallFlagRef.current = false
       candidateIndexRef.current = index
       lastSrcRef.current = src
@@ -104,7 +198,7 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
       }
       audio.addEventListener('canplay', onCanPlay)
     },
-    [clearStallTimer],
+    [clearStallTimer, clearBufferGuard],
   )
 
   /** Advances to the next URL for the current song, or reports failure. */
@@ -113,6 +207,7 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
     if (audio === null) return
 
     handlersRef.current.onRecoveryStart()
+    clearBufferGuard()
     recoveringRef.current = true
 
     const list = candidatesRef.current
@@ -138,7 +233,7 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
     }
 
     recoverToCandidate(nextIndex, audio.currentTime)
-  }, [clearStallTimer, recoverToCandidate])
+  }, [clearStallTimer, recoverToCandidate, clearBufferGuard])
 
   useEffect(() => {
     const audio = audioRef.current
@@ -167,6 +262,17 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
       clearStallTimer()
       stallFlagRef.current = false
       retryCountRef.current = 0
+      if (
+        pendingStartBufferRef.current &&
+        (() => {
+          const ahead = bufferedMeasurableAhead(audio, audio.currentTime)
+          return ahead !== null && ahead < MIN_START_BUFFER_S
+        })()
+      ) {
+        startBufferedStart()
+        return
+      }
+      pendingStartBufferRef.current = false
       handlersRef.current.onStatusChange('playing')
       if (songIdRef.current !== null && lastSrcRef.current !== null) {
         handlersRef.current.onSourceReady(songIdRef.current, lastSrcRef.current)
@@ -180,12 +286,26 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
     const onWaiting = () => {
       if (suppressLoadingRef.current) return
       stallFlagRef.current = true
+      logEvent('media.waiting', () => ({
+        currentTime: round(audio.currentTime),
+        buffered: bufferedRangesText(audio),
+        bufferedAhead: round(bufferedAheadOf(audio, audio.currentTime)),
+        readyState: audio.readyState,
+        ...connectionSummary(),
+      }))
       handlersRef.current.onStatusChange('loading')
       armBufferTimer()
     }
     const onStalled = () => {
       if (suppressLoadingRef.current) return
       stallFlagRef.current = true
+      logEvent('media.stalled', () => ({
+        currentTime: round(audio.currentTime),
+        buffered: bufferedRangesText(audio),
+        bufferedAhead: round(bufferedAheadOf(audio, audio.currentTime)),
+        readyState: audio.readyState,
+        ...connectionSummary(),
+      }))
       handlersRef.current.onStatusChange('loading')
       armBufferTimer()
     }
@@ -250,11 +370,14 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
       audio.removeEventListener('error', onError)
       audio.removeEventListener('ended', onEnded)
     }
-  }, [attemptRecovery, clearStallTimer])
+  }, [attemptRecovery, clearStallTimer, startBufferedStart, logEvent])
 
   useEffect(() => {
-    return () => clearStallTimer()
-  }, [clearStallTimer])
+    return () => {
+      clearStallTimer()
+      clearBufferGuard()
+    }
+  }, [clearStallTimer, clearBufferGuard])
 
   const loadAndPlay = useCallback(
     (songId: string, srcs: string[], startAt: number | null, shouldPlay: boolean) => {
@@ -285,6 +408,9 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
       }
       if (shouldPlay) {
         suppressLoadingRef.current = false
+        pendingStartBufferRef.current = true
+        bufferGuardDeadlineRef.current = Date.now() + BUFFER_GUARD_MAX_MS
+        logApp('media.load', { songId, src: preferred, shouldPlay, candidateCount: srcs.length })
         const promise = audio.play()
         if (promise !== undefined && typeof promise.catch === 'function') {
           promise.catch((err: unknown) => {
@@ -310,6 +436,7 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
     const audio = audioRef.current
     if (audio === null) return
     clearStallTimer()
+    clearBufferGuard()
     stallFlagRef.current = false
     retryCountRef.current = 0
     recoveringRef.current = false
@@ -319,7 +446,7 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
     candidateIndexRef.current = 0
     audio.removeAttribute('src')
     audio.load()
-  }, [clearStallTimer])
+  }, [clearStallTimer, clearBufferGuard])
 
   const seekTo = useCallback((time: number) => {
     const audio = audioRef.current
@@ -328,6 +455,7 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
     // waiting/stalled events briefly during a seek, which otherwise would toggle
     // the loading spinner and cause a visual flicker.
     suppressLoadingRef.current = true
+    clearBufferGuard()
     try {
       audio.currentTime = time
     } catch {
@@ -337,7 +465,7 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
     setTimeout(() => {
       suppressLoadingRef.current = false
     }, 500)
-  }, [])
+  }, [clearBufferGuard])
 
   const pauseAudio = useCallback(() => {
     const audio = audioRef.current

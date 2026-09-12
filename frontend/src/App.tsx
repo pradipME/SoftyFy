@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { MotionConfig } from 'framer-motion'
 import { HashRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { AppShell } from './components/layout/AppShell'
+import { DebugOverlay } from './components/debug/DebugOverlay'
 import { PlayerProvider } from './context/PlayerContext'
 import { HomePage } from './pages/Home'
 import { LibraryPage } from './pages/Library'
@@ -38,6 +39,7 @@ export default function App() {
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Routes>
+          <DebugOverlay />
         </PlayerProvider>
       </HashRouter>
     </MotionConfig>

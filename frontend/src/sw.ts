@@ -6,6 +6,7 @@ import {
   CACHED_AT_HEADER,
   DOWNLOADS_CACHE,
 } from './lib/audioCache'
+import { appendLogEntry, type MediaLogEntry } from './lib/mediaDebug'
 
 interface FetchEventLike {
   request: Request
@@ -33,6 +34,18 @@ precacheAndRoute(self.__WB_MANIFEST)
 // broken images. Letting the browser's normal HTTP cache fetch them directly
 // (the same path local/dev uses) is more reliable, and `activate` below purges
 // any legacy cover-cache entries.
+
+// ── Debug instrumentation ────────────────────────────────────────────────────
+// OFF unless the page explicitly enables it (DebugOverlay sends SET_DEBUG when
+// the `?debug` flag / localStorage `softyfy-debug` is on). Kept in an in-memory
+// ring buffer only — no console output. The page polls it with GET_DEBUG_LOG.
+let debugLogging = false
+const debugLog: MediaLogEntry[] = []
+
+function debugData(tag: string, data: Record<string, unknown> = {}): void {
+  if (!debugLogging) return
+  appendLogEntry(debugLog, tag, data)
+}
 
 // ── Audio ────────────────────────────────────────────────────────────────────
 function isAudioUrl(rawUrl: string): boolean {
@@ -85,6 +98,53 @@ function isAbortError(err: unknown): boolean {
   return typeof DOMException !== 'undefined' && err instanceof DOMException && err.name === 'AbortError'
 }
 
+function isQuotaError(err: unknown): boolean {
+  return (
+    typeof DOMException !== 'undefined' &&
+    err instanceof DOMException &&
+    (err.name === 'QuotaExceededError' || err.code === 22)
+  )
+}
+
+// Per-url bookkeeping for diagnosing cache health and for quota-aware eviction.
+const seenUrls = new Set<string>()
+const urlMeta = new Map<string, { size: number; cachedAt: number }>()
+const evictedUrls = new Map<string, number>()
+
+function contentRangeTotal(contentRange: string | null): number {
+  if (!contentRange) return 0
+  const match = /bytes \d+-\d+\/(\d+)/.exec(contentRange)
+  return match ? Number(match[1]) : 0
+}
+
+/** Total file size in bytes, from Content-Range total or Content-Length. */
+function fileSizeOf(response: Response): number {
+  const total = contentRangeTotal(response.headers.get('Content-Range'))
+  if (total > 0) return total
+  const length = Number(response.headers.get('Content-Length'))
+  return Number.isFinite(length) && length > 0 ? length : 0
+}
+
+let estimateCache: { usage: number; quota: number; at: number } | null = null
+
+async function storageEstimate(): Promise<{ usage: number; quota: number; ratio: number }> {
+  if (estimateCache && Date.now() - estimateCache.at < 2000) {
+    const { usage, quota } = estimateCache
+    return { usage, quota, ratio: quota > 0 ? usage / quota : 0 }
+  }
+  let usage = 0
+  let quota = 0
+  try {
+    const estimate = await navigator.storage.estimate()
+    usage = estimate.usage ?? 0
+    quota = estimate.quota ?? 0
+  } catch {
+    // storage.estimate may be unavailable in some hardened contexts.
+  }
+  estimateCache = { usage, quota, at: Date.now() }
+  return { usage, quota, ratio: quota > 0 ? usage / quota : 0 }
+}
+
 /**
  * Reads the body to completion so it can be re-stored as a plain 200 response.
  * Honours `signal`: once aborted (the user skipped on), the read stops and the
@@ -125,19 +185,87 @@ async function readFullBody(
   return merged.buffer as ArrayBuffer
 }
 
-async function trimAudioCache(cache: Cache, keepUrl: string): Promise<void> {
-  const entries = await cache.keys()
-  const evictable = entries.filter((request) => {
+const QUOTA_EVICT_RATIO = 0.85
+const QUOTA_EVICT_MIN_KEEP = 1
+
+/**
+ * Evicts from the runtime audio cache ahead of the fixed 8-entry ceiling.
+ *
+ * When the origin is running near its Cache Storage budget (mobile enforces a
+ * much smaller, thirstier quota than desktop Chrome), entries are dropped
+ * proactively using navigator.storage.estimate() — not just the count cap — so
+ * a large song is not silently dropped a moment after being cached. Never
+ * evicts `keepUrl` or any URL the page is still streaming (`activeUrls`).
+ */
+async function trimAudioCache(cache: Cache, keepUrl: string): Promise<number> {
+  const keys = await cache.keys()
+  const evictable = keys.filter((request) => {
     if (request.url === keepUrl) return false
     // Don't evict a song that the page is still actively streaming: its next
     // Range request would otherwise miss and re-download mid-play.
     if (activeUrls.has(request.url)) return false
     return true
   })
+  evictable.sort(
+    (a, b) => (urlMeta.get(a.url)?.cachedAt ?? 0) - (urlMeta.get(b.url)?.cachedAt ?? 0),
+  )
+
+  let evictedCount = 0
+  let estimate = await storageEstimate()
+
+  while (
+    evictable.length > QUOTA_EVICT_MIN_KEEP &&
+    estimate.quota > 0 &&
+    estimate.ratio >= QUOTA_EVICT_RATIO
+  ) {
+    const oldest = evictable.shift()
+    if (!oldest) break
+    await cache.delete(oldest)
+    evictedUrls.set(oldest.url, Date.now())
+    urlMeta.delete(oldest.url)
+    evictedCount += 1
+    debugData('cache.evict', { url: oldest.url, reason: 'quota', ...estimate })
+    estimate = await storageEstimate()
+  }
+
   while (evictable.length >= AUDIO_MAX_ENTRIES) {
     const oldest = evictable.shift()
     if (!oldest) break
     await cache.delete(oldest)
+    evictedUrls.set(oldest.url, Date.now())
+    urlMeta.delete(oldest.url)
+    evictedCount += 1
+    debugData('cache.evict', { url: oldest.url, reason: 'count' })
+  }
+  return evictedCount
+}
+
+/**
+ * cache.put() wrapped with QuotaExceededError handling: evict (quota-aware)
+ * then retry once, instead of swallowing the error and leaving the song
+ * uncached. Always logs exactly which URL failed.
+ */
+async function putWithRetry(cache: Cache, key: Request, response: Response): Promise<boolean> {
+  const url = key.url
+  try {
+    await cache.put(key, response)
+    return true
+  } catch (err) {
+    if (isQuotaError(err)) {
+      const estimate = await storageEstimate()
+      debugData('cache.quota-error', { url, ...estimate, error: String(err) })
+      try {
+        const evictedCount = await trimAudioCache(cache, url)
+        await cache.put(key, response)
+        debugData('cache.quota-retried', { url, evictedCount })
+        return true
+      } catch (err2) {
+        debugData('cache.put-failed', { url, error: String(err2) })
+        return false
+      }
+    }
+    debugData('cache.put-error', { url, error: String(err) })
+    return false
   }
 }
 
@@ -152,20 +280,38 @@ async function cacheAudioInBackground(
     // file (e.g. a Drive virus-scan page). Never cache those — playback still
     // streams, but the cache must not ever serve HTML as audio.
     const contentType = (response.headers.get('Content-Type') || '').toLowerCase()
-    if (!/^audio\/|^application\/octet-stream/.test(contentType)) return
+    if (!/^audio\/|^application\/octet-stream/.test(contentType)) {
+      debugData('audio.fill-skipped', { url, contentType, reason: 'content-type' })
+      return
+    }
+
+    const fileSize = fileSizeOf(response)
+    debugData('audio.fill-start', { url, fileSize })
 
     const body = await readFullBody(response, signal)
-    if (body === null) return // aborted — the user skipped on; nothing to store
+    if (body === null) {
+      debugData('audio.fill-aborted', { url })
+      return // aborted — the user skipped on; nothing to store
+    }
 
     const cache = await caches.open(AUDIO_CACHE)
     const headers = new Headers()
     headers.set('Content-Type', response.headers.get('Content-Type') || 'audio/mpeg')
     headers.set('Content-Length', String(body.byteLength))
     headers.set(CACHED_AT_HEADER, String(Date.now()))
-    await cache.put(key, new Response(body, { status: 200, statusText: 'OK', headers }))
-    await trimAudioCache(cache, url)
-  } catch {
-    // Aborted / quota / stream error — playback continues; this entry just stays uncached.
+    const stored = await putWithRetry(
+      cache,
+      key,
+      new Response(body, { status: 200, statusText: 'OK', headers }),
+    )
+    if (stored) {
+      urlMeta.set(url, { size: body.byteLength, cachedAt: Date.now() })
+      const estimate = await storageEstimate()
+      debugData('audio.cached', { url, size: body.byteLength, ...estimate })
+      await trimAudioCache(cache, url)
+    }
+  } catch (err) {
+    debugData('cache.put-error', { url, error: String(err), phase: 'cacheAudioInBackground' })
   } finally {
     const entry = fills.get(url)
     if (entry && entry.controller.signal === signal) fills.delete(url)
@@ -177,8 +323,12 @@ function startBackgroundFill(response: Response, key: Request): void {
   const url = key.url
   // A new track started: stop every older song's background copy so the active
   // stream no longer shares bandwidth with a full-file download nobody needs.
-  for (const [otherUrl] of fills) {
-    if (otherUrl !== url) abortFill(otherUrl)
+  for (const [otherUrl, fill] of fills) {
+    if (otherUrl !== url) {
+      fill.controller.abort()
+      fills.delete(otherUrl)
+      debugData('audio.fill-aborted-by', { url: otherUrl, canceledFor: url })
+    }
   }
   // Already filling this exact URL (media element re-issued `bytes=0-`) —
   // don't clone a second 8 MB download.
@@ -219,6 +369,7 @@ function withCancelAbort(response: Response, url: string): Response {
     cancel() {
       activeUrls.delete(url)
       abortFill(url)
+      debugData('audio.stream-cancel', { url })
       void reader.cancel().catch(() => {})
     },
   })
@@ -298,11 +449,19 @@ async function handleAudio(request: Request): Promise<Response> {
   if (downloaded && downloaded.ok) {
     markActive(url)
     const body = await downloaded.arrayBuffer()
-    return buildRangeResponse(
+    const served = buildRangeResponse(
       body,
       downloaded.headers.get('Content-Type') || 'audio/mpeg',
       rangeHeader,
     )
+    debugData('audio.serve', {
+      url,
+      source: 'downloads',
+      status: served.status,
+      range: rangeHeader ?? null,
+      size: body.byteLength,
+    })
+    return served
   }
 
   const cache = await caches.open(AUDIO_CACHE)
@@ -312,14 +471,44 @@ async function handleAudio(request: Request): Promise<Response> {
     if (Date.now() - at < AUDIO_MAX_AGE_MS) {
       markActive(url)
       const body = await cached.arrayBuffer()
-      return buildRangeResponse(
+      const served = buildRangeResponse(
         body,
         cached.headers.get('Content-Type') || 'audio/mpeg',
         rangeHeader,
       )
+      debugData('audio.serve', {
+        url,
+        source: 'cache',
+        status: served.status,
+        range: rangeHeader ?? null,
+        size: body.byteLength,
+        cachedAt: at,
+        ageSec: Math.round((Date.now() - at) / 1000),
+      })
+      return served
     }
     void cache.delete(key)
   }
+
+  // ---- Cache MISS bookkeeping (why, storage pressure, file identity) ----
+  const estimate = await storageEstimate()
+  let reason = 'never-fetched'
+  let evictedAgeSec = -1
+  const priorEviction = evictedUrls.get(url)
+  if (priorEviction !== undefined) {
+    reason = 'evicted'
+    evictedAgeSec = Math.round((Date.now() - priorEviction) / 1000)
+  } else if (seenUrls.has(url)) {
+    reason = 'fill-pending-or-failed'
+  }
+  seenUrls.add(url)
+  debugData('audio.cache-miss', {
+    url,
+    reason,
+    evictedAgeSec,
+    range: rangeHeader ?? null,
+    ...estimate,
+  })
 
   // Forward the original request (Range header included) so Google answers
   // with true byte-range semantics. Before this fix every miss returned a
@@ -333,9 +522,21 @@ async function handleAudio(request: Request): Promise<Response> {
   const isInitial = !rangeHeader || rangeHeader.trim() === 'bytes=0-'
   if (isInitial) {
     startBackgroundFill(response, key)
+    debugData('audio.fetch-response', {
+      url,
+      status: response.status,
+      size: fileSizeOf(response),
+      range: rangeHeader ?? null,
+    })
     return withCancelAbort(response, url)
   }
   markActive(url)
+  debugData('audio.fetch-response', {
+    url,
+    status: response.status,
+    size: fileSizeOf(response),
+    range: rangeHeader ?? null,
+  })
   return response
 }
 
@@ -367,6 +568,27 @@ self.addEventListener('activate', (event) => {
 })
 
 self.addEventListener('message', (event) => {
-  const data = (event as MessageEvent).data as { type?: string } | undefined
-  if (data && data.type === 'SKIP_WAITING') self.skipWaiting()
+  const messageEvent = event as MessageEvent
+  const data = messageEvent.data as { type?: string; enabled?: boolean } | string | undefined
+  if (typeof data === 'string') {
+    if (data === 'SKIP_WAITING') self.skipWaiting()
+    return
+  }
+  if (!data) return
+  if (data.type === 'SKIP_WAITING') {
+    self.skipWaiting()
+    return
+  }
+  if (data.type === 'SET_DEBUG') {
+    debugLogging = data.enabled === true
+    if (!debugLogging) debugLog.length = 0
+    return
+  }
+  if (data.type === 'GET_DEBUG_LOG') {
+    const source = messageEvent.source as { postMessage?: (message: unknown) => void } | null
+    if (source && typeof source.postMessage === 'function') {
+      source.postMessage({ type: 'DEBUG_LOG', entries: debugLog.slice() })
+    }
+    return
+  }
 })
