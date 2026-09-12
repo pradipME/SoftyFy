@@ -34,13 +34,3 @@ Thumbs.db
 
 # Testing / coverage
 coverage/
-
-# Capacitor Android build artifacts + secrets
-frontend/android/app/build/
-frontend/android/build/
-frontend/android/.gradle/
-frontend/android/app/src/main/assets/public/
-frontend/android/app/src/main/assets/capacitor.config.json
-frontend/android/keystore.properties
-frontend/android/*.keystore
-frontend/android/*.jks
