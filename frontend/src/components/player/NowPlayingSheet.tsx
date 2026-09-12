@@ -1,5 +1,5 @@
 import { AnimatePresence, motion, useMotionValue, useReducedMotion, useTransform, type PanInfo } from 'framer-motion'
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { usePlayer } from '../../context/PlayerContext'
 import { useBackInterception } from '../../hooks/useBackInterception'
 import { CoverBackground } from '../ambient/CoverBackground'
@@ -67,6 +67,10 @@ export function NowPlayingSheet({ open, onClose }: NowPlayingSheetProps) {
     if (info.offset.y > 110 || info.velocity.y > 600) onClose()
   }
 
+  // Stable per-song cover URL — never recomputed on player events, so the big
+  // artwork doesn't reload/blink while buffering.
+  const coverSrc = useMemo(() => currentSong?.coverSrc ?? '', [currentSong])
+
   if (currentSong === null) return null
 
   const isPlaying = status === 'playing'
@@ -125,7 +129,8 @@ export function NowPlayingSheet({ open, onClose }: NowPlayingSheetProps) {
               <CoverGlow song={currentSong} inset="-inset-10">
                 <div className="relative">
                   <Cover
-                    src={currentSong.coverSrc}
+                    key={currentSong.id}
+                    src={coverSrc}
                     alt={currentSong.title}
                     className="aspect-square w-[min(78vw,340px)] rounded-2xl shadow-2xl shadow-black/60"
                   />

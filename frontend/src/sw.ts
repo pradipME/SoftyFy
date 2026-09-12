@@ -1,4 +1,11 @@
 import { cleanupOutdatedCaches, precacheAndRoute } from 'workbox-precaching'
+import {
+  AUDIO_CACHE,
+  AUDIO_MAX_AGE_MS,
+  AUDIO_MAX_ENTRIES,
+  CACHED_AT_HEADER,
+  DOWNLOADS_CACHE,
+} from './lib/audioCache'
 
 interface FetchEventLike {
   request: Request
@@ -28,13 +35,6 @@ precacheAndRoute(self.__WB_MANIFEST)
 // any legacy cover-cache entries.
 
 // ── Audio ────────────────────────────────────────────────────────────────────
-const AUDIO_CACHE = 'softyfy-audio'
-/** Must match the cache name declared in `lib/downloads.ts`. */
-const DOWNLOADS_CACHE = 'so.softyfy-downloads'
-const AUDIO_MAX_ENTRIES = 8
-const AUDIO_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000
-const CACHED_AT_HEADER = 'x-softyfy-cached-at'
-
 function isAudioUrl(rawUrl: string): boolean {
   const url = new URL(rawUrl)
   if (
@@ -54,17 +54,99 @@ function isAudioUrl(rawUrl: string): boolean {
   return false
 }
 
+// URLs still being read by the page (a media element mid-stream). Never evicted
+// mid-play by another song's trim, so a Range request that arrives a moment
+// later still finds its file in cache instead of re-buffering from the network.
+const activeUrls = new Set<string>()
+
+function markActive(url: string): void {
+  activeUrls.add(url)
+  // Safety valve: only consulted during eviction, and treating an old URL as
+  // inactive merely relaxes the guard. Keep the set bounded.
+  if (activeUrls.size > 48) activeUrls.clear()
+}
+
+// In-flight background cache-fills keyed by request URL. Any new fill cancels
+// every older fill for a *different* URL, so a rapid skip stops the previous
+// song's full ~8 MB copy from downloading and competing with the track that is
+// actually playing. Multiple initial requests for the SAME url collapse into
+// one fill (no duplicate downloads).
+const fills = new Map<string, { controller: AbortController }>()
+
+function abortFill(url: string): void {
+  const fill = fills.get(url)
+  if (fill) {
+    fill.controller.abort()
+    fills.delete(url)
+  }
+}
+
+function isAbortError(err: unknown): boolean {
+  return typeof DOMException !== 'undefined' && err instanceof DOMException && err.name === 'AbortError'
+}
+
+/**
+ * Reads the body to completion so it can be re-stored as a plain 200 response.
+ * Honours `signal`: once aborted (the user skipped on), the read stops and the
+ * network branch for the clone is released so bandwidth frees up immediately.
+ */
+async function readFullBody(
+  response: Response,
+  signal: AbortSignal,
+): Promise<ArrayBuffer | null> {
+  const body = response.body
+  if (body === null) return null
+  const reader = body.getReader()
+  const chunks: Uint8Array[] = []
+  let total = 0
+  for (;;) {
+    if (signal.aborted) {
+      await reader.cancel().catch(() => {})
+      return null
+    }
+    let result
+    try {
+      result = await reader.read()
+    } catch (err) {
+      if (isAbortError(err)) return null
+      throw err
+    }
+    if (result.done) break
+    const value = result.value
+    chunks.push(value)
+    total += value.byteLength
+  }
+  const merged = new Uint8Array(total)
+  let offset = 0
+  for (const chunk of chunks) {
+    merged.set(chunk, offset)
+    offset += chunk.byteLength
+  }
+  return merged.buffer as ArrayBuffer
+}
+
 async function trimAudioCache(cache: Cache, keepUrl: string): Promise<void> {
   const entries = await cache.keys()
-  const others = entries.filter((r) => r.url !== keepUrl)
-  while (others.length >= AUDIO_MAX_ENTRIES) {
-    const oldest = others.shift()
+  const evictable = entries.filter((request) => {
+    if (request.url === keepUrl) return false
+    // Don't evict a song that the page is still actively streaming: its next
+    // Range request would otherwise miss and re-download mid-play.
+    if (activeUrls.has(request.url)) return false
+    return true
+  })
+  while (evictable.length >= AUDIO_MAX_ENTRIES) {
+    const oldest = evictable.shift()
     if (!oldest) break
     await cache.delete(oldest)
   }
 }
 
-async function cacheAudioInBackground(response: Response, key: Request): Promise<void> {
+async function cacheAudioInBackground(
+  response: Response,
+  key: Request,
+  signal: AbortSignal,
+): Promise<void> {
+  const url = key.url
   try {
     // Some hosts answer audio URLs with an HTML interstitial in place of the
     // file (e.g. a Drive virus-scan page). Never cache those — playback still
@@ -72,17 +154,80 @@ async function cacheAudioInBackground(response: Response, key: Request): Promise
     const contentType = (response.headers.get('Content-Type') || '').toLowerCase()
     if (!/^audio\/|^application\/octet-stream/.test(contentType)) return
 
+    const body = await readFullBody(response, signal)
+    if (body === null) return // aborted — the user skipped on; nothing to store
+
     const cache = await caches.open(AUDIO_CACHE)
-    const body = await response.arrayBuffer()
     const headers = new Headers()
     headers.set('Content-Type', response.headers.get('Content-Type') || 'audio/mpeg')
     headers.set('Content-Length', String(body.byteLength))
     headers.set(CACHED_AT_HEADER, String(Date.now()))
     await cache.put(key, new Response(body, { status: 200, statusText: 'OK', headers }))
-    await trimAudioCache(cache, key.url)
+    await trimAudioCache(cache, url)
   } catch {
-    // Aborted / quota — playback continues; this entry just stays uncached.
+    // Aborted / quota / stream error — playback continues; this entry just stays uncached.
+  } finally {
+    const entry = fills.get(url)
+    if (entry && entry.controller.signal === signal) fills.delete(url)
   }
+}
+
+/** Tracks the one active fill for a fresh (initial) response and returns it. */
+function startBackgroundFill(response: Response, key: Request): void {
+  const url = key.url
+  // A new track started: stop every older song's background copy so the active
+  // stream no longer shares bandwidth with a full-file download nobody needs.
+  for (const [otherUrl] of fills) {
+    if (otherUrl !== url) abortFill(otherUrl)
+  }
+  // Already filling this exact URL (media element re-issued `bytes=0-`) —
+  // don't clone a second 8 MB download.
+  if (fills.has(url)) return
+
+  const controller = new AbortController()
+  fills.set(url, { controller })
+  const copy = response.clone()
+  void cacheAudioInBackground(copy, key, controller.signal)
+}
+
+/**
+ * Streams the response to the page through a manual ReadableStream pump. If
+ * the page abandons the stream (skip / src change aborts the media fetch),
+ * the `cancel` hook aborts the matching background fill. The clone for the
+ * cache is taken *before* this wrapper, so streaming to the page and caching
+ * in the background never conflict.
+ */
+function withCancelAbort(response: Response, url: string): Response {
+  markActive(url)
+  const body = response.body
+  if (body === null) return response
+
+  const reader = body.getReader()
+  const stream = new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      try {
+        const { done, value } = await reader.read()
+        if (done) {
+          controller.close()
+        } else {
+          controller.enqueue(value)
+        }
+      } catch (error) {
+        controller.error(error)
+      }
+    },
+    cancel() {
+      activeUrls.delete(url)
+      abortFill(url)
+      void reader.cancel().catch(() => {})
+    },
+  })
+
+  return new Response(stream, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: response.headers,
+  })
 }
 
 // Builds the byte-range response (200 full, 206 slice, or 416) from the file's
@@ -143,6 +288,7 @@ function buildRangeResponse(
 async function handleAudio(request: Request): Promise<Response> {
   const rangeHeader = request.headers.get('Range')
   const key = new Request(request.url)
+  const url = key.url
 
   // Explicit user downloads take precedence: the entry lives in its own cache
   // (never pruned by the runtime audio cache) so an offline play of a saved
@@ -150,6 +296,7 @@ async function handleAudio(request: Request): Promise<Response> {
   const downloadCache = await caches.open(DOWNLOADS_CACHE)
   const downloaded = await downloadCache.match(key)
   if (downloaded && downloaded.ok) {
+    markActive(url)
     const body = await downloaded.arrayBuffer()
     return buildRangeResponse(
       body,
@@ -163,6 +310,7 @@ async function handleAudio(request: Request): Promise<Response> {
   if (cached && cached.ok) {
     const at = Number(cached.headers.get(CACHED_AT_HEADER) || 0)
     if (Date.now() - at < AUDIO_MAX_AGE_MS) {
+      markActive(url)
       const body = await cached.arrayBuffer()
       return buildRangeResponse(
         body,
@@ -179,13 +327,15 @@ async function handleAudio(request: Request): Promise<Response> {
   const response = await fetch(request, { mode: 'cors', credentials: 'omit' })
   if (!response.ok) return response
 
-  // Cache the full file in the background for instant repeat plays.
+  // Cache the full file in the background for instant repeat plays. The clone
+  // is taken BEFORE the response is handed to the page — cloning after
+  // handover throws on an already-consumed body and silently kills caching.
   const isInitial = !rangeHeader || rangeHeader.trim() === 'bytes=0-'
   if (isInitial) {
-    const copy = response.clone()
-    void cacheAudioInBackground(copy, key)
+    startBackgroundFill(response, key)
+    return withCancelAbort(response, url)
   }
-
+  markActive(url)
   return response
 }
 

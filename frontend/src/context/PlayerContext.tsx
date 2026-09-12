@@ -10,16 +10,13 @@ import {
   type ReactNode,
 } from 'react'
 import { useAudioPlayer } from '../hooks/useAudioPlayer'
+import {
+  AUDIO_CACHE,
+  AUDIO_MAX_AGE_MS,
+  CACHED_AT_HEADER,
+} from '../lib/audioCache'
 import { buildAudioCandidates, preferKnownGood } from '../lib/audioSources'
 import { haptic } from '../lib/haptics'
-import {
-  hasNativeMediaSession,
-  nativeClearNowPlaying,
-  nativeUpdateNowPlaying,
-  nativeUpdatePosition,
-  nativeSetPlaybackState,
-  onNativePlaybackAction,
-} from '../lib/mediaSessionBridge'
 import {
   loadPreferences,
   loadResumePositions,
@@ -179,11 +176,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       ? null
       : s.queue[s.playOrder[target]] ?? null
 
-    const targetKey = warmSong === null ? '' : warmSong.id
-    if (warmTargetRef.current === targetKey) return
-    warmTargetRef.current = targetKey
-
     if (warmSong === null) {
+      warmTargetRef.current = ''
       warmEl.removeAttribute('src')
       warmEl.load()
       return
@@ -192,8 +186,42 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     const candidates = buildAudioCandidates(warmSong.audioSrc)
     const knownGood = workingSourcesRef.current[warmSong.id]
     const preferred = preferKnownGood(candidates, knownGood)[0]
-    warmEl.preload = 'auto'
-    warmEl.src = preferred
+
+    const targetKey = `${warmSong.id}:${preferred}`
+    if (warmTargetRef.current === targetKey) return
+
+    // Only preload the next song when it is ALREADY in the audio cache. A
+    // cache-miss preload would make the service worker start a full ~8 MB
+    // background download of the next track *while the current one is
+    // streaming* — the mid-playback stutter/freeze. An in-cache preload starts
+    // cold from cache, which is exactly the point of warming.
+    void (async () => {
+      let cached = false
+      try {
+        const cache = await caches.open(AUDIO_CACHE)
+        const match = await cache.match(preferred)
+        if (match && match.ok) {
+          const at = Number(match.headers.get(CACHED_AT_HEADER) || 0)
+          cached = Date.now() - at < AUDIO_MAX_AGE_MS
+        }
+      } catch {
+        // Cache API unavailable — the fallback below streams on advance.
+      }
+      if (cached) {
+        // If a newer warm call claimed a different target while we awaited the
+        // cache read, don't clobber it with this (now stale) one.
+        if (warmTargetRef.current !== '' && warmTargetRef.current !== targetKey) return
+        warmTargetRef.current = targetKey
+        warmEl.preload = 'auto'
+        warmEl.src = preferred
+      } else if (warmTargetRef.current === targetKey) {
+        // Not cached: leave the target unclaimed so a later play of the current
+        // song re-attempts warming once the file is in cache.
+        warmTargetRef.current = ''
+        warmEl.removeAttribute('src')
+        warmEl.load()
+      }
+    })()
   }, [])
 
   // A source became playable — remember the winning URL and start preloading
@@ -454,70 +482,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     })
   }, [currentSong])
 
-  // Native Android MediaSession (Capacitor): push fresh metadata whenever the
-  // song changes, and tear the system session down when playback is cleared.
-  // Without this the WebView alone does not surface a media notification.
-  useEffect(() => {
-    if (typeof navigator === 'undefined' || !hasNativeMediaSession()) return
-    if (currentSong === null) {
-      void nativeClearNowPlaying()
-      return
-    }
-    let artworkSrc = currentSong.coverSrc
-    try {
-      artworkSrc = new URL(currentSong.coverSrc, window.location.origin).href
-    } catch {
-      // Resolution failed — send the raw path.
-    }
-    const s = stateRef.current
-    void nativeUpdateNowPlaying({
-      title: currentSong.title,
-      artist: currentSong.artist,
-      album: currentSong.album ?? '',
-      artwork: artworkSrc,
-      duration: currentSong.durationSec,
-      position: Math.max(0, Math.floor(s.currentTime)),
-      playing: s.status === 'playing' || s.status === 'loading',
-    })
-  }, [currentSong])
-
-  // Keep the native session's transport position/state in step with the web
-  // player on each timeupdate so the system media UI scrubs live.
-  useEffect(() => {
-    if (typeof navigator === 'undefined' || !hasNativeMediaSession() || currentSong === null) return
-    const s = stateRef.current
-    const duration = s.duration > 0 ? s.duration : currentSong.durationSec
-    const playing = s.status === 'playing' || s.status === 'loading'
-    void nativeUpdatePosition(
-      Math.max(0, Math.min(Math.floor(s.currentTime), duration)),
-      duration,
-      playing,
-    )
-  }, [state.status, state.currentTime, state.duration, currentSong])
-
-  // Native transport events (notification / quick settings / lock-screen
-  // buttons) drive the same actions the in-app controls use.
-  useEffect(() => {
-    if (typeof navigator === 'undefined' || !hasNativeMediaSession()) return
-    return onNativePlaybackAction(({ action, position }) => {
-      if (action === 'play' || action === 'pause') togglePlay()
-      else if (action === 'next') next()
-      else if (action === 'previous') previous()
-      else if (action === 'seekto' && typeof position === 'number') seek(position)
-    })
-  }, [togglePlay, next, previous, seek])
-
-  // Reflect the real play state in the OS UI (pause icon while playing, etc.).
-  // 'loading' leads straight into playback, so keep the OS showing "playing".
-  // With no song the session is inactive ('none'), which hides stale controls.
-  useEffect(() => {
-    if (typeof navigator === 'undefined' || !hasNativeMediaSession()) return
-    if (currentSong === null) return
-    const playing = state.status === 'playing' || state.status === 'loading'
-    void nativeSetPlaybackState(playing)
-  }, [state.status, currentSong])
-
-
   // Reflect playback state for browsers using the Media Session API
   useEffect(() => {
     if (typeof navigator === 'undefined' || !('mediaSession' in navigator)) return
@@ -529,6 +493,22 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     ms.playbackState =
       state.status === 'playing' || state.status === 'loading' ? 'playing' : 'paused'
   }, [state.status, currentSong])
+
+  // Keep the browser/OS media UI seekbar in step with real playback so the
+  // lock-screen / notification scrubbing position never drifts.
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !('mediaSession' in navigator)) return
+    const ms = navigator.mediaSession
+    if (typeof ms.setPositionState !== 'function') return
+    const s = stateRef.current
+    const duration = s.duration > 0 ? s.duration : (currentSong?.durationSec ?? 0)
+    if (duration <= 0) return
+    ms.setPositionState({
+      duration,
+      position: Math.max(0, Math.min(s.currentTime, duration)),
+      playbackRate: 1,
+    })
+  }, [state.status, state.currentTime, state.duration, currentSong])
 
 
   // Global keyboard shortcuts (Space, arrows, M) — ignored while typing.

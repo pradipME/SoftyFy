@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { usePlayer } from '../../context/PlayerContext'
 import { CoverGlow } from '../ambient/CoverGlow'
 import { Cover } from '../song/Cover'
@@ -37,6 +38,12 @@ export function PlayerBar({ onOpenSheet }: PlayerBarProps) {
     cycleRepeat,
   } = usePlayer()
 
+  // Keep the cover URL stable for the lifetime of a song. Recomputed/recreated
+  // image sources on every player event (timeupdate / waiting / stalled) cause
+  // the thumbnail to reload and blink; keying by song id guarantees the <img>
+  // only ever swaps when the song actually changes.
+  const coverSrc = useMemo(() => currentSong?.coverSrc ?? '', [currentSong])
+
   if (currentSong === null) return null
 
   const isPlaying = status === 'playing'
@@ -66,7 +73,7 @@ export function PlayerBar({ onOpenSheet }: PlayerBarProps) {
           >
             <CoverGlow song={currentSong} inset="-inset-4" className="shrink-0">
               <div className="relative">
-                <Cover src={currentSong.coverSrc} alt={currentSong.title} className="h-12 w-12 rounded-xl" />
+                <Cover key={currentSong.id} src={coverSrc} alt={currentSong.title} className="h-12 w-12 rounded-xl" />
                 {isLoading ? (
                   <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/30">
                     <LoaderIcon className="h-3.5 w-3.5 animate-spin text-white/80" />

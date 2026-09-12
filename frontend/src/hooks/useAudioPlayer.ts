@@ -200,8 +200,13 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
     }
     const onCanPlay = () => {
       clearStallTimer()
-      if (stallFlagRef.current && !audio.paused) {
-        handlersRef.current.onStatusChange('paused')
+      if (stallFlagRef.current) {
+        stallFlagRef.current = false
+        // A stall resolved into playable data. Report the element's REAL state:
+        // reporting 'paused' here while the element is actually playing makes
+        // PlayerContext's pause-sync effect call audio.pause() mid-song — a
+        // silent freeze after any transient buffer blip.
+        handlersRef.current.onStatusChange(audio.paused ? 'paused' : 'playing')
       }
     }
     const onError = () => {

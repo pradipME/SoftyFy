@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useReducer } from 'react'
 import type { Song } from '../types/song'
 import { buildAudioCandidates } from './audioSources'
+import { DOWNLOADS_CACHE } from './audioCache'
 
 const STORE_KEY = 'so.softyfy.downloads'
-/** Must match the cache name declared in `sw.ts`. */
-export const DOWNLOADS_CACHE = 'so.softyfy-downloads'
+
+export { DOWNLOADS_CACHE }
 
 type DownloadsMap = Record<string, string>
 
