@@ -17,6 +17,7 @@
 //   AIzaSyDJQOBTOSYvirZGDLjDOSEssJHx5e_BXDk       (retired — manual fallback)
 //   AIzaSyD0q-Vxl3jNY1VOjJ6Z2AkWvMwL2QW4oIo      (retired — manual fallback)
 //   AIzaSyAxAkYvJVFy_5HXwvejOlMi0yno613rtK8      (flagged by Google — retired)
+//   AIzaSyClaVWOBuBRg9mu7IPJqj601RbXfGjXaU0      (flagged by Google — retired)
 //
 // The key is read from the environment first, otherwise the built-in default is
 // used:
@@ -24,7 +25,7 @@
 //   SOFTYFY_DRIVE_API_KEY  (scripts; load via --env-file=.env)
 //   VITE_DRIVE_API_KEY     (build-time env, honored for parity)
 
-const DEFAULT_API_KEY = 'AIzaSyClaVWOBuBRg9mu7IPJqj601RbXfGjXaU0'
+const DEFAULT_API_KEY = 'AIzaSyDiCMArpkdOItpvTleR4ahYHpEwMAfMRcI'
 
 export const DRIVE_API_KEY =
   process.env.SOFTYFY_DRIVE_API_KEY || process.env.VITE_DRIVE_API_KEY || DEFAULT_API_KEY
