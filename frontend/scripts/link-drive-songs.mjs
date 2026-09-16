@@ -67,18 +67,17 @@ async function main() {
   let missing = []
 
   const replacer = (line) => {
-    // Already-linked keyless download URL → rebuild via audioUrl(fileId)
-    // (scripts keep one source of truth for the URL format).
-    const audioDrive = line.match(
-      /^(\s*audioSrc:\s*)'(https:\/\/drive\.usercontent\.google\.com\/download\?id=([A-Za-z0-9_-]+))[^']*',?\s*$/,
+    // Already-linked GitHub Release asset → already canonical; leave the line
+    // as-is (audioUrl(fileId) re-derives the same URL from the asset map).
+    const audioRelease = line.match(
+      /^(\s*audioSrc:\s*)'(https:\/\/github\.com\/pradipME\/SoftyFy\/releases\/download\/softyfy-audio-v1\/[^']+)',?\s*$/,
     )
     const audio = line.match(/^(\s*audioSrc:\s*)'(\/audio\/[^']+)',?\s*$/)
     const cover = line.match(/^(\s*coverSrc:\s*)'(\/covers\/[^']+)',?\s*$/)
-    if (!audioDrive && !audio && !cover) return line
+    if (!audioRelease && !audio && !cover) return line
 
-    if (audioDrive) {
-      changed += 1
-      return `${audioDrive[1]}'${audioUrl(audioDrive[3])}',`
+    if (audioRelease) {
+      return line
     }
 
     const isAudio = Boolean(audio)

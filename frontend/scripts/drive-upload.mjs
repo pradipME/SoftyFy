@@ -92,12 +92,16 @@ async function main() {
   const { stdout } = await run(RCLONE, ['link', remote], { env: process.env })
   const url = String(stdout).trim()
   const fileId = extractFileId(url)
+  // audioUrl() now emits a GitHub Release asset URL. The file still needs to be
+  // uploaded to the `softyfy-audio-v1` release (asset name = sanitized file
+  // name) and added to audio-release-map.json before that URL actually serves.
   const audioUrlValue = audioUrl(fileId)
   const coverUrlValue = coverUrl(fileId)
 
   console.log(`DRIVE_ID\t${fileId}`)
   console.log(`AUDIO_URL\t${audioUrlValue}`)
   console.log(`COVER_URL\t${coverUrlValue}`)
+  console.error('NOTE: upload this file to the softyfy-audio-v1 GitHub release + add to audio-release-map.json')
 }
 
 main().catch((err) => {

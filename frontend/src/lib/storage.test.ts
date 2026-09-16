@@ -5,9 +5,9 @@ import { loadWorkingSources, saveWorkingSource } from './storage'
 describe('working audio sources', () => {
   it('round-trips the known-good URL map', () => {
     const storage = window.localStorage
-    saveWorkingSource(storage, { afsos: 'https://drive.usercontent.google.com/download?id=1&export=download' })
+    saveWorkingSource(storage, { afsos: 'https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/Afsos.mp3' })
     expect(loadWorkingSources(storage).afsos).toBe(
-      'https://drive.usercontent.google.com/download?id=1&export=download',
+      'https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/Afsos.mp3',
     )
   })
 

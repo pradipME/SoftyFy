@@ -48,13 +48,15 @@ function debugData(tag: string, data: Record<string, unknown> = {}): void {
 
 // ── Audio ────────────────────────────────────────────────────────────────────
 function isAudioUrl(rawUrl: string): boolean {
-  // The player streams from KEYLESS Drive download endpoints — public files
-  // are served straight from Drive with no API key, so Google's key-level
-  // anti-abuse flagging (which 403'd every keyed alt=media request, from any
-  // project) can no longer block playback. Both hosts below were verified to
-  // answer 200 with audio/mpeg, byte ranges and Access-Control-Allow-Origin:*
-  // before the URL template was switched. Older keyed URLs are deliberately
-  // NOT matched: they are retired.
+  // Audio URLs changed to GitHub Release assets (softyfy-audio-v1) after Drive
+  // streaming became impossible: keyed alt=media was flag-403'd and keyless
+  // download endpoints block any request carrying browser `Sec-Fetch-Site:
+  // cross-site` headers. Release-asset URLs are therefore deliberately NOT
+  // intercepted here — the SW's CORS fetch would fail (the signed asset host
+  // sends no Access-Control-Allow-Origin) while the browser's native no-cors
+  // media request follows the 302 to a 206 Partial Content stream just fine.
+  // This matcher only keeps legacy Drive-download URLs (if a song ever lists
+  // one) on the old interception path.
   const url = new URL(rawUrl)
   return (
     (url.hostname === 'drive.usercontent.google.com' &&

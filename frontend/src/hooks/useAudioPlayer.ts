@@ -58,11 +58,11 @@ const BUFFER_GUARD_MAX_MS = 12_000
  *
  * `loadAndPlay(songId, srcs, startAt, shouldPlay)` is the only playback entry
  * point. `srcs` is an ordered list of URLs for one song (see
- * `buildAudioCandidates`). Drive songs deliberately have exactly ONE candidate
- * — the keyless Drive download URL — because Google's anti-abuse flagging
- * 403'd every keyed `alt=media` request across multiple projects, while the
- * keyless download endpoint keeps serving audio (byte-range supported). An
- * explicit key is no longer part of any stream URL.
+ * `buildAudioCandidates`). Songs have exactly ONE candidate — a GitHub Release
+ * asset URL (softyfy-audio-v1) — replacing Drive streaming after Google's
+ * anti-abuse flagging 403'd every API key AND the keyless download endpoints
+ * reject browser cross-site media requests. GitHub serves the asset with byte
+ * ranges (206), no key, nothing to flag.
  *
  * ## Stall / error recovery
  * When the network stalls mid-playback (`waiting` / `stalled`) a watchdog

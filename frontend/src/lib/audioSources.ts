@@ -1,20 +1,21 @@
 /**
  * Resolves the ordered list of URLs to try for a song's audio.
  *
- * Streaming lives on exactly ONE host, Drive's keyless download endpoint:
+ * Audio lives on GitHub Release assets (softyfy-audio-v1):
  *
- *   https://drive.usercontent.google.com/download?id=<FILE_ID>&export=download
+ *   https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/<FILE>.mp3
  *
- * No API key is involved. The keyed API endpoint
- * (www.googleapis.com/drive/v3/files/<ID>?alt=media&key=<KEY>) was retired
- * after Google's anti-abuse flagging 403'd every key across several projects;
- * the keyless endpoint answers 200 with audio/mpeg + byte ranges + ACAO:*.
+ * This replaced Google Drive streaming after both Drive routes died in real
+ * browsers: the keyed API (alt=media) was 403'd by Google's key flagging, and
+ * Drive's keyless download endpoints reject any request carrying browser
+ * `Sec-Fetch-Site: cross-site` headers. GitHub serves release assets with
+ * byte ranges (206) cross-site to media elements, no key, no flags.
  *
  * buildAudioCandidates therefore returns exactly one entry — the song's own URL.
  * Multi-host fallback is deliberately gone: the player retries this single URL
  * with escalating backoff instead of cycling through hosts. Sources that are
- * not Drive streams (local /audio/... files, arbitrary HTTPS) are also returned
- * as their sole candidate.
+ * not Release streams (local /audio/... files, arbitrary HTTPS) are also
+ * returned as their sole candidate.
  */
 export function buildAudioCandidates(source: string): string[] {
   return [source]

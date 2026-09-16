@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { buildAudioCandidates, preferKnownGood } from './audioSources'
 
-const DRIVE_URL =
-  'https://drive.usercontent.google.com/download?id=ABC123&export=download'
+const RELEASE_URL =
+  'https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/A-B_C.mp3'
 
 describe('buildAudioCandidates', () => {
   it('returns only the original source for local or unknown URLs', () => {
@@ -12,14 +12,14 @@ describe('buildAudioCandidates', () => {
     ])
   })
 
-  it('returns only the keyless download URL for Drive songs — no fallback hosts', () => {
-    expect(buildAudioCandidates(DRIVE_URL)).toEqual([DRIVE_URL])
+  it('returns only the GitHub Release URL for songs — no fallback hosts', () => {
+    expect(buildAudioCandidates(RELEASE_URL)).toEqual([RELEASE_URL])
   })
 
-  it('ignores non-download Drive URLs', () => {
+  it('ignores non-release URL patterns', () => {
     expect(
-      buildAudioCandidates('https://drive.usercontent.google.com/download?id=ABC123'),
-    ).toEqual(['https://drive.usercontent.google.com/download?id=ABC123'])
+      buildAudioCandidates('https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/A-B_C'),
+    ).toEqual(['https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/A-B_C'])
   })
 })
 
