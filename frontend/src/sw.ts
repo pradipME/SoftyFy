@@ -104,6 +104,22 @@ function isQuotaError(err: unknown): boolean {
   )
 }
 
+// ── Connection quality ─────────────────────────────────────────────────────
+// Same Network Information API the app uses for warm-preload decisions.
+// Chromium-only; returns false (fast / unknown) on Firefox / Safari / SWs
+// where the API is unavailable — conservative default is to proceed.
+function isSlowConnection(): boolean {
+  try {
+    const conn = (navigator as Navigator & { connection?: { effectiveType?: string; saveData?: boolean } }).connection
+    if (!conn) return false
+    if (conn.saveData) return true
+    const t = conn.effectiveType
+    return t === 'slow-2g' || t === '2g' || t === '3g'
+  } catch {
+    return false
+  }
+}
+
 // Per-url bookkeeping for diagnosing cache health and for quota-aware eviction.
 const seenUrls = new Set<string>()
 const urlMeta = new Map<string, { size: number; cachedAt: number }>()
@@ -147,6 +163,10 @@ async function storageEstimate(): Promise<{ usage: number; quota: number; ratio:
  * Reads the body to completion so it can be re-stored as a plain 200 response.
  * Honours `signal`: once aborted (the user skipped on), the read stops and the
  * network branch for the clone is released so bandwidth frees up immediately.
+ *
+ * Yields the SW thread between chunks (`await null`) so other fetch events —
+ * especially foreground Range requests for the same playing song — are never
+ * stuck behind the fill's read loop in the single-threaded SW event queue.
  */
 async function readFullBody(
   response: Response,
@@ -173,6 +193,12 @@ async function readFullBody(
     const value = result.value
     chunks.push(value)
     total += value.byteLength
+    // Yield the microtask queue between chunks so other fetch events can be
+    // dispatched. Each reader.read() already suspends while waiting for
+    // network data; this extra yield covers the case where multiple chunks
+    // arrive in rapid succession (fast connection) and prevents the read
+    // loop from monopolising the SW thread.
+    await null
   }
   const merged = new Uint8Array(total)
   let offset = 0
@@ -332,9 +358,19 @@ function startBackgroundFill(response: Response, key: Request): void {
   // don't clone a second 8 MB download.
   if (fills.has(url)) return
 
+  // On slow connections the background fill would compete with the foreground
+  // stream for the same limited bandwidth, causing the playing song to buffer.
+  // Defer entirely — the cache is a convenience for replays, not worth
+  // degrading the playback it's supposedly helping.
+  if (isSlowConnection()) {
+    debugData('audio.fill-skipped', { url, reason: 'slow-connection' })
+    return
+  }
+
   const controller = new AbortController()
   fills.set(url, { controller })
   const copy = response.clone()
+  debugData('audio.fill-start', { url })
   void cacheAudioInBackground(copy, key, controller.signal)
 }
 
