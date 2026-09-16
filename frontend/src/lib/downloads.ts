@@ -78,7 +78,7 @@ export function downloadSong(song: Song): Promise<void> {
         notify()
         return
       } catch {
-        // Try the next host — matches the playback fallback order.
+        // Try the next candidate — matches the playback fallback order.
       } finally {
         clearTimeout(timer)
       }

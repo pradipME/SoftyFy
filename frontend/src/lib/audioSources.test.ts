@@ -12,12 +12,8 @@ describe('buildAudioCandidates', () => {
     ])
   })
 
-  it('tries the keyless download hosts first, the keyed API URL last', () => {
-    expect(buildAudioCandidates(DRIVE_API)).toEqual([
-      'https://drive.usercontent.google.com/download?id=ABC123&export=download',
-      'https://drive.google.com/uc?export=download&confirm=t&id=ABC123',
-      DRIVE_API,
-    ])
+  it('returns only the googleapis media URL for Drive songs — no dead fallback hosts', () => {
+    expect(buildAudioCandidates(DRIVE_API)).toEqual([DRIVE_API])
   })
 
   it('ignores non-media Drive API URLs', () => {
@@ -29,14 +25,12 @@ describe('buildAudioCandidates', () => {
 
 describe('preferKnownGood', () => {
   it('moves a known-good URL to the front', () => {
-    const candidates = buildAudioCandidates(DRIVE_API)
-    const ordered = preferKnownGood(candidates, candidates[2])
-    expect(ordered[0]).toBe(candidates[2])
-    expect(ordered).toHaveLength(candidates.length)
+    const candidates = ['a', 'b', 'c']
+    expect(preferKnownGood(candidates, 'c')).toEqual(['c', 'a', 'b'])
   })
 
   it('keeps order when there is no known-good URL', () => {
-    const candidates = buildAudioCandidates(DRIVE_API)
+    const candidates = ['a', 'b', 'c']
     expect(preferKnownGood(candidates)).toEqual(candidates)
   })
 

@@ -1,32 +1,26 @@
 /**
- * Resolves the ordered list of downloadable URLs to try for a song's audio.
+ * Resolves the ordered list of URLs to try for a song's audio.
  *
- * Songs streamed from Google Drive are tried host-by-host so the player can
- * fall back when one host drops or is throttled:
+ * Streaming lives on exactly ONE host, the official Drive API media endpoint:
  *
- *   1. Google's direct-download host used by the Drive web UI (
- *      `drive.usercontent.google.com`) — keyless, real byte-range support,
- *   2. the classic `drive.google.com/uc` public link — keyless,
- *   3. the Drive API media URL (`www.googleapis.com/drive/v3/files/...?alt=media`)
- *      as a last resort; that endpoint is throttled for public hotlinking and
- *      needs a Google Cloud API key, so playback never depends on it.
+ *   https://www.googleapis.com/drive/v3/files/<FILE_ID>?alt=media&key=<KEY>
  *
- * Any other source (local `/audio/...` files, arbitrary HTTPS) is returned
- * untouched — only the player retries it verbatim.
+ * Every alternative host was probed and rejected in real browsers during the
+ * original playback fix (see project report §4.1): `drive.usercontent.google.com`
+ * returns HTTP 403 to any cross-site media request, `drive.google.com/uc`
+ * redirects 303 → 403, and `lh3.googleusercontent.com/d/<ID>` returns 404. They
+ * only appeared to work in curl, because browsers attach `Sec-Fetch-Site:
+ * cross-site` to cross-origin media requests and those endpoints reject it.
+ *
+ * buildAudioCandidates therefore returns exactly one entry — the song's own URL.
+ * Multi-host fallback is deliberately gone: the player retries this single URL
+ * with escalating backoff instead of cycling through hosts that are known to
+ * fail before ever reaching the one that works. Sources that are not Drive
+ * streams (local /audio/... files, arbitrary HTTPS) are also returned as their
+ * sole candidate.
  */
-
-const DRIVE_API_RE =
-  /^https:\/\/www\.googleapis\.com\/drive\/v3\/files\/([A-Za-z0-9_-]+)\?alt=media(.+)?$/
-
 export function buildAudioCandidates(source: string): string[] {
-  const match = DRIVE_API_RE.exec(source)
-  if (match === null) return [source]
-  const [, fileId] = match
-  const apiUrl = match[0]
-  const userContentUrl =
-    `https://drive.usercontent.google.com/download?id=${fileId}&export=download`
-  const publicLinkUrl = `https://drive.google.com/uc?export=download&confirm=t&id=${fileId}`
-  return [userContentUrl, publicLinkUrl, apiUrl]
+  return [source]
 }
 
 /**

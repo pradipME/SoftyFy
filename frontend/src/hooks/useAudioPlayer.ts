@@ -23,6 +23,11 @@ export interface AudioPlayerHandlers {
 const STALL_TIMEOUT_MS = 10_000
 const MAX_RECOVERY_ATTEMPTS = 3
 const NEAR_END_THRESHOLD_S = 2
+/** Base delay for retrying a single (the only) candidate URL. Doubles per
+ *  attempt, capped at 4 s, so a dead stream is not hammered into an instant
+ *  reload loop. */
+const RECOVERY_BACKOFF_MS = 1000
+const RECOVERY_BACKOFF_MAX_MS = 4000
 
 /** How recently a `timeupdate` must have advanced currentTime to count as real
  *  playback progress. onPlaying/onCanPlay only disarm the stall watchdog when
@@ -42,20 +47,23 @@ const BUFFER_GUARD_MAX_MS = 12_000
  *
  * `loadAndPlay(songId, srcs, startAt, shouldPlay)` is the only playback entry
  * point. `srcs` is an ordered list of URLs for one song (see
- * `buildAudioCandidates`): the first URL is tried first, then each failing host
- * is skipped in turn. When a different source list is requested — a new song or
- * a re-selected one — the list resets back to its first entry.
+ * `buildAudioCandidates`). Drive songs deliberately have exactly ONE candidate
+ * — the official `?alt=media&key=` URL — because every fallback host measured
+ * during the original playback fix 403s / 404s / CORS-fails in real browsers
+ * (project report §4.1). The first URL is therefore the only URL tried; a
+ * different source list — a new song or a re-selected one — resets the list
+ * back to its first entry.
  *
  * ## Stall / error recovery
  * When the network stalls mid-playback (`waiting` / `stalled`) a watchdog
  * timer starts; if no progress happens within {@link STALL_TIMEOUT_MS} we
- * force-recover by re-loading the *next* URL in the list, preserving the
- * playback position. Drive throttles some connections so slowly that only
- * `waiting` fires (never `stalled`), so both events arm the watchdog.
- * Transient media errors do the same. Once every URL in a list has failed,
- * `onError` fires so the UI can give up.
- * A single-entry list simply retries the same URL up to
- * {@link MAX_RECOVERY_ATTEMPTS} times before failing, as before.
+ * force-recover by re-loading the current URL, preserving the playback
+ * position. Drive throttles some connections so slowly that only `waiting`
+ * fires (never `stalled`), so both events arm the watchdog. Transient media
+ * errors do the same. Because every source list is a single entry, recovery
+ * retries that one URL with escalating backoff up to
+ * {@link MAX_RECOVERY_ATTEMPTS} times before `onError` fires so the UI can
+ * give up.
  */
 export function useAudioPlayer(handlers: AudioPlayerHandlers) {
   const handlersRef = useRef(handlers)
@@ -72,6 +80,7 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
   const songIdRef = useRef<string | null>(null)
   const suppressLoadingRef = useRef(false)
   const stallTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const recoveryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const retryCountRef = useRef(0)
   const recoveringRef = useRef(false)
   const stallFlagRef = useRef(false)
@@ -89,6 +98,13 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
     if (stallTimerRef.current !== null) {
       clearTimeout(stallTimerRef.current)
       stallTimerRef.current = null
+    }
+  }, [])
+
+  const clearRecoveryTimer = useCallback(() => {
+    if (recoveryTimerRef.current !== null) {
+      clearTimeout(recoveryTimerRef.current)
+      recoveryTimerRef.current = null
     }
   }, [])
 
@@ -239,7 +255,9 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
     if (audio === null) return
 
     handlersRef.current.onRecoveryStart()
+    clearRecoveryTimer()
     clearBufferGuard()
+    clearStallTimer()
     recoveringRef.current = true
 
     const list = candidatesRef.current
@@ -248,24 +266,33 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
     const sameHost = nextIndex === currentIndex
 
     if (sameHost) {
-      // Single-entry (e.g. local files): retry the same URL a bounded number of
-      // times before giving up, mirroring the old behavior.
+      // Every source list is a single entry now (Drive songs and local files
+      // alike), so recovery retries the same URL a bounded number of times
+      // with escalating backoff before giving up. No dead hosts to cycle.
       retryCountRef.current += 1
       if (retryCountRef.current > MAX_RECOVERY_ATTEMPTS) {
         retryCountRef.current = 0
         recoveringRef.current = false
-        clearStallTimer()
         handlersRef.current.onError()
         return
       }
-    } else {
-      // Multi-host list: each failure just moves to the next URL; the list
-      // bounds the total attempts.
-      retryCountRef.current = 0
+      const savedTime = audio.currentTime
+      const delay = Math.min(
+        RECOVERY_BACKOFF_MS * 2 ** (retryCountRef.current - 1),
+        RECOVERY_BACKOFF_MAX_MS,
+      )
+      recoveryTimerRef.current = setTimeout(() => {
+        recoveryTimerRef.current = null
+        recoverToCandidate(nextIndex, savedTime)
+      }, delay)
+      return
     }
 
+    // Multi-entry lists (only reachable for non-Drive sources that opt in)
+    // still skip to the next URL per failure; the list bounds total attempts.
+    retryCountRef.current = 0
     recoverToCandidate(nextIndex, audio.currentTime)
-  }, [clearStallTimer, recoverToCandidate, clearBufferGuard])
+  }, [clearRecoveryTimer, clearStallTimer, recoverToCandidate, clearBufferGuard])
 
   useEffect(() => {
     const audio = audioRef.current
@@ -424,8 +451,9 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
     return () => {
       clearStallTimer()
       clearBufferGuard()
+      clearRecoveryTimer()
     }
-  }, [clearStallTimer, clearBufferGuard])
+  }, [clearStallTimer, clearBufferGuard, clearRecoveryTimer])
 
   const loadAndPlay = useCallback(
     (songId: string, srcs: string[], startAt: number | null, shouldPlay: boolean) => {
@@ -441,6 +469,7 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
         candidateIndexRef.current = 0
         suppressLoadingRef.current = !shouldPlay
         clearStallTimer()
+        clearRecoveryTimer()
         stallFlagRef.current = false
         retryCountRef.current = 0
         recoveringRef.current = false
@@ -482,7 +511,7 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
         audio.pause()
       }
     },
-    [attemptRecovery, clearStallTimer, startBufferedStart],
+    [attemptRecovery, clearStallTimer, clearRecoveryTimer, startBufferedStart],
   )
 
   const clearSource = useCallback(() => {
@@ -490,6 +519,7 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
     if (audio === null) return
     clearStallTimer()
     clearBufferGuard()
+    clearRecoveryTimer()
     stallFlagRef.current = false
     retryCountRef.current = 0
     recoveringRef.current = false
@@ -499,7 +529,7 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
     candidateIndexRef.current = 0
     audio.removeAttribute('src')
     audio.load()
-  }, [clearStallTimer, clearBufferGuard])
+  }, [clearStallTimer, clearBufferGuard, clearRecoveryTimer])
 
   const seekTo = useCallback((time: number) => {
     const audio = audioRef.current

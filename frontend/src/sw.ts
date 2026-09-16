@@ -49,22 +49,16 @@ function debugData(tag: string, data: Record<string, unknown> = {}): void {
 
 // ── Audio ────────────────────────────────────────────────────────────────────
 function isAudioUrl(rawUrl: string): boolean {
+  // The player streams from exactly one host — the official Drive API media
+  // endpoint. Every alternative was proven 403 / 303→403 / 404 / CORS-blocked
+  // for cross-site media requests in real browsers (project report §4.1), so
+  // no fallback hosts are matched: only googleapis alt=media requests exist.
   const url = new URL(rawUrl)
-  if (
+  return (
     url.hostname === 'www.googleapis.com' &&
     url.pathname.startsWith('/drive/v3/files/') &&
     url.searchParams.get('alt') === 'media'
-  ) {
-    return true
-  }
-  // Fallback hosts the player switches to when the Drive API URL drops.
-  if (url.hostname === 'drive.usercontent.google.com' && url.pathname.startsWith('/download')) {
-    return true
-  }
-  if (url.hostname === 'drive.google.com' && url.pathname.startsWith('/uc')) {
-    return true
-  }
-  return false
+  )
 }
 
 // URLs still being read by the page (a media element mid-stream). Never evicted
