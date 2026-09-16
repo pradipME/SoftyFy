@@ -2,8 +2,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { fetchWithKeyFallback, swapApiKey } from './apiKeyFallback'
 
-const PRIMARY_KEY = 'AIzaSyAxAkYvJVFy_5HXwvejOlMi0yno613rtK8'
-const BACKUP_KEY = 'AIzaSyDJQOBTOSYvirZGDLjDOSEssJHx5e_BXDk'
+const PRIMARY_KEY = 'AIzaSyClaVWOBuBRg9mu7IPJqj601RbXfGjXaU0'
+const BACKUP_KEY = 'AIzaSyAxAkYvJVFy_5HXwvejOlMi0yno613rtK8'
 const MEDIA_URL = `https://www.googleapis.com/drive/v3/files/AB12?alt=media&key=${PRIMARY_KEY}`
 
 function driveResponse(status: number): Response {

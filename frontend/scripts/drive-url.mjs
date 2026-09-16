@@ -8,12 +8,16 @@
 // A SINGLE API key is used for every stream URL. Key rotation was removed: for
 // a personal library a single key's per-day download quota is far above real
 // usage, and multi-key rotation only made failures harder to isolate during the
-// buffering investigation. The retired keys are kept below purely as a manual
-// fallback in case the daily quota is ever hit — there is NO live rotation code
-// anywhere anymore:
+// buffering investigation. The previously-active key was demoted to the backup
+// safety net (service worker single 403/429 retry) after Google's anti-abuse
+// system flagged it — it may recover on its own and now serves as redundancy.
+// Retired keys are kept below purely as a manual fallback in case the daily
+// quota is ever hit — there is NO live rotation code anywhere anymore:
 //
-//   AIzaSyDJQOBTOSYvirZGDLjDOSEssJHx5e_BXDk   (retired — manual fallback)
-//   AIzaSyD0q-Vxl3jNY1VOjJ6Z2AkWvMwL2QW4oIo  (retired — manual fallback)
+//   AIzaSyDJQOBTOSYvirZGDLjDOSEssJHx5e_BXDk       (retired — manual fallback)
+//   AIzaSyD0q-Vxl3jNY1VOjJ6Z2AkWvMwL2QW4oIo      (retired — manual fallback)
+//   AIzaSyAxAkYvJVFy_5HXwvejOlMi0yno613rtK8      (flagged primary — now the
+//                                                 VITE_DRIVE_API_KEY_BACKUP)
 //
 // The key is read from the environment first, otherwise the built-in default is
 // used:
@@ -21,7 +25,7 @@
 //   SOFTYFY_DRIVE_API_KEY  (scripts; load via --env-file=.env)
 //   VITE_DRIVE_API_KEY     (build-time env, honored for parity)
 
-const DEFAULT_API_KEY = 'AIzaSyAxAkYvJVFy_5HXwvejOlMi0yno613rtK8'
+const DEFAULT_API_KEY = 'AIzaSyClaVWOBuBRg9mu7IPJqj601RbXfGjXaU0'
 
 export const DRIVE_API_KEY =
   process.env.SOFTYFY_DRIVE_API_KEY || process.env.VITE_DRIVE_API_KEY || DEFAULT_API_KEY
