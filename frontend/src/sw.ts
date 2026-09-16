@@ -48,15 +48,21 @@ function debugData(tag: string, data: Record<string, unknown> = {}): void {
 
 // ── Audio ────────────────────────────────────────────────────────────────────
 function isAudioUrl(rawUrl: string): boolean {
-  // The player streams from exactly one host — the official Drive API media
-  // endpoint. Every alternative was proven 403 / 303→403 / 404 / CORS-blocked
-  // for cross-site media requests in real browsers (project report §4.1), so
-  // no fallback hosts are matched: only googleapis alt=media requests exist.
+  // The player streams from KEYLESS Drive download endpoints — public files
+  // are served straight from Drive with no API key, so Google's key-level
+  // anti-abuse flagging (which 403'd every keyed alt=media request, from any
+  // project) can no longer block playback. Both hosts below were verified to
+  // answer 200 with audio/mpeg, byte ranges and Access-Control-Allow-Origin:*
+  // before the URL template was switched. Older keyed URLs are deliberately
+  // NOT matched: they are retired.
   const url = new URL(rawUrl)
   return (
-    url.hostname === 'www.googleapis.com' &&
-    url.pathname.startsWith('/drive/v3/files/') &&
-    url.searchParams.get('alt') === 'media'
+    (url.hostname === 'drive.usercontent.google.com' &&
+      url.pathname.startsWith('/download') &&
+      url.searchParams.get('export') === 'download') ||
+    (url.hostname === 'drive.google.com' &&
+      url.pathname === '/uc' &&
+      url.searchParams.get('export') === 'download')
   )
 }
 

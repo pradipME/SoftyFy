@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { buildAudioCandidates, preferKnownGood } from './audioSources'
 
-const DRIVE_API =
-  'https://www.googleapis.com/drive/v3/files/ABC123?alt=media&key=SECRET'
+const DRIVE_URL =
+  'https://drive.usercontent.google.com/download?id=ABC123&export=download'
 
 describe('buildAudioCandidates', () => {
   it('returns only the original source for local or unknown URLs', () => {
@@ -12,14 +12,14 @@ describe('buildAudioCandidates', () => {
     ])
   })
 
-  it('returns only the googleapis media URL for Drive songs — no dead fallback hosts', () => {
-    expect(buildAudioCandidates(DRIVE_API)).toEqual([DRIVE_API])
+  it('returns only the keyless download URL for Drive songs — no fallback hosts', () => {
+    expect(buildAudioCandidates(DRIVE_URL)).toEqual([DRIVE_URL])
   })
 
-  it('ignores non-media Drive API URLs', () => {
+  it('ignores non-download Drive URLs', () => {
     expect(
-      buildAudioCandidates('https://www.googleapis.com/drive/v3/files/ABC123'),
-    ).toEqual(['https://www.googleapis.com/drive/v3/files/ABC123'])
+      buildAudioCandidates('https://drive.usercontent.google.com/download?id=ABC123'),
+    ).toEqual(['https://drive.usercontent.google.com/download?id=ABC123'])
   })
 })
 

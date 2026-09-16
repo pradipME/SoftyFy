@@ -1,23 +1,20 @@
 /**
  * Resolves the ordered list of URLs to try for a song's audio.
  *
- * Streaming lives on exactly ONE host, the official Drive API media endpoint:
+ * Streaming lives on exactly ONE host, Drive's keyless download endpoint:
  *
- *   https://www.googleapis.com/drive/v3/files/<FILE_ID>?alt=media&key=<KEY>
+ *   https://drive.usercontent.google.com/download?id=<FILE_ID>&export=download
  *
- * Every alternative host was probed and rejected in real browsers during the
- * original playback fix (see project report §4.1): `drive.usercontent.google.com`
- * returns HTTP 403 to any cross-site media request, `drive.google.com/uc`
- * redirects 303 → 403, and `lh3.googleusercontent.com/d/<ID>` returns 404. They
- * only appeared to work in curl, because browsers attach `Sec-Fetch-Site:
- * cross-site` to cross-origin media requests and those endpoints reject it.
+ * No API key is involved. The keyed API endpoint
+ * (www.googleapis.com/drive/v3/files/<ID>?alt=media&key=<KEY>) was retired
+ * after Google's anti-abuse flagging 403'd every key across several projects;
+ * the keyless endpoint answers 200 with audio/mpeg + byte ranges + ACAO:*.
  *
  * buildAudioCandidates therefore returns exactly one entry — the song's own URL.
  * Multi-host fallback is deliberately gone: the player retries this single URL
- * with escalating backoff instead of cycling through hosts that are known to
- * fail before ever reaching the one that works. Sources that are not Drive
- * streams (local /audio/... files, arbitrary HTTPS) are also returned as their
- * sole candidate.
+ * with escalating backoff instead of cycling through hosts. Sources that are
+ * not Drive streams (local /audio/... files, arbitrary HTTPS) are also returned
+ * as their sole candidate.
  */
 export function buildAudioCandidates(source: string): string[] {
   return [source]

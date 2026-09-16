@@ -1,40 +1,26 @@
 // Shared Google Drive URL helpers.
 //
-// Audio streams through the Drive API (alt=media) because the plain Drive
-// "usercontent" download endpoint returns HTTP 403 to any cross-site browser
-// media request. The API key below is a public, key-restricted key — it is
-// also embedded in the built PWA (songs.ts), so it ships to the browser anyway.
+// Audio streams KEYLESS from Drive's public download endpoint
+// (drive.usercontent.google.com/download?id=…&export=download). No API key is
+// involved anywhere: every keyed request to www.googleapis.com alt=media was
+// answered 403 by Google's anti-abuse flagging — across FOUR different API
+// keys and multiple projects — while the keyless download endpoint keeps
+// answering 200 with audio/mpeg, byte ranges and ACAO:* (verified direct).
 //
-// A SINGLE API key is used for every stream URL. Key rotation was removed: for
-// a personal library a single key's per-day download quota is far above real
-// usage, and multi-key rotation only made failures harder to isolate during the
-// buffering investigation. The SW backup-key safety net was also removed after
-// Google's anti-abuse system flagged the previous primary — keeping a dead
-// second key only added a wasted failing request to every blocked song.
-// Retired keys are kept below purely as a manual fallback in case the daily
-// quota is ever hit — there is NO live rotation code anywhere anymore:
+// The Drive API key era is over. The keys below are kept purely as a historical
+// record — there is NO live code that uses any of them:
 //
 //   AIzaSyDJQOBTOSYvirZGDLjDOSEssJHx5e_BXDk       (retired — manual fallback)
 //   AIzaSyD0q-Vxl3jNY1VOjJ6Z2AkWvMwL2QW4oIo      (retired — manual fallback)
 //   AIzaSyAxAkYvJVFy_5HXwvejOlMi0yno613rtK8      (flagged by Google — retired)
 //   AIzaSyClaVWOBuBRg9mu7IPJqj601RbXfGjXaU0      (flagged by Google — retired)
-//
-// The key is read from the environment first, otherwise the built-in default is
-// used:
-//
-//   SOFTYFY_DRIVE_API_KEY  (scripts; load via --env-file=.env)
-//   VITE_DRIVE_API_KEY     (build-time env, honored for parity)
+//   AIzaSyDiCMArpkdOItpvTleR4ahYHpEwMAfMRcI      (flagged by Google — retired)
 
-const DEFAULT_API_KEY = 'AIzaSyDiCMArpkdOItpvTleR4ahYHpEwMAfMRcI'
-
-export const DRIVE_API_KEY =
-  process.env.SOFTYFY_DRIVE_API_KEY || process.env.VITE_DRIVE_API_KEY || DEFAULT_API_KEY
-
-const FILES_BASE = 'https://www.googleapis.com/drive/v3/files'
+const DRIVE_DOWNLOAD_BASE = 'https://drive.usercontent.google.com/download'
 const THUMBNAIL_BASE = 'https://drive.google.com/thumbnail'
 
 export function audioUrl(fileId) {
-  return `${FILES_BASE}/${encodeURIComponent(fileId)}?alt=media&key=${DRIVE_API_KEY}`
+  return `${DRIVE_DOWNLOAD_BASE}?id=${encodeURIComponent(fileId)}&export=download`
 }
 
 export function coverUrl(fileId) {

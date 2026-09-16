@@ -59,11 +59,10 @@ const BUFFER_GUARD_MAX_MS = 12_000
  * `loadAndPlay(songId, srcs, startAt, shouldPlay)` is the only playback entry
  * point. `srcs` is an ordered list of URLs for one song (see
  * `buildAudioCandidates`). Drive songs deliberately have exactly ONE candidate
- * — the official `?alt=media&key=` URL — because every fallback host measured
- * during the original playback fix 403s / 404s / CORS-fails in real browsers
- * (project report §4.1). The first URL is therefore the only URL tried; a
- * different source list — a new song or a re-selected one — resets the list
- * back to its first entry.
+ * — the keyless Drive download URL — because Google's anti-abuse flagging
+ * 403'd every keyed `alt=media` request across multiple projects, while the
+ * keyless download endpoint keeps serving audio (byte-range supported). An
+ * explicit key is no longer part of any stream URL.
  *
  * ## Stall / error recovery
  * When the network stalls mid-playback (`waiting` / `stalled`) a watchdog

@@ -67,10 +67,10 @@ async function main() {
   let missing = []
 
   const replacer = (line) => {
-    // Already-linked Drive API URL → rebuild via audioUrl(fileId) so the key
-    // matches the single configured key (see .env.example).
+    // Already-linked keyless download URL → rebuild via audioUrl(fileId)
+    // (scripts keep one source of truth for the URL format).
     const audioDrive = line.match(
-      /^(\s*audioSrc:\s*)'(https:\/\/www\.googleapis\.com\/drive\/v3\/files\/([A-Za-z0-9_-]+)\?alt=media)[^']*',?\s*$/,
+      /^(\s*audioSrc:\s*)'(https:\/\/drive\.usercontent\.google\.com\/download\?id=([A-Za-z0-9_-]+))[^']*',?\s*$/,
     )
     const audio = line.match(/^(\s*audioSrc:\s*)'(\/audio\/[^']+)',?\s*$/)
     const cover = line.match(/^(\s*coverSrc:\s*)'(\/covers\/[^']+)',?\s*$/)
