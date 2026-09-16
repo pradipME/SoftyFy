@@ -8,16 +8,15 @@
 // A SINGLE API key is used for every stream URL. Key rotation was removed: for
 // a personal library a single key's per-day download quota is far above real
 // usage, and multi-key rotation only made failures harder to isolate during the
-// buffering investigation. The previously-active key was demoted to the backup
-// safety net (service worker single 403/429 retry) after Google's anti-abuse
-// system flagged it — it may recover on its own and now serves as redundancy.
+// buffering investigation. The SW backup-key safety net was also removed after
+// Google's anti-abuse system flagged the previous primary — keeping a dead
+// second key only added a wasted failing request to every blocked song.
 // Retired keys are kept below purely as a manual fallback in case the daily
 // quota is ever hit — there is NO live rotation code anywhere anymore:
 //
 //   AIzaSyDJQOBTOSYvirZGDLjDOSEssJHx5e_BXDk       (retired — manual fallback)
 //   AIzaSyD0q-Vxl3jNY1VOjJ6Z2AkWvMwL2QW4oIo      (retired — manual fallback)
-//   AIzaSyAxAkYvJVFy_5HXwvejOlMi0yno613rtK8      (flagged primary — now the
-//                                                 VITE_DRIVE_API_KEY_BACKUP)
+//   AIzaSyAxAkYvJVFy_5HXwvejOlMi0yno613rtK8      (flagged by Google — retired)
 //
 // The key is read from the environment first, otherwise the built-in default is
 // used:

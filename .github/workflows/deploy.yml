@@ -37,9 +37,6 @@ jobs:
         run: npm run build
         env:
           SOFTYFY_BASE: /SoftyFy/
-          # Optional: bake the backup Drive API key into the service worker
-          # (single 403/429 retry safety net). Empty/absent → fallback disabled.
-          VITE_DRIVE_API_KEY_BACKUP: ${{ secrets.VITE_DRIVE_API_KEY_BACKUP }}
 
       - name: Configure Pages
         uses: actions/configure-pages@v5

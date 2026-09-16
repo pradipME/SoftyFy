@@ -25,12 +25,12 @@ const STALL_TIMEOUT_MS = 10_000
  * HARD ceiling on recovery reloads for a SINGLE song load.
  *
  * The initial load + this many retries are all the media loads a song gets
- * before a visible error replaces silent buffering. Every reload of a failing
- * Drive URL can cost up to TWO real Google requests (the service worker tries
- * the primary key, then the backup key on 403/429/throw), so with 1 retry a
- * dead song peaks around 4 network requests per load attempt — far below the
- * 8× same-URL hammering observed. Recovery never resets this counter mid-loop
- * (a bug fixed in onError), so the budget cannot spin back to zero.
+ * before a visible error replaces silent buffering. Each reload of a failing
+ * Drive URL is ONE real Google request (a single key is baked into the URL),
+ * so with 1 retry a dead song peaks around 2 network requests per load
+ * attempt — far below the 8× same-URL hammering observed. Recovery never
+ * resets this counter mid-loop (a bug fixed in onError), so the budget cannot
+ * spin back to zero.
  */
 const MAX_RECOVERY_ATTEMPTS = 1
 const NEAR_END_THRESHOLD_S = 2
@@ -280,9 +280,9 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
       // Every source list is a single entry now (Drive songs and local files
       // alike). Recovery retries the SAME URL a HARD-BOUNDED number of times
       // (MAX_RECOVERY_ATTEMPTS) with escalating backoff, then fails fast with
-      // a visible error. Each reload can spend up to two real Google requests
-      // (primary key → backup key on 403/429), so the ceiling also caps how
-      // many times a dead keyed URL can be hammered per song load.
+      // a visible error. Each reload is one real Google request (single key
+      // in the URL), so the ceiling also caps how many times a dead keyed URL
+      // can be hammered per song load.
       retryCountRef.current += 1
       logEvent('player.recovery', () => ({
         songId: songIdRef.current,

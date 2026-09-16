@@ -6,7 +6,6 @@ import {
   CACHED_AT_HEADER,
 } from './lib/audioCache'
 import { appendLogEntry, type MediaLogEntry } from './lib/mediaDebug'
-import { fetchWithKeyFallback, swapApiKey } from './lib/apiKeyFallback'
 
 interface FetchEventLike {
   request: Request
@@ -65,10 +64,6 @@ function isAudioUrl(rawUrl: string): boolean {
 // mid-play by another song's trim, so a Range request that arrives a moment
 // later still finds its file in cache instead of re-buffering from the network.
 const activeUrls = new Set<string>()
-
-// Backup Drive API key, baked in at SW build time from VITE_DRIVE_API_KEY_BACKUP
-// (see apiKeyFallback.ts). Absent → the safety net is disabled entirely.
-const BACKUP_KEY: string | undefined = import.meta.env.VITE_DRIVE_API_KEY_BACKUP
 
 function markActive(url: string): void {
   activeUrls.add(url)
@@ -525,31 +520,18 @@ async function handleAudio(request: Request): Promise<Response> {
   // with true byte-range semantics. Before this fix every miss returned a
   // full 200 which snapped the media timeline back ("can't drag ahead").
   //
-  // Backup-key safety net: only an EXACT 403 or 429 from the primary key
-  // triggers one retry with the backup key. Every other condition (timeout,
-  // stall, network error, 5xx) passes through with no retry — those ambiguous
-  // triggers are exactly what the old multi-host fallback mishandled.
-  const { response, usedBackupKey, failedStatus, primaryError } = await fetchWithKeyFallback(
-    url,
-    BACKUP_KEY,
-    { method: request.method, headers: request.headers, mode: 'cors', credentials: 'omit' },
-  )
-  if (usedBackupKey) {
-    // Two distinct triggers surface through the same `usedBackupKey` flag:
-    // `primaryError` present → the primary fetch THREW (CORS block); otherwise
-    // `failedStatus` is the 403/429 that resolved. Logged under separate keys
-    // so `?debug=1` output shows which path fired.
-    debugData(
-      primaryError ? 'audio.backup-key-cors' : 'audio.backup-key',
-      {
-        url,
-        primaryStatus: failedStatus,
-        primaryError,
-        backupStatus: response.status,
-        backupUrl: swapApiKey(url, BACKUP_KEY ?? ''),
-      },
-    )
-  }
+  // Single key: the stream URL already carries the one configured key. A 403/
+  // 429/throw passes straight back to the media element, where the player's
+  // hard recovery ceiling (initial load + 1 retry) bounds the damage before a
+  // visible error. A backup-key swap was removed after Google flagged the
+  // previous primary — a second key just added a wasted failing request to
+  // every blocked song.
+  const response = await fetch(url, {
+    method: request.method,
+    headers: request.headers,
+    mode: 'cors',
+    credentials: 'omit',
+  })
   if (!response.ok) return response
 
   // Cache the full file in the background for instant repeat plays. The clone
@@ -581,13 +563,13 @@ self.addEventListener('fetch', (event) => {
   const { method, url } = fetchEvent.request
   if (method !== 'GET') return
   if (isAudioUrl(url)) {
-    // handleAudio already did the primary→backup swap internally. If it threw
-    // (both keys threw, e.g. CORS blocks or a genuinely dead network), do NOT
-    // fall through to a second `fetch(fetchEvent.request)` here — that would
-    // re-request the same primary-key URL and show up as an extra same-key
-    // retry in the Network tab while still failing. Return a bounded synthetic
-    // error response instead; the player's own hard recovery ceiling and
-    // visible-error state take it from there.
+    // handleAudio already fetched the single-key URL. If it THREW (CORS block
+    // or a genuinely dead network), do NOT fall through to a second
+    // `fetch(fetchEvent.request)` here — that would re-request the same
+    // primary-key URL and show up as an extra same-key retry in the Network
+    // tab while still failing. Return a bounded synthetic error response
+    // instead; the player's own hard recovery ceiling and visible-error state
+    // take it from there.
     fetchEvent.respondWith(
       handleAudio(fetchEvent.request).catch((err: unknown) => {
         debugData('audio.sw-gateway-error', {
