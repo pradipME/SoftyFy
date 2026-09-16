@@ -11,10 +11,17 @@
 
 export interface KeyFallbackResult {
   response: Response
-  /** True when the backup key was actually tried (primary returned 403/429). */
+  /** True when the backup key was actually tried (primary returned 403/429 or its fetch threw). */
   usedBackupKey: boolean
   /** The primary 403/429 status that triggered the fallback, if any. */
   failedStatus: number | null
+  /**
+   * Set when the primary fetch THREW instead of resolving (CORS block,
+   * network failure — browser rejects with a TypeError). No status is
+   * readable in that case, so callers distinguishing the two triggers read
+   * this instead of `failedStatus`.
+   */
+  primaryError?: string
 }
 
 /** Only these exact HTTP statuses may trigger the backup key. */
@@ -28,19 +35,35 @@ export function swapApiKey(url: string, newKey: string): string {
 }
 
 /**
- * Fetches `url` with the primary key. If — and ONLY if — the response status
- * is exactly 403 or 429 and a backup key is configured, retries exactly once
- * with the backup key swapped in. No loop, no cascade: whatever the backup
- * request returns (success OR another 403/429) is the caller's to handle.
- * Timeouts, network errors, stalls and every other status code pass through
- * untouched with `usedBackupKey: false`.
+ * Fetches `url` with the primary key, and retries exactly once with the
+ * backup key in exactly TWO cases:
+ *  - the response resolved with status 403 or 429, or
+ *  - the primary fetch THREW (CORS block / network failure — a request that
+ *    should succeed never throws, so this is itself a strong signal).
+ * No loop, no cascade: whatever the backup request returns (success, another
+ * 403/429, or its own throw) is the caller's to handle. Every other status
+ * code passes through untouched with `usedBackupKey: false`.
  */
 export async function fetchWithKeyFallback(
   url: string,
   backupKey: string | undefined,
   init?: RequestInit,
 ): Promise<KeyFallbackResult> {
-  const primary = await fetch(url, init)
+  let primary: Response
+  try {
+    primary = await fetch(url, init)
+  } catch (err) {
+    // No status code is readable here — but a fetch that throws when it should
+    // succeed is exactly the CORS-blocked-403 scenario. Try the backup once.
+    if (!backupKey) throw err
+    const backup = await fetch(swapApiKey(url, backupKey), init)
+    return {
+      response: backup,
+      usedBackupKey: true,
+      failedStatus: null,
+      primaryError: err instanceof Error ? err.message : String(err),
+    }
+  }
   const retryable = RETRYABLE_STATUSES.has(primary.status)
   if (!retryable || !backupKey) {
     return { response: primary, usedBackupKey: false, failedStatus: retryable ? primary.status : null }

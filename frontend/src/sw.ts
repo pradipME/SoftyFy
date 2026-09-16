@@ -529,18 +529,26 @@ async function handleAudio(request: Request): Promise<Response> {
   // triggers one retry with the backup key. Every other condition (timeout,
   // stall, network error, 5xx) passes through with no retry — those ambiguous
   // triggers are exactly what the old multi-host fallback mishandled.
-  const { response, usedBackupKey, failedStatus } = await fetchWithKeyFallback(
+  const { response, usedBackupKey, failedStatus, primaryError } = await fetchWithKeyFallback(
     url,
     BACKUP_KEY,
     { method: request.method, headers: request.headers, mode: 'cors', credentials: 'omit' },
   )
   if (usedBackupKey) {
-    debugData('audio.backup-key', {
-      url,
-      primaryStatus: failedStatus,
-      backupStatus: response.status,
-      backupUrl: swapApiKey(url, BACKUP_KEY ?? ''),
-    })
+    // Two distinct triggers surface through the same `usedBackupKey` flag:
+    // `primaryError` present → the primary fetch THREW (CORS block); otherwise
+    // `failedStatus` is the 403/429 that resolved. Logged under separate keys
+    // so `?debug=1` output shows which path fired.
+    debugData(
+      primaryError ? 'audio.backup-key-cors' : 'audio.backup-key',
+      {
+        url,
+        primaryStatus: failedStatus,
+        primaryError,
+        backupStatus: response.status,
+        backupUrl: swapApiKey(url, BACKUP_KEY ?? ''),
+      },
+    )
   }
   if (!response.ok) return response
 

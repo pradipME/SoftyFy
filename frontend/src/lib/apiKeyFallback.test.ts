@@ -86,11 +86,34 @@ describe('fetchWithKeyFallback', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
-  it('does NOT trigger the backup on a network error (fetch rejection)', async () => {
+  it('retries with the backup key ONCE when the primary fetch throws (CORS block)', async () => {
     const fetchMock = vi
       .spyOn(globalThis, 'fetch')
       .mockRejectedValueOnce(new TypeError('Failed to fetch'))
-    await expect(fetchWithKeyFallback(MEDIA_URL, BACKUP_KEY)).rejects.toThrow('Failed to fetch')
+      .mockResolvedValueOnce(driveResponse(206))
+    const result = await fetchWithKeyFallback(MEDIA_URL, BACKUP_KEY)
+    expect(result.usedBackupKey).toBe(true)
+    expect(result.failedStatus).toBe(null)
+    expect(result.primaryError).toBe('Failed to fetch')
+    expect(result.response.status).toBe(206)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    const secondCall = fetchMock.mock.calls[1]
+    expect(secondCall[0]).toContain(`key=${BACKUP_KEY}`)
+    expect(secondCall[0]).not.toContain(`key=${PRIMARY_KEY}`)
+  })
+
+  it('propagates a thrown primary fetch unchanged when NO backup key is configured', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new TypeError('Failed to fetch'))
+    await expect(fetchWithKeyFallback(MEDIA_URL, undefined)).rejects.toThrow('Failed to fetch')
     expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('never cascades: a throw from the backup fetch itself is re-thrown as-is', async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockRejectedValueOnce(new TypeError('primary cors'))
+      .mockRejectedValueOnce(new TypeError('backup cors'))
+    await expect(fetchWithKeyFallback(MEDIA_URL, BACKUP_KEY)).rejects.toThrow('backup cors')
+    expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 })
