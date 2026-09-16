@@ -21,7 +21,18 @@ export interface AudioPlayerHandlers {
 }
 
 const STALL_TIMEOUT_MS = 10_000
-const MAX_RECOVERY_ATTEMPTS = 3
+/**
+ * HARD ceiling on recovery reloads for a SINGLE song load.
+ *
+ * The initial load + this many retries are all the media loads a song gets
+ * before a visible error replaces silent buffering. Every reload of a failing
+ * Drive URL can cost up to TWO real Google requests (the service worker tries
+ * the primary key, then the backup key on 403/429/throw), so with 1 retry a
+ * dead song peaks around 4 network requests per load attempt — far below the
+ * 8× same-URL hammering observed. Recovery never resets this counter mid-loop
+ * (a bug fixed in onError), so the budget cannot spin back to zero.
+ */
+const MAX_RECOVERY_ATTEMPTS = 1
 const NEAR_END_THRESHOLD_S = 2
 /** Base delay for retrying a single (the only) candidate URL. Doubles per
  *  attempt, capped at 4 s, so a dead stream is not hammered into an instant
@@ -267,9 +278,22 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
 
     if (sameHost) {
       // Every source list is a single entry now (Drive songs and local files
-      // alike), so recovery retries the same URL a bounded number of times
-      // with escalating backoff before giving up. No dead hosts to cycle.
+      // alike). Recovery retries the SAME URL a HARD-BOUNDED number of times
+      // (MAX_RECOVERY_ATTEMPTS) with escalating backoff, then fails fast with
+      // a visible error. Each reload can spend up to two real Google requests
+      // (primary key → backup key on 403/429), so the ceiling also caps how
+      // many times a dead keyed URL can be hammered per song load.
       retryCountRef.current += 1
+      logEvent('player.recovery', () => ({
+        songId: songIdRef.current,
+        attempt: retryCountRef.current,
+        url: lastSrcRef.current,
+        backoffMs: Math.min(
+          RECOVERY_BACKOFF_MS * 2 ** (retryCountRef.current - 1),
+          RECOVERY_BACKOFF_MAX_MS,
+        ),
+        ...connectionSummary(),
+      }))
       if (retryCountRef.current > MAX_RECOVERY_ATTEMPTS) {
         retryCountRef.current = 0
         recoveringRef.current = false
@@ -292,7 +316,7 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
     // still skip to the next URL per failure; the list bounds total attempts.
     retryCountRef.current = 0
     recoverToCandidate(nextIndex, audio.currentTime)
-  }, [clearRecoveryTimer, clearStallTimer, recoverToCandidate, clearBufferGuard])
+  }, [clearRecoveryTimer, clearStallTimer, recoverToCandidate, clearBufferGuard, logEvent])
 
   useEffect(() => {
     const audio = audioRef.current
@@ -328,12 +352,14 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
     const onPlay = () => handlersRef.current.onStatusChange('playing')
     const onPlaying = () => {
       stallFlagRef.current = false
-      retryCountRef.current = 0
-      // Only disarm the stall watchdog on evidence of real progress. A
-      // thin-buffer flutter (playing → waiting → playing with no currentTime
-      // moving) must not keep resetting the 10 s escalation clock on a host
-      // that never delivers.
-      if (Date.now() - lastProgressAtRef.current < PROGRESS_EVIDENCE_MS) clearStallTimer()
+      // Reset the recovery budget ONLY on evidence of real playback progress.
+      // A "playing" pulse from a server that is actually still blocked must
+      // not restore a fresh retry budget — that would undercut the hard ceiling
+      // and let a dead URL keep hammering.
+      if (Date.now() - lastProgressAtRef.current < PROGRESS_EVIDENCE_MS) {
+        clearStallTimer()
+        retryCountRef.current = 0
+      }
       if (
         pendingStartBufferRef.current &&
         (() => {
@@ -411,7 +437,11 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
       // MEDIA_ERR_ABORTED fires when *we* reload mid-request — that is not a
       // real failure. Anything else is worth trying on the next URL.
       if (mediaError !== null && mediaError.code === MediaError.MEDIA_ERR_ABORTED) return
-      retryCountRef.current = 0
+      // CRITICAL: do NOT reset retryCountRef here. Resetting before every
+      // attemptRecovery made a URL that fails with a hard media `error` retry
+      // forever (observed: 8+ identical same-key requests), because the count
+      // never reached the MAX_RECOVERY_ATTEMPTS ceiling. The counter only
+      // resets on real playback progress or an explicit new play intent.
       attemptRecovery()
     }
     const onEnded = () => handlersRef.current.onEnded()
@@ -475,6 +505,12 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
         recoveringRef.current = false
         audio.src = preferred
         audio.load()
+      } else if (shouldPlay) {
+        // Explicit user play intent on the SAME URL (manual Retry after a
+        // PLAY_FAILED, or replaying a paused song): grant one fresh bounded
+        // budget. Without this, the hard ceiling from the previous failed
+        // attempt would fail the replay instantly.
+        retryCountRef.current = 0
       }
       if (startAt != null && startAt > 0) {
         try {

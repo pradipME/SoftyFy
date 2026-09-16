@@ -581,7 +581,26 @@ self.addEventListener('fetch', (event) => {
   const { method, url } = fetchEvent.request
   if (method !== 'GET') return
   if (isAudioUrl(url)) {
-    fetchEvent.respondWith(handleAudio(fetchEvent.request).catch(() => fetch(fetchEvent.request)))
+    // handleAudio already did the primary→backup swap internally. If it threw
+    // (both keys threw, e.g. CORS blocks or a genuinely dead network), do NOT
+    // fall through to a second `fetch(fetchEvent.request)` here — that would
+    // re-request the same primary-key URL and show up as an extra same-key
+    // retry in the Network tab while still failing. Return a bounded synthetic
+    // error response instead; the player's own hard recovery ceiling and
+    // visible-error state take it from there.
+    fetchEvent.respondWith(
+      handleAudio(fetchEvent.request).catch((err: unknown) => {
+        debugData('audio.sw-gateway-error', {
+          url,
+          error: String((err as Error)?.message ?? err).slice(0, 120),
+        })
+        return new Response(null, {
+          status: 502,
+          statusText: 'Unavailable',
+          headers: { 'Content-Type': 'text/plain' },
+        })
+      }),
+    )
   }
 })
 
