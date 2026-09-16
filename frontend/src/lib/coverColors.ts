@@ -11,6 +11,16 @@ const cache = new Map<string, Promise<CoverPalette | null>>()
  * Extracts a small palette from a cover image by downscaling it onto a canvas
  * and histogram-quantizing the pixels. Results are cached per image URL so the
  * work happens once per song. Resolves `null` when the image can't be read.
+ *
+ * Pixel readback requires a CORS-readable image: an opaque (no-cors) load
+ * taints the canvas and `getImageData()` throws. Drive thumbnails
+ * (`drive.google.com/thumbnail?id=…&sz=w1000`) redirect 302 to lh3 without a
+ * CORS header on that first hop, so loading them here with CORS fails and
+ * loading them opaque makes them unreadable. Only same-origin covers (e.g.
+ * `/covers/X.jpg` served by the app) are extracted — remote covers resolve
+ * `null` and the caller keeps its deterministic fallback palette. Cover art
+ * itself still renders normally through plain `<img src>` tags (opaque loads),
+ * which never enforce CORS.
  */
 export function getCoverColors(src: string): Promise<CoverPalette | null> {
   const existing = cache.get(src)
@@ -20,10 +30,19 @@ export function getCoverColors(src: string): Promise<CoverPalette | null> {
   return promise
 }
 
+function isSameOrigin(src: string): boolean {
+  try {
+    const url = new URL(src, window.location.href)
+    return url.origin === window.location.origin
+  } catch {
+    return false
+  }
+}
+
 function extract(src: string): Promise<CoverPalette | null> {
+  if (!isSameOrigin(src)) return Promise.resolve(null)
   return new Promise((resolve) => {
     const img = new Image()
-    img.crossOrigin = 'anonymous'
     img.onload = () => {
       try {
         if (!img.naturalWidth || !img.naturalHeight) {
