@@ -1,6 +1,6 @@
 // End-to-end verification of every generated song: streams (via the app's
 // candidate chain, exactly as buildAudioCandidates builds it) + cover images,
-// grouped by rotation key.
+// grouped by API key.
 import { readFileSync } from 'node:fs'
 
 const songsTs = readFileSync('src/data/songs.ts', 'utf8')

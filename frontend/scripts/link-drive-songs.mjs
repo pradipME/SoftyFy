@@ -5,9 +5,9 @@
 // Usage:
 //   node scripts/link-drive-songs.mjs
 //
-// The audio URLs come from ./drive-url.mjs, which round-robins across the
-// configured API keys (see .env.example). Load your keys first so the rewritten
-// songs.ts spreads the library across them:
+// The audio URLs come from ./drive-url.mjs, which uses a single API key (see
+// .env.example). Load your key first so every rewritten entry uses the same
+// configured key:
 //   node --env-file=.env scripts/link-drive-songs.mjs
 //
 // Files were uploaded in one bulk `rclone copy` and the parent folders were
@@ -67,8 +67,8 @@ async function main() {
   let missing = []
 
   const replacer = (line) => {
-    // Already-linked Drive API URL → rebuild via audioUrl(fileId) so the key is
-    // round-robin rotated across the library (see .env.example).
+    // Already-linked Drive API URL → rebuild via audioUrl(fileId) so the key
+    // matches the single configured key (see .env.example).
     const audioDrive = line.match(
       /^(\s*audioSrc:\s*)'(https:\/\/www\.googleapis\.com\/drive\/v3\/files\/([A-Za-z0-9_-]+)\?alt=media)[^']*',?\s*$/,
     )
