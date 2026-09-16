@@ -519,7 +519,11 @@ self.addEventListener('fetch', (event) => {
   }
 })
 
-self.addEventListener('install', () => self.skipWaiting())
+// No `install` handler here: the new service worker must not call
+// `skipWaiting()` on install or it would take control immediately and reload
+// the page (silent auto-update). It stays in the "waiting" state so the page
+// can offer an update prompt, and only advances when the user confirms via the
+// SKIP_WAITING message handled below.
 
 self.addEventListener('activate', (event) => {
   const activateEvent = event as unknown as ExtendableEventLike

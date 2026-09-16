@@ -15,7 +15,7 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       strategies: 'injectManifest',
       includeAssets: ['favicon.png'],
       srcDir: 'src',
