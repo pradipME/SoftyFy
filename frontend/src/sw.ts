@@ -6,6 +6,7 @@ import {
   CACHED_AT_HEADER,
 } from './lib/audioCache'
 import { appendLogEntry, type MediaLogEntry } from './lib/mediaDebug'
+import { fetchWithKeyFallback, swapApiKey } from './lib/apiKeyFallback'
 
 interface FetchEventLike {
   request: Request
@@ -64,6 +65,10 @@ function isAudioUrl(rawUrl: string): boolean {
 // mid-play by another song's trim, so a Range request that arrives a moment
 // later still finds its file in cache instead of re-buffering from the network.
 const activeUrls = new Set<string>()
+
+// Backup Drive API key, baked in at SW build time from VITE_DRIVE_API_KEY_BACKUP
+// (see apiKeyFallback.ts). Absent → the safety net is disabled entirely.
+const BACKUP_KEY: string | undefined = import.meta.env.VITE_DRIVE_API_KEY_BACKUP
 
 function markActive(url: string): void {
   activeUrls.add(url)
@@ -483,7 +488,24 @@ async function handleAudio(request: Request): Promise<Response> {
   // Forward the original request (Range header included) so Google answers
   // with true byte-range semantics. Before this fix every miss returned a
   // full 200 which snapped the media timeline back ("can't drag ahead").
-  const response = await fetch(request, { mode: 'cors', credentials: 'omit' })
+  //
+  // Backup-key safety net: only an EXACT 403 or 429 from the primary key
+  // triggers one retry with the backup key. Every other condition (timeout,
+  // stall, network error, 5xx) passes through with no retry — those ambiguous
+  // triggers are exactly what the old multi-host fallback mishandled.
+  const { response, usedBackupKey, failedStatus } = await fetchWithKeyFallback(
+    url,
+    BACKUP_KEY,
+    { method: request.method, headers: request.headers, mode: 'cors', credentials: 'omit' },
+  )
+  if (usedBackupKey) {
+    debugData('audio.backup-key', {
+      url,
+      primaryStatus: failedStatus,
+      backupStatus: response.status,
+      backupUrl: swapApiKey(url, BACKUP_KEY ?? ''),
+    })
+  }
   if (!response.ok) return response
 
   // Cache the full file in the background for instant repeat plays. The clone
