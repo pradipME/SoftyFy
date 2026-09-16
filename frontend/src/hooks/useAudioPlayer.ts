@@ -24,6 +24,12 @@ const STALL_TIMEOUT_MS = 10_000
 const MAX_RECOVERY_ATTEMPTS = 3
 const NEAR_END_THRESHOLD_S = 2
 
+/** How recently a `timeupdate` must have advanced currentTime to count as real
+ *  playback progress. onPlaying/onCanPlay only disarm the stall watchdog when
+ *  there is such evidence, so a thin-buffer "flutter" that never makes progress
+ *  cannot keep resetting the 10 s escalation clock forever. */
+const PROGRESS_EVIDENCE_MS = 1500
+
 /** Minimum buffer (seconds) required before a fresh song is reported "playing". */
 const MIN_START_BUFFER_S = 5
 const BUFFER_GUARD_POLL_MS = 300
@@ -73,6 +79,11 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
   const bufferGuardTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const bufferGuardDeadlineRef = useRef(0)
   const lastEventLogAtRef = useRef<Record<string, number>>({})
+  /** Wall-clock time / currentTime of the last `timeupdate` that advanced
+   *  currentTime. Used to prove real playback progress before the stall
+   *  watchdog is disarmed. */
+  const lastProgressAtRef = useRef(0)
+  const lastProgressValueRef = useRef(0)
 
   const clearStallTimer = useCallback(() => {
     if (stallTimerRef.current !== null) {
@@ -113,6 +124,11 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
    * of flagging "playing" exactly at the buffering edge and stalling a moment
    * later. Never blocks forever - past {@link BUFFER_GUARD_MAX_MS} it plays
    * regardless.
+   *
+   * Critically, the guard chain is armed from `loadAndPlay`/`recoverToCandidate`
+   * (not only from the element's `playing` event), so a stall that never
+   * reaches `playing` still hits the {@link BUFFER_GUARD_MAX_MS} give-up
+   * instead of holding "loading" forever.
    */
   const startBufferedStart = useCallback(() => {
     const audio = audioRef.current
@@ -128,6 +144,9 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
       if (!pendingStartBufferRef.current) return
       const current = audioRef.current
       if (current === null) return
+      // A real media error is handled by the onError → recovery path; stop
+      // steering status once it has handed over.
+      if (current.error !== null) return
       if (current.paused) {
         // Paused while guarding (user or browser) - the pause event already
         // reported 'paused'; stop steering status.
@@ -139,6 +158,12 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
         return
       }
       bufferGuardTimerRef.current = setTimeout(poll, BUFFER_GUARD_POLL_MS)
+    }
+    // One self-sustaining poll chain per load (re-entrant calls during a
+    // waiting/playing flutter just no-op instead of stacking timers).
+    if (bufferGuardTimerRef.current !== null) return
+    if (bufferGuardDeadlineRef.current === 0) {
+      bufferGuardDeadlineRef.current = Date.now() + BUFFER_GUARD_MAX_MS
     }
     if (healthy()) {
       completeBufferedStart()
@@ -176,6 +201,13 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
       audio.src = src
       audio.load()
 
+      // The recovered host gets the same startup runway guard + give-up
+      // deadline as an initial load, so a flutter on a fallback host can never
+      // hold the spinner up forever either.
+      pendingStartBufferRef.current = true
+      bufferGuardDeadlineRef.current = Date.now() + BUFFER_GUARD_MAX_MS
+      startBufferedStart()
+
       const onCanPlay = () => {
         audio.removeEventListener('canplay', onCanPlay)
         try {
@@ -198,7 +230,7 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
       }
       audio.addEventListener('canplay', onCanPlay)
     },
-    [clearStallTimer, clearBufferGuard],
+    [clearStallTimer, clearBufferGuard, startBufferedStart],
   )
 
   /** Advances to the next URL for the current song, or reports failure. */
@@ -253,15 +285,28 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
       }, STALL_TIMEOUT_MS)
     }
 
-    const onTimeUpdate = () => handlersRef.current.onTimeUpdate(audio.currentTime)
+    const onTimeUpdate = () => {
+      handlersRef.current.onTimeUpdate(audio.currentTime)
+      // Advancing currentTime is the only hard evidence of real playback — use
+      // it to record progress and disarm the stall watchdog.
+      if (audio.currentTime !== lastProgressValueRef.current) {
+        lastProgressValueRef.current = audio.currentTime
+        lastProgressAtRef.current = Date.now()
+        clearStallTimer()
+      }
+    }
     const onSeeked = () => handlersRef.current.onTimeUpdate(audio.currentTime)
     const onLoadedMetadata = () => handlersRef.current.onDurationChange(audio.duration)
     const onDurationChange = () => handlersRef.current.onDurationChange(audio.duration)
     const onPlay = () => handlersRef.current.onStatusChange('playing')
     const onPlaying = () => {
-      clearStallTimer()
       stallFlagRef.current = false
       retryCountRef.current = 0
+      // Only disarm the stall watchdog on evidence of real progress. A
+      // thin-buffer flutter (playing → waiting → playing with no currentTime
+      // moving) must not keep resetting the 10 s escalation clock on a host
+      // that never delivers.
+      if (Date.now() - lastProgressAtRef.current < PROGRESS_EVIDENCE_MS) clearStallTimer()
       if (
         pendingStartBufferRef.current &&
         (() => {
@@ -319,7 +364,10 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
       armBufferTimer()
     }
     const onCanPlay = () => {
-      clearStallTimer()
+      // Like onPlaying: only disarm the watchdog when currentTime has really
+      // advanced, so a stall that reaches canplay without actually playing
+      // still lets the 10 s watchdog escalate.
+      if (Date.now() - lastProgressAtRef.current < PROGRESS_EVIDENCE_MS) clearStallTimer()
       if (stallFlagRef.current) {
         stallFlagRef.current = false
         // A stall resolved into playable data. Report the element's REAL state:
@@ -425,11 +473,16 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
             attemptRecovery()
           })
         }
+        // Arm the initial-runway guard immediately. It must NOT depend on the
+        // element ever firing `playing` — a stall that never reaches that event
+        // (the Drive slow-trickle / thin-pulse case) would otherwise hold
+        // "loading" forever, well past the BUFFER_GUARD_MAX_MS give-up.
+        startBufferedStart()
       } else if (srcChanged && !audio.paused) {
         audio.pause()
       }
     },
-    [attemptRecovery, clearStallTimer],
+    [attemptRecovery, clearStallTimer, startBufferedStart],
   )
 
   const clearSource = useCallback(() => {

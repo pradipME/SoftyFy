@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SoftyFy — Project &amp; Technical Report</title>
+<style>
+  @page { size: A4; margin: 13mm 14mm 14mm 14mm; }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", Arial, sans-serif; color: #1f2330; margin: 0; line-height: 1.5; font-size: 11px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  h1 { font-size: 26px; margin: 0 0 2px; color: #4c1d95; }
+  h2 { font-size: 17px; color: #4c1d95; border-bottom: 2px solid #ddd6fe; padding-bottom: 3px; margin: 22px 0 9px; }
+  h3 { font-size: 13px; margin: 14px 0 5px; color: #334155; }
+  p { margin: 5px 0; }
+  .subtitle { color: #64748b; margin-bottom: 14px; font-size: 12px; }
+  .meta { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 16px; }
+  .pill { background: #ede9fe; color: #4c1d95; border: 1px solid #c4b5fd; border-radius: 20px; padding: 2px 10px; font-size: 10.5px; }
+  table { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 10.5px; }
+  th, td { border: 1px solid #d9dce6; padding: 4px 8px; text-align: left; }
+  th { background: #f3f0ff; color: #4c1d95; }
+  tr:nth-child(even) td { background: #faf9ff; }
+  code, .mono { font-family: Consolas, "Courier New", monospace; background: #f1f5f9; padding: 0 4px; border-radius: 3px; font-size: 10px; color: #334155; }
+  pre { font-family: Consolas, "Courier New", monospace; background: #0f172a; color: #e2e8f0; padding: 10px 12px; border-radius: 6px; font-size: 10px; overflow-x: auto; white-space: pre-wrap; }
+  .card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; margin: 8px 0; }
+  .ok { color: #047857; font-weight: 600; }
+  .bad { color: #b91c1c; font-weight: 600; }
+  .chart-wrap { display: flex; gap: 18px; justify-content: center; align-items: center; margin: 10px 0; flex-wrap: wrap; }
+  .chart-box { border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 14px; background: #ffffff; }
+  .chart-title { font-size: 11.5px; font-weight: 600; text-align: center; color: #334155; margin-bottom: 6px; }
+  .legend { font-size: 10px; color: #475569; margin-top: 4px; }
+  .flowbox { fill: #ffffff; stroke: #a5b4fc; stroke-width: 1.2; rx: 7; }
+  .flowtext { font-size: 10px; fill: #334155; text-anchor: middle; }
+  .flowarrow { stroke: #94a3b8; stroke-width:1.4; fill:none; }
+  ul { margin: 5px 0 5px 18px; padding: 0; }
+  li { margin: 2px 0; }
+  .footer { margin-top: 26px; color: #94a3b8; font-size: 9.5px; text-align: center; }
+  .statgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 10px 0; }
+  .stat { border: 1px solid #e2e8f0; border-left: 4px solid #7c3aed; border-radius: 8px; padding: 8px 10px; background: #fff; }
+  .stat b { display: block; font-size: 18px; color: #4c1d95; }
+  .stat span { font-size: 10px; color: #64748b; }
+</style>
+</head>
+<body>
+
+<h1>SoftyFy</h1>
+<div class="subtitle">Project &amp; Technical Report — Streaming PWA hosted on Google Drive · 9 Sep 2026</div>
+<div class="meta">
+  <span class="pill">React + TypeScript + Vite</span>
+  <span class="pill">Progressive Web App</span>
+  <span class="pill">Google Drive backend</span>
+  <span class="pill">Custom Service Worker</span>
+  <span class="pill">Render deploy</span>
+  <span class="pill">37 songs · ~349.5 MB</span>
+</div>
+
+<div class="statgrid">
+  <div class="stat"><b>37</b><span>songs streamable</span></div>
+  <div class="stat"><b>3</b><span>libraries</span></div>
+  <div class="stat"><b>349.5 MB</b><span>media total</span></div>
+  <div class="stat"><b>0</b><span>network on replays</span></div>
+</div>
+
+<h2>1. What is SoftyFy?</h2>
+<p>SoftyFy is a <b>Progressive Web App</b> that streams songs. It is a <b>static frontend</b> (React + Vite) deployed at <code>https://softyfy.onrender.com</code>. The GitHub repository (<code>pradipME/SoftyFy</code>) contains <b>code only</b> — all audio and cover artwork live on <b>Google Drive</b>. A custom <b>Service Worker</b> makes repeat playback instant and offline-capable.</p>
+
+<h2>2. Architecture</h2>
+<table>
+  <tr><th>Layer</th><th>Technology</th><th>Role</th></tr>
+  <tr><td>Frontend</td><td>React + TypeScript + Vite</td><td>UI, player, library views</td></tr>
+  <tr><td>PWA engine</td><td>vite-plugin-pwa (injectManifest)</td><td>Generates <code>sw.js</code> from hand-written <code>src/sw.ts</code></td></tr>
+  <tr><td>Audio storage</td><td>Google Drive (official API)</td><td>Stream + cache source for all 37 songs</td></tr>
+  <tr><td>Artwork</td><td>Google Drive thumbnail endpoint</td><td>Cover images per album</td></tr>
+  <tr><td>Upload tooling</td><td>rclone</td><td>Uploads media to Drive from local machine</td></tr>
+  <tr><td>Hosting</td><td>Render (static, free tier)</td><td>Serves the app shell; auto-deploys from <code>main</code></td></tr>
+  <tr><td>Quality</td><td>Vitest (44 tests) + oxlint</td><td>Logic + component tests, linting</td></tr>
+</table>
+
+<h2>3. Content pipeline — how a song is added</h2>
+<ol>
+  <li><b>Source selection</b> — a YouTube link or a Spotify album (e.g. <i>Yours Truly</i>, 11 tracks) is chosen and its track list is retrieved (rclone <code>lsjson</code>).</li>
+  <li><b>Upload</b> — <code>scripts/drive-upload.mjs</code> uploads the audio file and cover art into the Drive folder with rclone.</li>
+  <li><b>Linking</b> — <code>scripts/link-drive-songs.mjs</code> reads Drive file IDs and writes the stream URL + cover URL into <code>frontend/src/data/songs.ts</code>.</li>
+  <li><b>Deploy</b> — a push to <code>main</code> triggers an automatic Render redeploy; the Service Worker updates itself on the next visit.</li>
+</ol>
+
+<h2>4. The playback fix that made everything work</h2>
+<h3>4.1 The bug</h3>
+<p>Google Drive's public sharing link (<code>drive.usercontent.google.com/download?id=…</code>) returned <b class="bad">HTTP 403 Forbidden</b> in every real browser while <i>working</i> in curl. Root cause: browsers attach <code>Sec-Fetch-Site: cross-site</code> to cross-origin media requests, and Drive's <code>usercontent</code> endpoint rejects any such request. Cover images (<code>thumbnail?id=…&amp;sz=w1000</code>) were NOT affected, only audio.</p>
+<table>
+  <tr><th>Candidate URL</th><th>Result in browser</th></tr>
+  <tr><td>drive.usercontent.google.com/download?id=…</td><td class="bad">403 — cross-site blocked</td></tr>
+  <tr><td>drive.google.com/uc?export=open …</td><td class="bad">303 → 403</td></tr>
+  <tr><td>lh3.googleusercontent.com/d/&lt;ID&gt;</td><td class="bad">404</td></tr>
+  <tr><td>Service-worker proxy</td><td class="bad">CORS-blocked (no ACAO header)</td></tr>
+  <tr><td>drive.google.com/thumbnail?id=… (covers)</td><td class="ok">200 image/jpeg — works</td></tr>
+  <tr><td><b>googleapis.com/drive/v3/files/&lt;ID&gt;?alt=media&amp;key=…</b></td><td class="ok">200/206 audio/mpeg — works, chosen</td></tr>
+</table>
+
+<h3>4.2 The chosen solution</h3>
+<p>Stream via the <b>official Drive API</b> using a public API key baked into the bundle:</p>
+<pre>https://www.googleapis.com/drive/v3/files/&lt;FILE_ID&gt;?alt=media&amp;key=AIzaSyAxAkYvJVFy_5HXwvejOlMi0yno613rtK8</pre>
+<ul>
+  <li>Honours <code>Range</code> requests (206) and sends permissive CORS headers (ACAO happily echoes <code>softyfy.onrender.com</code>).</li>
+  <li>API keys do <b>not expire</b>; the key is <i>public by design</i> since it ships to every client. Real risks: key deleted/regenerated, or a future Google policy change on the official API.</li>
+</ul>
+
+<h2>5. Service Worker — caching design</h2>
+<p>A hand-written SW (<code>frontend/src/sw.ts</code>) is compiled by vite-plugin-pwa into <code>sw.js</code>. Google does not send cache directives for these streams (<code>cache-control: private, max-age=0</code>, no ETag), so without the SW <b>every play re-downloads the full ~8 MB file</b> — ~350 MB across the library. The SW fixes this while keeping first play fast.</p>
+
+<h3>5.1 Audio handler — stream first, cache in background</h3>
+<div class="chart-box">
+  <div class="chart-title">Audio request flow (per song URL)</div>
+  <svg width="820" height="330" viewBox="0 0 820 330">
+    <rect x="330" y="6" width="160" height="30" class="flowbox"/>
+    <text x="410" y="25" class="flowtext">Audio request</text>
+    <line x1="410" y1="36" x2="410" y2="55" class="flowarrow"/>
+    <rect x="290" y="55" width="240" height="44" class="flowbox" fill="#f5f3ff"/>
+    <text x="410" y="72" class="flowtext">Is googleapis + alt=media?</text>
+    <text x="410" y="87" class="flowtext">else → untouched / not intercepted</text>
+    <line x1="410" y1="99" x2="410" y2="118" class="flowarrow"/>
+    <rect x="300" y="118" width="220" height="42" class="flowbox"/>
+    <text x="410" y="135" class="flowtext">cache.match(URL) → hit?</text>
+    <text x="410" y="150" class="flowtext">fresh (14d)?</text>
+    <line x1="300" y1="152" x2="180" y2="210" class="flowarrow" marker-end="url(#ar)"/>
+    <line x1="520" y1="152" x2="640" y2="210" class="flowarrow" marker-end="url(#ar)"/>
+    <rect x="80" y="210" width="200" height="88" class="flowbox" fill="#ecfdf5"/>
+    <text x="180" y="228" class="flowtext">CACHE HIT (repeat play)</text>
+    <text x="180" y="245" class="flowtext">buildRangeResponse()</text>
+    <text x="180" y="261" class="flowtext">200 full · 206 slice · 416</text>
+    <text x="180" y="277" class="flowtext">instant, 0 network ✓</text>
+    <rect x="540" y="210" width="200" height="88" class="flowbox" fill="#fffbeb"/>
+    <text x="640" y="228" class="flowtext">CACHE MISS (first play)</text>
+    <text x="640" y="245" class="flowtext">fetch → STREAM THROUGH</text>
+    <text x="640" y="261" class="flowtext">playback starts ~1s ✓</text>
+    <text x="640" y="277" class="flowtext">background clone → cache.put</text>
+  </svg>
+</div>
+<ul>
+  <li><b>Cache miss</b> — the Google response is passed through <b>unchanged</b> (streaming), so playback starts immediately. Meanwhile the full body is copied in the background using <code>response.clone()</code> (taken <i>before</i> handover — cloning afterwards throws and used to silently break caching), stored with an <code>x-softyfy-cached-at</code> tag.</li>
+  <li><b>Cache hit</b> — the single cached file answers any request with correct byte-range semantics (<b>200</b> full file, <b>206</b> exact slice for <code>Range</code>, <b>416</b> for out-of-range) so <b>seeking mid-song works perfectly</b> even before downloading the track.</li>
+  <li><b>Hybrid</b> — seek requests which carry a real <code>Range</code> (mid-stream) pass straight through Google's native range handling.</li>
+  <li><b>Bounds</b> — max ~8 songs, 14-day freshness, oldest entry evicted. Quota errors are caught silently and playback continues from the network (safe fallback).</li>
+</ul>
+
+<h3>5.2 Covers handler</h3>
+<p>Cached on first sight in <code>softyfy-covers</code>; <code>&lt;img&gt;</code> loads are no-cors/opaque and are stored + served unchanged. (The first workbox <code>CacheFirst</code> route silently never stored them — replaced by the same manual-handler pattern as audio.)</p>
+
+<h3>5.3 App shell &amp; updates</h3>
+<p>Shell assets precached via <code>precacheAndRoute(self.__WB_MANIFEST)</code>; <code>skipWaiting()</code> on install + <code>clients.claim()</code> on activate + <code>SKIP_WAITING</code> message → new versions activate instantly, <code>cleanupOutdatedCaches()</code> removes stale caches.</p>
+
+<h2>6. Charts</h2>
+<div class="chart-wrap">
+  <div class="chart-box">
+    <div class="chart-title">Tracks per library (37 total)</div>
+    <svg width="240" height="170" viewBox="0 0 240 170">
+      <g transform="translate(70,85)">
+        <circle r="72" fill="none" stroke="#e2e8f0" stroke-width="26"/>
+        <circle r="72" fill="none" stroke="#7c3aed" stroke-width="26" stroke-dasharray="326 176.7" stroke-dashoffset="-90"/>
+        <circle r="72" fill="none" stroke="#f59e0b" stroke-width="26" stroke-dasharray="27.2 475.5" stroke-dashoffset="-416"/>
+        <circle r="72" fill="none" stroke="#10b981" stroke-width="26" stroke-dasharray="149.5 353.2" stroke-dashoffset="-443.2"/>
+      </g>
+      <text x="70" y="115" text-anchor="middle" font-size="22" font-weight="700" fill="#4c1d95">37</text>
+      <text x="70" y="132" text-anchor="middle" font-size="9" fill="#64748b">songs</text>
+      <line x1="10" y1="155" x2="26" y2="155" stroke="#7c3aed" stroke-width="8"/><text x="31" y="159" font-size="10">Bathroom — 24 (65%)</text>
+      <line x1="10" y1="165" x2="26" y2="165" stroke="#f59e0b" stroke-width="8"/><text x="31" y="168" font-size="10">Qwali — 2 (5%)</text>
+      <line x1="130" y1="155" x2="146" y2="155" stroke="#10b981" stroke-width="8"/><text x="151" y="159" font-size="10">Yours Truly — 11 (30%)</text>
+    </svg>
+  </div>
+  <div class="chart-box">
+    <div class="chart-title">Data downloaded on a replay</div>
+    <svg width="340" height="170" viewBox="0 0 340 170">
+      <line x1="60" y1="20" x2="60" y2="130" stroke="#cbd5e1" stroke-width="1.5"/>
+      <line x1="60" y1="130" x2="330" y2="130" stroke="#cbd5e1" stroke-width="1.5"/>
+      <text x="48" y="136" font-size="9" fill="#64748b">0</text>
+      <text x="34" y="52" font-size="9" fill="#64748b">8 MB</text>
+      <line x1="75" y1="50" x2="95" y2="50" stroke="#cbd5e1" stroke-dasharray="2 2"/>
+      <rect x="105" y="112" width="70" height="18" fill="#ef4444" rx="3"/>
+      <text x="140" y="125" text-anchor="middle" font-size="9" font-weight="700" fill="#fff">~8 MB</text>
+      <rect x="195" y="112" width="70" height="18" fill="#10b981" rx="3"/>
+      <text x="230" y="125" text-anchor="middle" font-size="9" font-weight="700" fill="#fff">0 MB</text>
+      <text x="140" y="143" text-anchor="middle" font-size="9.5" fill="#334155">Without SW</text>
+      <text x="230" y="143" text-anchor="middle" font-size="9.5" fill="#334155">With SW (cached)</text>
+      <text x="195" y="30" text-anchor="middle" font-size="10.5" fill="#047857" font-weight="700">100% of repeat network eliminated</text>
+    </svg>
+  </div>
+</div>
+
+<div class="chart-box" style="max-width: 830px;">
+  <div class="chart-title">Bandwidth saved per session (37 songs, full listen through)</div>
+  <table>
+    <tr><th>Scenario</th><th>Downloads first play</th><th>Downloads each replay</th><th>Total for 3 full listens</th></tr>
+    <tr><td>Without Service Worker</td><td>~350 MB</td><td>~350 MB</td><td class="bad">~1,050 MB</td></tr>
+    <tr><td>With Service Worker</td><td>~350 MB</td><td class="ok">0 MB (cached)</td><td class="ok">~350 MB (−67%)</td></tr>
+  </table>
+</div>
+
+<h2>7. Verification</h2>
+<h3>7.1 Test matrix (Headless Edge, local + LIVE)</h3>
+<table>
+  <tr><th>Check</th><th>Local (dist)</th><th>Live (onrender)</th></tr>
+  <tr><td>First play (uncached)</td><td>streams, starts ~1 s; no cache entry during fetch</td><td>same; BG fill ~6–12 s in parallel</td></tr>
+  <tr><td>Second play</td><td class="ok">0 network — served <code>[SW]</code> from cache</td><td class="ok">0 network — cachedAt header present</td></tr>
+  <tr><td>Seek</td><td>to 90 s landed exactly (206 slice)</td><td>to 111 s landed (206 slice)</td></tr>
+  <tr><td>All traced responses</td><td colspan="2" class="ok"><code>[SW]</code> only — zero real outbound on replays</td></tr>
+  <tr><td>Covers cache</td><td colspan="2" class="ok">entries populate after first &lt;img&gt; load</td></tr>
+</table>
+
+<h3>7.2 Notes on a bug found during verification</h3>
+<p>The first caching attempt eagerly <code>arrayBuffer()</code>-ed the whole file <b>before</b> responding — first play of a new song stalled until ~8 MB downloaded. Fixed to stream-through + background copy; the seek test (which assumed a fully-buffered file) was also updated to reflect real streaming usage.</p>
+
+<h2>8. Build, test &amp; deploy</h2>
+<pre>cd frontend
+npm run build      # type-checks + builds dist/ incl. sw.js (~19066 B)
+npm test           # 44/44 tsc + Vitest tests pass
+npm run lint       # oxlint — clean (2 pre-existing Fast-Refresh warnings)
+git push origin main   # Render auto-redeploys; live sw.js verified</pre>
+
+<h2>9. Key files</h2>
+<table>
+  <tr><th>File</th><th>Purpose</th></tr>
+  <tr><td><code>frontend/src/data/songs.ts</code></td><td>All 37 songs with Drive API stream URLs</td></tr>
+  <tr><td><code>frontend/src/sw.ts</code></td><td>Custom Service Worker (stream + cache + range slicing)</td></tr>
+  <tr><td><code>frontend/vite.config.ts</code></td><td>PWA injectManifest configuration</td></tr>
+  <tr><td><code>frontend/scripts/drive-url.mjs</code></td><td>Shared Drive URL builder + API key (env overridable)</td></tr>
+  <tr><td><code>frontend/scripts/drive-upload.mjs</code></td><td>rclone-based uploader for media</td></tr>
+  <tr><td><code>frontend/scripts/link-drive-songs.mjs</code></td><td>Writes file IDs into songs.ts</td></tr>
+  <tr><td><code>frontend/package.json</code></td><td>Build/test/lint scripts + workbox-precaching dep</td></tr>
+</table>
+
+<h2>10. Limitations &amp; trade-offs</h2>
+<ul>
+  <li>First listen of a never-heard track downloads the full file in the background even if the user stops after seconds — the deliberate price of instant replays.</li>
+  <li>Cache is capped (≈8 songs) so mobile storage stays bounded; quota exhaustion degrades gracefully to network streaming.</li>
+  <li>The API key cannot be revoked per-client; security comes from the key being public + Drive sharing settings. The main long-term risk is Google policy change, not key expiry.</li>
+  <li>rclone's shared client-id retirement (2026) affects only new uploads, never playback.</li>
+</ul>
+
+<div class="footer">SoftyFy — prepared 9 Sep 2026 · repo softyfy.onrender.com · generated report, not committed to the repo</div>
+
+</body>
+</html>
