@@ -350,16 +350,6 @@ export const SONGS: Song[] = [
     library: 'Sometimes',
   },
   {
-    id: 'dhadak-title-track',
-    title: 'Dhadak - Title Track',
-    artist: 'Shreya Ghoshal, Ajay Gogavale',
-    album: 'Sometimes',
-    durationSec: 243,
-    audioSrc: 'https://www.googleapis.com/drive/v3/files/1yz3TJ5PiumL_BdYjNouZeUizqHbvkS9h?alt=media&key=AIzaSyAxAkYvJVFy_5HXwvejOlMi0yno613rtK8',
-    coverSrc: 'https://drive.google.com/thumbnail?id=1S8SLqEa0gb8qd69UlJKynR0bbbPzp7L5&sz=w1000',
-    library: 'Sometimes',
-  },
-  {
     id: 'lambiyan-judaiyan',
     title: 'Lambiyan Judaiyan',
     artist: 'Imran Raza',
