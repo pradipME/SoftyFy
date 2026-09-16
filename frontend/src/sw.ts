@@ -4,7 +4,6 @@ import {
   AUDIO_MAX_AGE_MS,
   AUDIO_MAX_ENTRIES,
   CACHED_AT_HEADER,
-  DOWNLOADS_CACHE,
 } from './lib/audioCache'
 import { appendLogEntry, type MediaLogEntry } from './lib/mediaDebug'
 
@@ -435,29 +434,6 @@ async function handleAudio(request: Request): Promise<Response> {
   const key = new Request(request.url)
   const url = key.url
 
-  // Explicit user downloads take precedence: the entry lives in its own cache
-  // (never pruned by the runtime audio cache) so an offline play of a saved
-  // song resolves here even when the network is gone.
-  const downloadCache = await caches.open(DOWNLOADS_CACHE)
-  const downloaded = await downloadCache.match(key)
-  if (downloaded && downloaded.ok) {
-    markActive(url)
-    const body = await downloaded.arrayBuffer()
-    const served = buildRangeResponse(
-      body,
-      downloaded.headers.get('Content-Type') || 'audio/mpeg',
-      rangeHeader,
-    )
-    debugData('audio.serve', {
-      url,
-      source: 'downloads',
-      status: served.status,
-      range: rangeHeader ?? null,
-      size: body.byteLength,
-    })
-    return served
-  }
-
   const cache = await caches.open(AUDIO_CACHE)
   const cached = await cache.match(key)
   if (cached && cached.ok) {
@@ -553,7 +529,9 @@ self.addEventListener('activate', (event) => {
       .then((keys) =>
         Promise.all(
           keys
-            .filter((name) => name.startsWith('softyfy-covers'))
+            .filter(
+              (name) => name.startsWith('softyfy-covers') || name === 'so.softyfy-downloads',
+            )
             .map((name) => caches.delete(name)),
         ),
       )
