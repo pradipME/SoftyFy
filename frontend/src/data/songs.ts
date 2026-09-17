@@ -399,6 +399,206 @@ export const SONGS: Song[] = [
     coverSrc: 'https://drive.google.com/thumbnail?id=1d2nYwLOQQnqGIvVSIgHUV0BIemBOkato&sz=w1000',
     library: 'Sometimes',
   },
+  {
+    id: 'pehli-nazar-mein',
+    title: 'Pehli Nazar Mein',
+    artist: 'Atif Aslam',
+    album: 'Sometimes',
+    durationSec: 183,
+    audioSrc: 'https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/pehli-nazar-mein.webm',
+    coverSrc: 'https://drive.google.com/thumbnail?id=10H3SgwBUwDbCiITUpyuTuE4S7pjDt4iX&sz=w1000',
+    library: 'Sometimes',
+  },
+  {
+    id: 'tera-hone-laga-hoon',
+    title: 'Tera Hone Laga Hoon',
+    artist: 'Atif Aslam & Alisha Chinai',
+    album: 'Sometimes',
+    durationSec: 167,
+    audioSrc: 'https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/tera-hone-laga-hoon.webm',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1vMeQrtU9syZQ3r3A63YfVWFCXiwl14xs&sz=w1000',
+    library: 'Sometimes',
+  },
+  {
+    id: 'bheegi-si-bhaagi-si',
+    title: 'Bheegi Si Bhaagi Si',
+    artist: 'Mohit Chauhan & Antara Mitra',
+    album: 'Sometimes',
+    durationSec: 237,
+    audioSrc: 'https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/bheegi-si-bhaagi-si.webm',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1Q1UGeQg80sPnVB4CcTzSHiEgd6TO89F7&sz=w1000',
+    library: 'Sometimes',
+  },
+  {
+    id: 'pee-loon',
+    title: 'Pee Loon',
+    artist: 'Mohit Chauhan',
+    album: 'Sometimes',
+    durationSec: 283,
+    audioSrc: 'https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/pee-loon.webm',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1lByb-VkUp45dkwlFWy4DO96FpjN87rwr&sz=w1000',
+    library: 'Sometimes',
+  },
+  {
+    id: 'abhi-kuch-dino-se',
+    title: 'Abhi Kuch Dino Se',
+    artist: 'Mohit Chauhan',
+    album: 'Sometimes',
+    durationSec: 152,
+    audioSrc: 'https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/abhi-kuch-dino-se.webm',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1X3eiMV6fXuycuivjNRpO2BRNyNI8LdjL&sz=w1000',
+    library: 'Sometimes',
+  },
+  {
+    id: 'mere-bina',
+    title: 'Mere Bina',
+    artist: 'Nikhil D\'Souza',
+    album: 'Sometimes',
+    durationSec: 146,
+    audioSrc: 'https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/mere-bina.webm',
+    coverSrc: 'https://drive.google.com/thumbnail?id=12tY_Etl2l77kUGso42cb4OJ21T79d9AZ&sz=w1000',
+    library: 'Sometimes',
+  },
+  {
+    id: 'tu-hi-mera',
+    title: 'Tu Hi Mera',
+    artist: 'Shafqat Amanat Ali',
+    album: 'Sometimes',
+    durationSec: 147,
+    audioSrc: 'https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/tu-hi-mera.webm',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1Jzx_4eMJIDf7sU9UCIM0gKtjJVOjbkRu&sz=w1000',
+    library: 'Sometimes',
+  },
+  {
+    id: 'khuda-jaane',
+    title: 'Khuda Jaane',
+    artist: 'KK & Shilpa Rao',
+    album: 'Sometimes',
+    durationSec: 150,
+    audioSrc: 'https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/khuda-jaane.webm',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1BInPGaZ3RzB4mh-NX_XJ1CyXGL_RBrb-&sz=w1000',
+    library: 'Sometimes',
+  },
+  {
+    id: 'hosanna',
+    title: 'Hosanna',
+    artist: 'A.R. Rahman',
+    album: 'Sometimes',
+    durationSec: 113,
+    audioSrc: 'https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/hosanna.webm',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1sjChWOI0dEsFyxnJUGuhhcAejVlGAC_a&sz=w1000',
+    library: 'Sometimes',
+  },
+  {
+    id: 'piya-o-re-piya',
+    title: 'Piya O Re Piya',
+    artist: 'Atif Aslam & Shreya Ghoshal',
+    album: 'Sometimes',
+    durationSec: 179,
+    audioSrc: 'https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/piya-o-re-piya.webm',
+    coverSrc: 'https://drive.google.com/thumbnail?id=16gcFAigwHexteE-_JXmHYqmbD9Oh39Ga&sz=w1000',
+    library: 'Sometimes',
+  },
+  {
+    id: 'saibo',
+    title: 'Saibo',
+    artist: 'Shreya Ghoshal & Tochi Raina',
+    album: 'Sometimes',
+    durationSec: 143,
+    audioSrc: 'https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/saibo.webm',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1KPpGi7yxAy8BoeQz4jIewsKgunjSRGvo&sz=w1000',
+    library: 'Sometimes',
+  },
+  {
+    id: 'ishq-sufiyana',
+    title: 'Ishq Sufiyana',
+    artist: 'Sunidhi Chauhan',
+    album: 'Sometimes',
+    durationSec: 166,
+    audioSrc: 'https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/ishq-sufiyana.webm',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1_GpaWBiAZGiJjoMboI4GYyhC2siqFWt0&sz=w1000',
+    library: 'Sometimes',
+  },
+  {
+    id: 'teri-jhuki-nazar',
+    title: 'Teri Jhuki Nazar',
+    artist: 'Shafqat Amanat Ali',
+    album: 'Sometimes',
+    durationSec: 173,
+    audioSrc: 'https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/teri-jhuki-nazar.webm',
+    coverSrc: 'https://drive.google.com/thumbnail?id=12leI0GnFzjqtAXaTPBN4nX03seiJ40as&sz=w1000',
+    library: 'Sometimes',
+  },
+  {
+    id: 'hona-tha-pyaar',
+    title: 'Hona Tha Pyaar',
+    artist: 'Atif Aslam & Hadiqa Kiani',
+    album: 'Sometimes',
+    durationSec: 112,
+    audioSrc: 'https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/hona-tha-pyaar.webm',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1hq0od_t5ZxD9dKoWRuP6bBG2gwMfqRNY&sz=w1000',
+    library: 'Sometimes',
+  },
+  {
+    id: 'aaj-din-chadheya',
+    title: 'Aaj Din Chadheya',
+    artist: 'Rahat Fateh Ali Khan',
+    album: 'Sometimes',
+    durationSec: 143,
+    audioSrc: 'https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/aaj-din-chadheya.webm',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1NgOVINZu3lOhQVemboUeq6eptcMxb9Do&sz=w1000',
+    library: 'Sometimes',
+  },
+  {
+    id: 'saudebazi',
+    title: 'Saudebazi',
+    artist: 'Anupam Amod',
+    album: 'Sometimes',
+    durationSec: 112,
+    audioSrc: 'https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/saudebazi.webm',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1QsSea9JSZ2QmmOsmeVtB-Jpe-aCVn_c1&sz=w1000',
+    library: 'Sometimes',
+  },
+  {
+    id: 'tose-naina',
+    title: 'Tose Naina',
+    artist: 'Arijit Singh',
+    album: 'Sometimes',
+    durationSec: 196,
+    audioSrc: 'https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/tose-naina.webm',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1H7V9k0_NwKfxNpbx7jz1D4e0uAr6kLUa&sz=w1000',
+    library: 'Sometimes',
+  },
+  {
+    id: 'tum-se-hi',
+    title: 'Tum Se Hi',
+    artist: 'Mohit Chauhan',
+    album: 'Sometimes',
+    durationSec: 183,
+    audioSrc: 'https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/tum-se-hi.webm',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1-b-ldgE8sCHvNaAcqIRzgjuJuqHYO_UB&sz=w1000',
+    library: 'Sometimes',
+  },
+  {
+    id: 'tera-deedar-hua',
+    title: 'Tera Deedar Hua',
+    artist: 'Rahat Fateh Ali Khan',
+    album: 'Sometimes',
+    durationSec: 183,
+    audioSrc: 'https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/tera-deedar-hua.webm',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1dEJwe_2yCdtGZdSY949eryihwDESCdZh&sz=w1000',
+    library: 'Sometimes',
+  },
+  {
+    id: 'ye-tune-kya-kiya',
+    title: 'Ye Tune Kya Kiya',
+    artist: 'Javed Bashir',
+    album: 'Sometimes',
+    durationSec: 249,
+    audioSrc: 'https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/ye-tune-kya-kiya.webm',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1Ec7l4cBsFkY38Cc25eCy5AzgSQcilOvT&sz=w1000',
+    library: 'Sometimes',
+  },
   // ── Qwali ────────────────────────────────────────────────────────────────
   {
     id: 'tumhe-dillagi',
@@ -970,6 +1170,26 @@ export const LIBRARIES = [...new Set(SONGS.map((s) => s.library))]
 export const SONGS_BY_LIBRARY: Record<string, Song[]> = Object.fromEntries(
   LIBRARIES.map((lib) => [lib, SONGS.filter((s) => s.library === lib)]),
 )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
