@@ -642,6 +642,208 @@ export const SONGS: Song[] = [
     coverSrc: 'https://drive.google.com/thumbnail?id=1wzVw9GWvyu8pP5Z-ZxUWrXKqK-Mx7uDK&sz=w1000',
     library: 'The Weekends',
   },
+
+  // ── Hindi Hits ──────────────────────────────────────────────────────────
+  {
+    id: 'aadat-se-majboor',
+    title: 'Aadat Se Majboor',
+    artist: 'Benny Dayal',
+    album: 'Hindi Hits',
+    durationSec: 122,
+    audioSrc: 'https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/aadat-se-majboor.mp3',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1NIjUVk44-w-Qg9xYj87GEP2HIUZ-rFAc&sz=w1000',
+    library: 'Hindi Hits',
+  },
+  {
+    id: 'love-dose',
+    title: 'Love Dose',
+    artist: 'Yo Yo Honey Singh',
+    album: 'Hindi Hits',
+    durationSec: 165,
+    audioSrc: 'https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/love-dose.mp3',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1W7XfvIvL1Z9yoAKBCaVhJbenGEnFZexY&sz=w1000',
+    library: 'Hindi Hits',
+  },
+  {
+    id: 'pungi',
+    title: 'Pungi',
+    artist: 'Mika Singh',
+    album: 'Hindi Hits',
+    durationSec: 201,
+    audioSrc: 'https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/pungi.mp3',
+    coverSrc: 'https://drive.google.com/thumbnail?id=10MzPnXd_nYJ1mqZ1NvihMfBMHaH8NR1h&sz=w1000',
+    library: 'Hindi Hits',
+  },
+  {
+    id: 'thug-le',
+    title: 'Thug Le',
+    artist: 'Vishal Dadlani & Shweta Pandit',
+    album: 'Hindi Hits',
+    durationSec: 196,
+    audioSrc: 'https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/thug-le.mp3',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1cOUQLU8dfh2oQKC41I7BOMvU4UHy_Iwb&sz=w1000',
+    library: 'Hindi Hits',
+  },
+  {
+    id: 'party-all-night',
+    title: 'Party All Night',
+    artist: 'Yo Yo Honey Singh',
+    album: 'Hindi Hits',
+    durationSec: 244,
+    audioSrc: 'https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/party-all-night.mp3',
+    coverSrc: 'https://drive.google.com/thumbnail?id=195b8_OLkfEefDNwWKu5FgsZVNTaqqKOk&sz=w1000',
+    library: 'Hindi Hits',
+  },
+  {
+    id: 'johnny-johnny',
+    title: 'Johnny Johnny',
+    artist: 'Sachin-Jigar',
+    album: 'Hindi Hits',
+    durationSec: 183,
+    audioSrc: 'https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/johnny-johnny.mp3',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1AVi0785tGIpdYDBZQcNqfU26JRvlRb34&sz=w1000',
+    library: 'Hindi Hits',
+  },
+  {
+    id: 'party-with-bhoothnath',
+    title: 'Party With Bhoothnath',
+    artist: 'Yo Yo Honey Singh',
+    album: 'Hindi Hits',
+    durationSec: 168,
+    audioSrc: 'https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/party-with-bhoothnath.mp3',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1GxFfB8hmIfVHn-yH9dtQNRXMg6Tq74fm&sz=w1000',
+    library: 'Hindi Hits',
+  },
+  {
+    id: 'manma-emotion-jaage',
+    title: 'Manma Emotion',
+    artist: 'Amit Mishra, Anushka Manchanda & Antara Mitra',
+    album: 'Hindi Hits',
+    durationSec: 154,
+    audioSrc: 'https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/manma-emotion-jaage.mp3',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1WTNBheI6ZLZ1bmZkfAxN5zPlB4rsWL_h&sz=w1000',
+    library: 'Hindi Hits',
+  },
+  {
+    id: 'i-hate-luv-storys',
+    title: 'I Hate Luv Storys',
+    artist: 'Vishal Dadlani',
+    album: 'Hindi Hits',
+    durationSec: 146,
+    audioSrc: 'https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/i-hate-luv-storys.mp3',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1NvDXyM8_XDZXe0kvtK9tzf5djza7VXpI&sz=w1000',
+    library: 'Hindi Hits',
+  },
+  {
+    id: 'character-dheela',
+    title: 'Character Dheela',
+    artist: 'Neeraj Shridhar & Amrita Kak',
+    album: 'Hindi Hits',
+    durationSec: 202,
+    audioSrc: 'https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/character-dheela.mp3',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1FSyG_41T0ctWTCf2hxY3u8bJmG9ivhst&sz=w1000',
+    library: 'Hindi Hits',
+  },
+  {
+    id: 'babli-badmaash',
+    title: 'Babli Badmaash',
+    artist: 'Sunidhi Chauhan',
+    album: 'Hindi Hits',
+    durationSec: 156,
+    audioSrc: 'https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/babli-badmaash.mp3',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1yP3dSfjRDw7fYW03zrlbRFWTSidmjF4r&sz=w1000',
+    library: 'Hindi Hits',
+  },
+  {
+    id: 'yaar-na-miley',
+    title: 'Yaar Na Miley',
+    artist: 'Yo Yo Honey Singh',
+    album: 'Hindi Hits',
+    durationSec: 152,
+    audioSrc: 'https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/yaar-na-miley.mp3',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1F8OogCIVY9wMwdKqM9IVZmOI-LC2jnEw&sz=w1000',
+    library: 'Hindi Hits',
+  },
+  {
+    id: 'patli-kamariya',
+    title: 'Patli Kamariya',
+    artist: 'Tanishk Bagchi, Sukh-E Muzical Doctorz & Parampara Tandon',
+    album: 'Hindi Hits',
+    durationSec: 151,
+    audioSrc: 'https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/patli-kamariya.mp3',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1JVoRw_abuYBUrZ1p6U5mOkt3iMQEJ2yT&sz=w1000',
+    library: 'Hindi Hits',
+  },
+  {
+    id: 'shararat',
+    title: 'Shararat',
+    artist: 'Shashwat Sachdev, Madhubanti Bagchi & Jasmine Sandlas',
+    album: 'Hindi Hits',
+    durationSec: 157,
+    audioSrc: 'https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/shararat.mp3',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1LyNfqVTM9oljqmupXmNXlJRfafv_ouTj&sz=w1000',
+    library: 'Hindi Hits',
+  },
+  {
+    id: 'aaj-raat-ka-scene',
+    title: 'Aaj Raat Ka Scene',
+    artist: 'Badshah & Shraddha Pandit',
+    album: 'Hindi Hits',
+    durationSec: 189,
+    audioSrc: 'https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/aaj-raat-ka-scene.mp3',
+    coverSrc: 'https://drive.google.com/thumbnail?id=11JAiBj__U2HKFRWvKEY7LCcpFd_XJ977&sz=w1000',
+    library: 'Hindi Hits',
+  },
+  {
+    id: 'aankh-lad-jaave',
+    title: 'Aankh Lad Jaave',
+    artist: 'Badshah, Tanishk Bagchi, Jubin Nautiyal & Asees Kaur',
+    album: 'Hindi Hits',
+    durationSec: 173,
+    audioSrc: 'https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/aankh-lad-jaave.mp3',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1v49zjRwUXQ_Wjb5fHx19m6E07SByLACi&sz=w1000',
+    library: 'Hindi Hits',
+  },
+  {
+    id: 'galat-baat',
+    title: 'Galat Baat',
+    artist: 'Neeti Mohan & Javed Ali',
+    album: 'Hindi Hits',
+    durationSec: 161,
+    audioSrc: 'https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/galat-baat.mp3',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1t_cN22_i5x2veAN3kxyQ1hOeAgEppN6Y&sz=w1000',
+    library: 'Hindi Hits',
+  },
+  {
+    id: 'the-break-up-song',
+    title: 'The Break Up Song',
+    artist: 'Arijit Singh, Badshah, Jonita Gandhi & Nakash Aziz',
+    album: 'Hindi Hits',
+    durationSec: 141,
+    audioSrc: 'https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/the-break-up-song.mp3',
+    coverSrc: 'https://drive.google.com/thumbnail?id=15n7krHEzo_bjaqruPRUOwBie6fJwnyaI&sz=w1000',
+    library: 'Hindi Hits',
+  },
+  {
+    id: 'nachenge-saari-raat',
+    title: 'Nachenge Saari Raat',
+    artist: 'Meet Bros, Neeraj Shridhar & Tulsi Kumar',
+    album: 'Hindi Hits',
+    durationSec: 222,
+    audioSrc: 'https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/nachenge-saari-raat.mp3',
+    coverSrc: 'https://drive.google.com/thumbnail?id=14IOH_67JS08UG4obPuKhaLRJYtftR3BF&sz=w1000',
+    library: 'Hindi Hits',
+  },
+  {
+    id: 'lattoo',
+    title: 'Lattoo',
+    artist: 'Shreya Ghoshal',
+    album: 'Hindi Hits',
+    durationSec: 172,
+    audioSrc: 'https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/lattoo.mp3',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1nDDF7Ymzq9XSSK2kQ4Rs_lIqmU06OjrX&sz=w1000',
+    library: 'Hindi Hits',
+  },
 ]
 
 /** Quick lookup by id (used by the player to restore a saved queue). */
@@ -656,6 +858,26 @@ export const LIBRARIES = [...new Set(SONGS.map((s) => s.library))]
 export const SONGS_BY_LIBRARY: Record<string, Song[]> = Object.fromEntries(
   LIBRARIES.map((lib) => [lib, SONGS.filter((s) => s.library === lib)]),
 )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
