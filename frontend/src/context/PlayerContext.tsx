@@ -144,14 +144,17 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }, [])
 
   // A song ended: clear its resume entry and let the reducer resolve the next
-  // song (auto-advance, repeat, or stop). A subsequent play() on an ended
-  // element restarts from the top.
+  // song (auto-advance, repeat, or stop). AUTO_NEXT (not NEXT) so the resolved
+  // target always plays — the end-of-song `pause` event can flip status to
+  // 'paused' right before `ended` is processed, and NEXT would then load the
+  // next song without starting it. A subsequent play() on an ended element
+  // restarts from the top.
   const onEnded = useCallback(() => {
     const song = currentSongOf(stateRef.current)
     if (song !== null) {
       resumePositionsRef.current = removeResumePosition(safeStorage(), resumePositionsRef.current, song.id)
     }
-    dispatch({ type: 'NEXT' })
+    dispatch({ type: 'AUTO_NEXT' })
   }, [])
 
   // Called by the audio hook when an automatic recovery attempt begins (stall

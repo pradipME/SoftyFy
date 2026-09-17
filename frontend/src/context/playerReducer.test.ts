@@ -145,6 +145,56 @@ describe('playerReducer', () => {
     expect(state.playIntent).toEqual({ startAt: 0 })
   })
 
+  it('AUTO_NEXT advances to the next song and always plays, even from paused', () => {
+    // The end-of-song `pause` event can flip status to 'paused' just before
+    // the `ended` event is processed; AUTO_NEXT must still auto-advance.
+    const state = reduce(playAll(createInitialState(), ['a', 'b', 'c']), [
+      { type: 'SET_STATUS', status: 'playing' },
+      { type: 'SET_STATUS', status: 'paused' },
+      { type: 'AUTO_NEXT' },
+    ])
+    expect(currentSongOf(state)?.id).toBe('b')
+    expect(state.status).toBe('loading')
+    expect(state.playIntent).toEqual({ startAt: null })
+  })
+
+  it('AUTO_NEXT with repeat all wraps to the start and plays', () => {
+    const state = reduce(playAll(createInitialState(), ['a', 'b']), [
+      { type: 'CYCLE_REPEAT' },
+      { type: 'SET_STATUS', status: 'playing' },
+      { type: 'AUTO_NEXT' },
+      { type: 'SET_STATUS', status: 'playing' },
+      { type: 'AUTO_NEXT' },
+    ])
+    expect(currentSongOf(state)?.id).toBe('a')
+    expect(state.status).toBe('loading')
+    expect(state.playIntent).toEqual({ startAt: null })
+  })
+
+  it('AUTO_NEXT with repeat one restarts the current song and plays', () => {
+    const state = reduce(playAll(createInitialState(), ['a', 'b']), [
+      { type: 'CYCLE_REPEAT' },
+      { type: 'CYCLE_REPEAT' },
+      { type: 'SET_STATUS', status: 'paused' },
+      { type: 'AUTO_NEXT' },
+    ])
+    expect(currentSongOf(state)?.id).toBe('a')
+    expect(state.status).toBe('loading')
+    expect(state.playIntent).toEqual({ startAt: 0 })
+  })
+
+  it('AUTO_NEXT with repeat off stops at the end of the queue', () => {
+    const state = reduce(playAll(createInitialState(), ['a', 'b']), [
+      { type: 'SET_STATUS', status: 'playing' },
+      { type: 'AUTO_NEXT' },
+      { type: 'SET_STATUS', status: 'playing' },
+      { type: 'AUTO_NEXT' },
+    ])
+    expect(state.status).toBe('paused')
+    expect(state.currentTime).toBe(0)
+    expect(state.playIntent).toBeNull()
+  })
+
   it('PREVIOUS restarts the current song past the restart threshold', () => {
     const state = playerReducer(playAll(createInitialState(), ['a', 'b']), {
       type: 'PREVIOUS',

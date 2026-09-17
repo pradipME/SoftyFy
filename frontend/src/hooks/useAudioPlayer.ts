@@ -103,6 +103,13 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
    *  watchdog is disarmed. */
   const lastProgressAtRef = useRef(0)
   const lastProgressValueRef = useRef(0)
+  /** True while the most recent pause was the USER's explicit action (pauseAudio).
+   *  Lets the end-of-song detection distinguish "I stopped on purpose" from
+   *  "the element ran out of data at the end without firing `ended`". */
+  const userPausedRef = useRef(false)
+  /** Guards the end-of-song handlers (ended event, pause/tail fallbacks) against
+   *  firing auto-advance twice in a row for the same song end. */
+  const endHandledRef = useRef(false)
 
   const clearStallTimer = useCallback(() => {
     if (stallTimerRef.current !== null) {
@@ -141,6 +148,19 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
     if (songId !== null && src !== null) {
       handlersRef.current.onSourceReady(songId, src)
     }
+  }, [])
+
+  /**
+   * Reports a finished song exactly ONCE per media load. Every end-of-song
+   * signal (the native `ended` event, the pause-at-the-tail fallback, the
+   * near-end stall watchdog, and background recovery) funnels through this, so
+   * a browser that fires `pause` with `ended` still false and then `ended` a
+   * moment later can never advance two songs.
+   */
+  const handleEnded = useCallback(() => {
+    if (endHandledRef.current) return
+    endHandledRef.current = true
+    handlersRef.current.onEnded()
   }, [])
 
   /**
@@ -222,6 +242,8 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
       clearStallTimer()
       clearBufferGuard()
       stallFlagRef.current = false
+      endHandledRef.current = false
+      userPausedRef.current = false
       candidateIndexRef.current = index
       lastSrcRef.current = src
       audio.src = src
@@ -331,6 +353,21 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
       if (suppressLoadingRef.current) return
       stallTimerRef.current = setTimeout(() => {
         stallTimerRef.current = null
+        const current = audioRef.current
+        const parkedAtEnd =
+          current !== null &&
+          !current.ended &&
+          Number.isFinite(current.duration) &&
+          current.duration > 0 &&
+          current.currentTime >= current.duration - NEAR_END_THRESHOLD_S
+        if (parkedAtEnd) {
+          // The song ran out of data in its final seconds without firing
+          // `ended` (last chunk never flagged as end-of-file). This is NOT a
+          // recoverable stall - auto-advance instead of reloading a URL that
+          // has nothing left to give.
+          handleEnded()
+          return
+        }
         attemptRecovery()
       }, STALL_TIMEOUT_MS)
     }
@@ -377,7 +414,20 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
     }
     const onPause = () => {
       clearStallTimer()
-      if (audio.ended) return
+      // Playback stopped at the very end of the file, whether or not the
+      // native `ended` event has fired yet (some streams drain the last buffer
+      // and pause instead of completing; others flip `ended` too early and then
+      // drop the event entirely). Treat it as a finished song and auto-advance —
+      // unless the pause was the USER explicitly stopping in the final seconds,
+      // which must stay paused. handleEnded's dedup makes the follow-up `ended`
+      // event a no-op, so this never advances two songs.
+      const duration = audio.duration
+      const atEnd =
+        Number.isFinite(duration) && duration > 0 && audio.currentTime >= duration - NEAR_END_THRESHOLD_S
+      if (atEnd && !userPausedRef.current) {
+        handleEnded()
+        return
+      }
       handlersRef.current.onStatusChange('paused')
     }
     const onWaiting = () => {
@@ -443,7 +493,7 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
       // resets on real playback progress or an explicit new play intent.
       attemptRecovery()
     }
-    const onEnded = () => handlersRef.current.onEnded()
+    const onEnded = () => handleEnded()
 
     audio.addEventListener('timeupdate', onTimeUpdate)
     audio.addEventListener('seeked', onSeeked)
@@ -474,7 +524,7 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
       audio.removeEventListener('error', onError)
       audio.removeEventListener('ended', onEnded)
     }
-  }, [attemptRecovery, clearStallTimer, startBufferedStart, logEvent])
+  }, [attemptRecovery, clearStallTimer, startBufferedStart, handleEnded, logEvent])
 
   useEffect(() => {
     return () => {
@@ -502,6 +552,7 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
         stallFlagRef.current = false
         retryCountRef.current = 0
         recoveringRef.current = false
+        endHandledRef.current = false
         audio.src = preferred
         audio.load()
       } else if (shouldPlay) {
@@ -510,6 +561,7 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
         // budget. Without this, the hard ceiling from the previous failed
         // attempt would fail the replay instantly.
         retryCountRef.current = 0
+        endHandledRef.current = false
       }
       if (startAt != null && startAt > 0) {
         try {
@@ -520,6 +572,7 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
       }
       if (shouldPlay) {
         suppressLoadingRef.current = false
+        userPausedRef.current = false
         pendingStartBufferRef.current = true
         bufferGuardDeadlineRef.current = Date.now() + BUFFER_GUARD_MAX_MS
         logApp('media.load', { songId, src: preferred, shouldPlay, candidateCount: srcs.length })
@@ -558,6 +611,8 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
     stallFlagRef.current = false
     retryCountRef.current = 0
     recoveringRef.current = false
+    endHandledRef.current = false
+    userPausedRef.current = false
     lastSrcRef.current = null
     songIdRef.current = null
     candidatesRef.current = []
@@ -574,6 +629,7 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
     // the loading spinner and cause a visual flicker.
     suppressLoadingRef.current = true
     clearBufferGuard()
+    endHandledRef.current = false
     try {
       audio.currentTime = time
     } catch {
@@ -588,7 +644,10 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
   const pauseAudio = useCallback(() => {
     const audio = audioRef.current
     if (audio === null) return
-    if (!audio.paused) audio.pause()
+    if (!audio.paused) {
+      userPausedRef.current = true
+      audio.pause()
+    }
   }, [])
 
   const setVolume = useCallback((volume: number, muted: boolean) => {
@@ -622,14 +681,14 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
     const atEnd = Number.isFinite(duration) && duration > 0 && audio.currentTime >= duration
 
     if (ended || atEnd || nearEnd) {
-      handlersRef.current.onEnded()
+      handleEnded()
       return
     }
 
     if (audio.paused) {
       audio.play().catch(() => {})
     }
-  }, [])
+  }, [handleEnded])
 
   return { audioRef, loadAndPlay, clearSource, seekTo, pauseAudio, setVolume, recoverFromBackground }
 }

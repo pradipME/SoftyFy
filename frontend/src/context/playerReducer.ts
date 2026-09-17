@@ -159,6 +159,11 @@ export type PlayerAction =
   | { type: 'PLAY' }
   | { type: 'PAUSE' }
   | { type: 'NEXT' }
+  /** Auto-advance triggered by the `ended` event. Like NEXT but the resolved
+   *  target ALWAYS plays — the end-of-song `pause` event may flip status to
+   *  'paused' before `ended` is processed, and a song that literally ended must
+   *  keep going regardless of whatever transient status it reported. */
+  | { type: 'AUTO_NEXT' }
   | { type: 'PREVIOUS'; currentTime: number }
   | { type: 'TOGGLE_SHUFFLE' }
   | { type: 'CYCLE_REPEAT' }
@@ -220,6 +225,25 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
         currentTime: 0,
         duration: restart ? state.duration : 0,
         playIntent: intentFor(wasPlaying, restart),
+        error: null,
+      }
+    }
+
+    case 'AUTO_NEXT': {
+      if (state.playOrder.length === 0) return state
+      const target = nextPosition(state)
+      if (target === null) {
+        // End of the queue with repeat off: there is nothing to advance to.
+        return { ...state, status: 'paused', currentTime: 0, playIntent: null, error: null }
+      }
+      const restart = target === state.position
+      return {
+        ...state,
+        position: target,
+        status: 'loading',
+        currentTime: 0,
+        duration: restart ? state.duration : 0,
+        playIntent: intentFor(true, restart),
         error: null,
       }
     }
