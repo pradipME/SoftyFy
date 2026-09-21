@@ -4,6 +4,7 @@ import { HashRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'r
 import { AppShell } from './components/layout/AppShell'
 import { DebugOverlay } from './components/debug/DebugOverlay'
 import { PwaUpdater } from './components/pwa/PwaUpdater'
+import { InstallPrompt } from './components/pwa/InstallPrompt'
 import { PlayerProvider } from './context/PlayerContext'
 import { HomePage } from './pages/Home'
 import { LibraryPage } from './pages/Library'
@@ -41,7 +42,8 @@ export default function App() {
             </Route>
           </Routes>
           <DebugOverlay />
-          <PwaUpdater />
+          <InstallPrompt />
+      <PwaUpdater />
         </PlayerProvider>
       </HashRouter>
     </MotionConfig>
