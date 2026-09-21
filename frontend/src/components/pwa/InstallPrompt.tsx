@@ -69,7 +69,26 @@ export function InstallPrompt() {
     }
   }, [isStandalone])
 
-  // After we have a prompt (or we are on iOS) and the user hasn't dismissed,
+  // Listen for the custom "deferredprompt" event in case the native beforeinstallprompt fired before this component mounted.
+  useEffect(() => {
+    // If the early listener stored a global variable, capture it.
+    // @ts-ignore
+    if (typeof window !== 'undefined' && (window as any).deferredPrompt) {
+      // @ts-ignore
+      setDeferredPrompt((window as any).deferredPrompt)
+    }
+    const handler = (e: Event) => {
+      const custom = e as CustomEvent
+      console.log('debug: InstallPrompt received deferredprompt event')
+      setDeferredPrompt(custom.detail)
+    }
+    window.addEventListener('deferredprompt', handler)
+    return () => {
+      window.removeEventListener('deferredprompt', handler)
+    }
+  }, [])
+
+// After we have a prompt (or we are on iOS) and the user hasn't dismissed,
   // schedule the toast to appear after a short delay.
   useEffect(() => {
     if (isStandalone || isDismissed) return
