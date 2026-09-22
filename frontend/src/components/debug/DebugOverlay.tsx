@@ -24,7 +24,7 @@ function summarize(entry: MediaLogEntry): string {
       parts.push(`${key}=${key === 'url' ? value.replace(/^.*\/([^/?]+).*$/, '$1') : value}`)
     }
   }
-  for (const key of ['reason', 'action', 'cached', 'slow', 'status', 'source', 'size', 'fileSize', 'ageSec', 'evictedAgeSec', 'ratio', 'usage', 'quota']) {
+  for (const key of ['reason', 'action', 'cached', 'slow', 'quality', 'qualityReason', 'status', 'source', 'size', 'fileSize', 'ageSec', 'evictedAgeSec', 'ratio', 'usage', 'quota']) {
     if (data[key] !== undefined) {
       const label =
         key === 'usage' || key === 'quota' || key === 'size' || key === 'fileSize'

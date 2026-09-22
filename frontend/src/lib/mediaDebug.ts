@@ -74,14 +74,31 @@ function connectionInfo(): NetworkInformation | undefined {
 }
 
 export function isSlowConnection(): boolean {
+  return slowConnectionReason() !== null
+}
+
+/**
+ * Returns a short reason string when the connection is considered slow, or
+ * `null` when it is not. Single source of truth for the slow-connection
+ * decision so the warm-preload timing, the LQ-quality pick, and debugging logs
+ * can never disagree on the definition.
+ *
+ * Slow = Data Saver on, effectiveType 2g/3g (or slower), RTT above 400 ms, or
+ * an estimated downlink below 0.5 Mb/s. Returns the FIRST matching reason.
+ */
+export function slowConnectionReason(): string | null {
   const conn = connectionInfo()
-  if (!conn) return false
-  if (conn.saveData) return true
+  if (!conn) return null
+  if (conn.saveData) return 'saveData'
   const effectiveType = conn.effectiveType
   if (effectiveType !== undefined && ['slow-2g', '2g', '3g'].includes(effectiveType)) {
-    return true
+    return `effectiveType:${effectiveType}`
   }
-  return (conn.rtt ?? 0) > 400
+  const rtt = conn.rtt ?? 0
+  if (rtt > 400) return `rtt:${rtt}ms`
+  const downlink = conn.downlink
+  if (downlink !== undefined && downlink < 0.5) return `downlink:${downlink}Mb/s`
+  return null
 }
 
 export function connectionSummary(): Record<string, unknown> {

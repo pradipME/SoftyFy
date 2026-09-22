@@ -46,6 +46,7 @@ export const SONGS: Song[] = [
     album: '',
     durationSec: 0,
     audioSrc: 'https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/Afsos.PenduJatt.Com.Se.mp3',
+    audioSrcLQ: 'https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/Afsos.PenduJatt.Com.Se.mp3-lq.mp3',
     coverSrc: 'https://drive.google.com/thumbnail?id=1UA8oK-Su_eDMcuEicnXv_PuF2LJy2n5Q&sz=w1000',
     library: 'Sometimes',
   },

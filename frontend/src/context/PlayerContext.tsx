@@ -15,7 +15,7 @@ import {
   AUDIO_MAX_AGE_MS,
   CACHED_AT_HEADER,
 } from '../lib/audioCache'
-import { buildAudioCandidates, preferKnownGood } from '../lib/audioSources'
+import { buildAudioCandidates, pickAudioSource, preferKnownGood } from '../lib/audioSources'
 import { haptic } from '../lib/haptics'
 import { isSlowConnection, logApp } from '../lib/mediaDebug'
 import {
@@ -191,7 +191,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       return
     }
 
-    const candidates = buildAudioCandidates(warmSong.audioSrc)
+    const choice = pickAudioSource(warmSong)
+    const candidates = buildAudioCandidates(choice.src)
     const knownGood = workingSourcesRef.current[warmSong.id]
     const preferred = preferKnownGood(candidates, knownGood)[0]
 
@@ -226,7 +227,14 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         warmTargetRef.current = targetKey
         warmEl.preload = 'auto'
         warmEl.src = preferred
-        logApp('warm.decide', { songId: warmSong.id, cached: true, slow, action: 'cached' })
+        logApp('warm.decide', {
+          songId: warmSong.id,
+          cached: true,
+          slow,
+          quality: choice.quality,
+          qualityReason: choice.reason,
+          action: 'cached',
+        })
         return
       }
 
@@ -238,7 +246,14 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         warmTargetRef.current = targetKey
         warmEl.preload = 'auto'
         warmEl.src = preferred
-        logApp('warm.decide', { songId: warmSong.id, cached: false, slow, action: 'network-warm' })
+        logApp('warm.decide', {
+          songId: warmSong.id,
+          cached: false,
+          slow,
+          quality: choice.quality,
+          qualityReason: choice.reason,
+          action: 'network-warm',
+        })
         return
       }
 
@@ -249,7 +264,14 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       warmTargetRef.current = ''
       warmEl.removeAttribute('src')
       warmEl.load()
-      logApp('warm.decide', { songId: warmSong.id, cached: false, slow, action: 'defer' })
+      logApp('warm.decide', {
+        songId: warmSong.id,
+        cached: false,
+        slow,
+        quality: choice.quality,
+        qualityReason: choice.reason,
+        action: 'defer',
+      })
     })()
   }, [])
 
@@ -382,7 +404,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       return
     }
     lastSongChangeRef.current = Date.now()
-    const candidates = buildAudioCandidates(song.audioSrc)
+    const choice = pickAudioSource(song)
+    const candidates = buildAudioCandidates(choice.src)
     const orderedCandidates = preferKnownGood(
       candidates,
       workingSourcesRef.current[song.id],
@@ -394,6 +417,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         title: song.title,
         candidateCount: orderedCandidates.length,
         slow: isSlowConnection(),
+        quality: choice.quality,
+        qualityReason: choice.reason,
+        src: choice.src,
       })
       dispatch({ type: 'CONSUME_PLAY_INTENT' })
     }

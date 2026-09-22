@@ -17,6 +17,9 @@
  * not Release streams (local /audio/... files, arbitrary HTTPS) are also
  * returned as their sole candidate.
  */
+import type { Song } from '../types/song'
+import { slowConnectionReason } from './mediaDebug'
+
 export function buildAudioCandidates(source: string): string[] {
   return [source]
 }
@@ -30,4 +33,34 @@ export function preferKnownGood(candidates: string[], knownGood?: string): strin
   if (knownGood === undefined) return candidates
   if (candidates.length <= 1 || !candidates.includes(knownGood)) return candidates
   return [knownGood, ...candidates.filter((candidate) => candidate !== knownGood)]
+}
+
+export interface QualityChoice {
+  /** The URL audio should load from for this song, decided NOW. */
+  src: string
+  /** Which quality tier was picked. */
+  quality: 'hq' | 'lq'
+  /** Human-readable explanation (no LQ version, connection type, etc.). */
+  reason: string
+}
+
+/**
+ * Chooses which URL to play for a song — HQ or its low-bitrate twin — at load
+ * time only.
+ *
+ * The decision runs ONCE when a song starts loading (and again for the
+ * preloaded "next" song), never mid-playback, so changing network conditions
+ * cannot swap buffers under an active stream and glitch the audio. If a song
+ * has no `audioSrcLQ` yet this silently falls back to `audioSrc`, exactly as
+ * before LQ existed.
+ */
+export function pickAudioSource(song: Song): QualityChoice {
+  if (song.audioSrcLQ === undefined) {
+    return { src: song.audioSrc, quality: 'hq', reason: 'no-lq-version' }
+  }
+  const reason = slowConnectionReason()
+  if (reason !== null) {
+    return { src: song.audioSrcLQ, quality: 'lq', reason }
+  }
+  return { src: song.audioSrc, quality: 'hq', reason: 'fast-connection' }
 }

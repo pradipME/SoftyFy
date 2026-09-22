@@ -45,7 +45,6 @@ const DEFAULT_BITRATE = 128
 const DEFAULT_CHANNELS = 'stereo'
 const DEFAULT_SUFFIX = 'lq'
 const DEFAULT_OUT = resolve(__dirname, 'lq-output')
-const DOWNLOAD_CONCURRENCY = 3
 
 function usage() {
   console.log(`Usage:
@@ -251,7 +250,6 @@ async function main() {
     ].join('\t'))
   }
 
-  const files = rows.map((r) => r.filename)
   console.log('\n' + '='.repeat(92))
   console.log('UPLOAD (review & run this yourself — the script never uploads):')
   const quoted = rows.map((r) => `"${join(args.out, r.filename)}"`)

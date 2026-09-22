@@ -21,6 +21,13 @@ export interface Song {
    */
   audioSrc: string
   /**
+   * Optional low-bitrate twin of `audioSrc` (e.g. ".../a.mp3" → ".../a-lq.mp3").
+   * On slow connections the player prefers this URL AT LOAD TIME when present;
+   * songs without an LQ version just use `audioSrc` as today. Never switched
+   * mid-playback — the choice is made once per song, when it starts loading.
+   */
+  audioSrcLQ?: string
+  /**
    * Absolute path to the cover image, e.g. "/covers/track-01.jpg" — or a full
    * external URL (e.g. "https://cdn/.../a.jpg"). External covers that block
    * CORS fall back to a generated palette/placeholder, never breaking the UI.
