@@ -34,3 +34,6 @@ Thumbs.db
 
 # Testing / coverage
 coverage/
+
+# Low-bitrate audio generator output
+frontend/scripts/lq-output/
