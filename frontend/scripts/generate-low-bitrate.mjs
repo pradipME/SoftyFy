@@ -87,27 +87,42 @@ function validate(args) {
   return args
 }
 
-/** Parses src/data/songs.ts into { id, title, filename } for Release-hosted songs. */
+/** Parses src/data/songs.ts into { id, title, filename, library } for Release-hosted songs. */
 function readReleaseSongs() {
   const source = readFileSync(join(REPO, 'src', 'data', 'songs.ts'), 'utf8')
-  // id → title → (optional audioSrcLQ) → audioSrc inside each {...} entry.
-  const entryRe = /\{\s*?id:\s*'([^']+)'[\s\S]*?title:\s*'([^']+)'[\s\S]*?audioSrc:\s*'([^']+)'/g
+  // id → title → (optional audioSrcLQ) → audioSrc → library inside each {...} entry.
+  const entryRe =
+    /\{\s*?id:\s*'([^']+)'[\s\S]*?title:\s*'([^']+)'[\s\S]*?audioSrc:\s*'([^']+)'[\s\S]*?library:\s*'([^']+)'/g
   const songs = []
   let m
   while ((m = entryRe.exec(source)) !== null) {
-    const [, id, title, audioSrc] = m
+    const [, id, title, audioSrc, library] = m
     const fm = RELEASE_RE.exec(audioSrc)
-    if (fm) songs.push({ id, title, filename: fm[1] })
+    if (fm) songs.push({ id, title, filename: fm[1], library })
   }
   return songs
 }
 
-/** Streams a URL to a local file (redirects followed), like download in Node 24. */
-async function download(url, dest) {
-  const res = await fetch(url, { headers: { 'User-Agent': 'softyfy-lowbitrate-tool' } })
-  if (!res.ok || !res.body) throw new Error(`HTTP ${res.status} for ${url}`)
-  await mkdir(dirname(dest), { recursive: true })
-  await finished(Readable.fromWeb(res.body).pipe(createWriteStream(dest)))
+/** Streams a URL to a local file (redirects followed), with transient retries. */
+async function download(url, dest, attempts = 4) {
+  let lastErr
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      const res = await fetch(url, { headers: { 'User-Agent': 'softyfy-lowbitrate-tool' } })
+      if (!res.ok || !res.body) throw new Error(`HTTP ${res.status} for ${url}`)
+      await mkdir(dirname(dest), { recursive: true })
+      await finished(Readable.fromWeb(res.body).pipe(createWriteStream(dest)))
+      return
+    } catch (err) {
+      lastErr = err
+      if (attempt < attempts) {
+        const waitMs = 1500 * 2 ** (attempt - 1)
+        console.log(`    retry ${attempt}/${attempts - 1} in ${waitMs}ms ...`)
+        await new Promise((r) => setTimeout(r, waitMs))
+      }
+    }
+  }
+  throw lastErr
 }
 
 async function fileSizes(path) {
@@ -199,6 +214,7 @@ async function main() {
 
   const srcDir = join(args.out, 'src')
   const rows = []
+  const failures = []
 
   await mapLimit(songs, 1, async (song) => {
     const releaseUrl = `https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/${encodeURIComponent(song.filename)}`
@@ -206,33 +222,44 @@ async function main() {
     const output = join(args.out, `${song.filename}-${args.suffix}.mp3`)
 
     console.log(`\n[${song.id}] ${song.filename}`)
-    if (!existsSync(input)) {
-      console.log('  downloading HQ from Release ...')
-      await download(releaseUrl, input)
-    } else {
-      console.log('  using cached HQ file')
-    }
+    try {
+      if (!existsSync(input)) {
+        console.log('  downloading HQ from Release ...')
+        await download(releaseUrl, input)
+      } else {
+        console.log('  using cached HQ file')
+      }
 
-    if (!existsSync(output)) {
-      console.log(`  transcoding → ${args.bitrate}k ${args.channels} → ${song.filename}-${args.suffix}.mp3`)
-      await transcode(input, output, args)
-    } else {
-      console.log('  output already exists, keeping it')
-    }
+      if (!existsSync(output)) {
+        console.log(`  transcoding → ${args.bitrate}k ${args.channels} → ${song.filename}-${args.suffix}.mp3`)
+        await transcode(input, output, args)
+      } else {
+        console.log('  output already exists, keeping it')
+      }
 
-    const srcBytes = await fileSizes(input)
-    const outBytes = await fileSizes(output)
-    const remote = srcBytes === null ? await remoteSize(releaseUrl) : null
-    const info = await probeAudio(output)
-    rows.push({
-      id: song.id,
-      filename: `${song.filename}-${args.suffix}.mp3`,
-      outBytes,
-      srcBytes: srcBytes ?? remote,
-      bitrate: info.bitrate,
-      duration: info.durationSec,
-    })
+      const srcBytes = await fileSizes(input)
+      const outBytes = await fileSizes(output)
+      const remote = srcBytes === null ? await remoteSize(releaseUrl) : null
+      const info = await probeAudio(output)
+      rows.push({
+        id: song.id,
+        library: song.library,
+        filename: `${song.filename}-${args.suffix}.mp3`,
+        outBytes,
+        srcBytes: srcBytes ?? remote,
+        bitrate: info.bitrate,
+        duration: info.durationSec,
+      })
+    } catch (err) {
+      failures.push({ id: song.id, filename: song.filename, error: String(err?.message || err).slice(0, 140) })
+      console.log(`  FAILED: ${String(err?.message || err).slice(0, 140)}`)
+    }
   })
+
+  if (failures.length) {
+    console.log(`\n\n!! ${failures.length} songs failed — re-run this command to continue (completed files are skipped):`)
+    for (const f of failures) console.log(`  [${f.id}] ${f.filename}: ${f.error}`)
+  }
 
   console.log('\n\n' + '='.repeat(92))
   console.log(`GENERATED ${rows.length} LOW-BITRATE FILES  (${args.bitrate} kb/s ${args.channels}, suffix "-${args.suffix}")`)
@@ -251,10 +278,15 @@ async function main() {
   }
 
   console.log('\n' + '='.repeat(92))
-  console.log('UPLOAD (review & run this yourself — the script never uploads):')
-  const quoted = rows.map((r) => `"${join(args.out, r.filename)}"`)
-  if (rows.length) {
-    console.log(`  gh release upload softyfy-audio-v1 --repo pradipME/SoftyFy ${quoted.join(' ')}`)
+  console.log('UPLOAD (review & run these yourself — the script never uploads):')
+  const groups = new Map()
+  for (const r of rows) {
+    if (!groups.has(r.library)) groups.set(r.library, [])
+    groups.get(r.library).push(r.filename)
+  }
+  for (const [lib, files] of groups) {
+    const quoted = files.map((f) => `"${join(args.out, f)}"`).join(' ')
+    console.log(`  gh release upload softyfy-audio-v1 --repo pradipME/SoftyFy ${quoted}   # ${lib} (${files.length})`)
   }
   console.log('\nOr drag-and-drop the files above into the release at:')
   console.log('  https://github.com/pradipME/SoftyFy/releases/edit/softyfy-audio-v1')
