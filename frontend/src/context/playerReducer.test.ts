@@ -39,6 +39,7 @@ describe('playerReducer', () => {
     expect(state.currentTime).toBe(0)
     expect(state.duration).toBe(0)
     expect(state.playIntent).toBeNull()
+    expect(state.currentQuality).toBeNull()
   })
 
   it('initializes from persisted preferences', () => {
@@ -254,6 +255,51 @@ describe('playerReducer', () => {
     const state = playerReducer(playAll(createInitialState(), ['a']), { type: 'PLAY_FAILED' })
     expect(state.status).toBe('error')
     expect(state.error).toBeTruthy()
+  })
+
+  describe('currentQuality', () => {
+    it('SET_QUALITY stores the active tier and reason', () => {
+      const withLq = playerReducer(createInitialState(), {
+        type: 'SET_QUALITY',
+        quality: { quality: 'lq', reason: 'effectiveType:3g' },
+      })
+      expect(withLq.currentQuality).toEqual({ quality: 'lq', reason: 'effectiveType:3g' })
+      const withHq = playerReducer(withLq, {
+        type: 'SET_QUALITY',
+        quality: { quality: 'hq', reason: 'fast-connection' },
+      })
+      expect(withHq.currentQuality).toEqual({ quality: 'hq', reason: 'fast-connection' })
+      const cleared = playerReducer(withLq, { type: 'SET_QUALITY', quality: null })
+      expect(cleared.currentQuality).toBeNull()
+    })
+
+    it('PLAY_SONG clears the tier until the next song loads', () => {
+      const base = playerReducer(createInitialState(), {
+        type: 'SET_QUALITY',
+        quality: { quality: 'lq', reason: 'saveData' },
+      })
+      const state = playAll(base, ['a'])
+      expect(state.currentQuality).toBeNull()
+    })
+
+    it('NEXT/AUTO_NEXT/PREVIOUS clear the stale tier when the position changes', () => {
+      const qualified = (s: PlayerState): PlayerState =>
+        playerReducer(s, {
+          type: 'SET_QUALITY',
+          quality: { quality: 'lq', reason: 'downlink:0.3Mb/s' },
+        })
+      const loaded = qualified(playAll(createInitialState(), ['a', 'b', 'c']))
+      const afterNext = playerReducer(loaded, {
+        type: 'SET_QUALITY',
+        quality: { quality: 'hq', reason: 'fast-connection' },
+      })
+      const nexted = playerReducer(afterNext, { type: 'NEXT' })
+      expect(nexted.currentQuality).toBeNull()
+      const auto = playerReducer(afterNext, { type: 'AUTO_NEXT' })
+      expect(auto.currentQuality).toBeNull()
+      const back = playerReducer(nexted, { type: 'PREVIOUS', currentTime: 1 })
+      expect(back.currentQuality).toBeNull()
+    })
   })
 
   describe('single-song library', () => {

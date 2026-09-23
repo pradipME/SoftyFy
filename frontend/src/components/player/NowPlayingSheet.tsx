@@ -18,6 +18,7 @@ import {
 } from '../ui/icons'
 import { ProgressBar } from './ProgressBar'
 import { VolumeControl } from './VolumeControl'
+import { LqBadge } from './LqBadge'
 
 interface NowPlayingSheetProps {
   open: boolean
@@ -37,7 +38,7 @@ interface NowPlayingSheetProps {
  * leaving the app's hash navigation history untouched.
  */
 export function NowPlayingSheet({ open, onClose }: NowPlayingSheetProps) {
-  const { currentSong, status, shuffle, repeat, togglePlay, next, previous, toggleShuffle, cycleRepeat } =
+  const { currentSong, status, shuffle, repeat, currentQuality, togglePlay, next, previous, toggleShuffle, cycleRepeat } =
     usePlayer()
   const reduced = useReducedMotion()
 
@@ -146,7 +147,10 @@ export function NowPlayingSheet({ open, onClose }: NowPlayingSheetProps) {
 
             <div className="flex shrink-0 items-center justify-between gap-4 px-6 pb-1">
               <div className="min-w-0">
-                <h2 className="truncate text-2xl font-bold tracking-tight text-fg">{currentSong.title}</h2>
+                <h2 className="flex min-w-0 items-center gap-2 text-2xl font-bold tracking-tight text-fg">
+                  <span className="min-w-0 truncate">{currentSong.title}</span>
+                  {currentQuality?.quality === 'lq' ? <LqBadge /> : null}
+                </h2>
                 <p className="truncate text-sm text-muted">{currentSong.artist}</p>
               </div>
               {isPlaying ? <EqualizerBars /> : null}

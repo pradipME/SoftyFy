@@ -36,6 +36,7 @@ import {
   currentSongOf,
   nextPosition,
   playerReducer,
+  type ActiveQuality,
   type PlaybackStatus,
   type RepeatMode,
 } from './playerReducer'
@@ -52,6 +53,8 @@ export interface PlayerApi {
   shuffle: boolean
   repeat: RepeatMode
   error: string | null
+  /** Quality tier (hq/lq) the current song was loaded at, set once at load. */
+  currentQuality: ActiveQuality | null
   /** Plays `song` within `queue` (the queue is used for next/prev/auto-advance). */
   playSong: (song: Song, queue: Song[]) => void
   /** Increments whenever the user selects a song via `playSong`. */
@@ -401,10 +404,15 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }
     if (song === null) {
       clearSource()
+      dispatch({ type: 'SET_QUALITY', quality: null })
       return
     }
     lastSongChangeRef.current = Date.now()
     const choice = pickAudioSource(song)
+    dispatch({
+      type: 'SET_QUALITY',
+      quality: { quality: choice.quality, reason: choice.reason },
+    })
     const candidates = buildAudioCandidates(choice.src)
     const orderedCandidates = preferKnownGood(
       candidates,
@@ -646,6 +654,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       shuffle: state.shuffle,
       repeat: state.repeat,
       error: state.error,
+      currentQuality: state.currentQuality,
       playSong,
       selectionEpoch,
       togglePlay,
@@ -667,6 +676,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       state.shuffle,
       state.repeat,
       state.error,
+      state.currentQuality,
       playSong,
       selectionEpoch,
       togglePlay,

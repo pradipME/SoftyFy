@@ -26,10 +26,11 @@ let playerAudio: HTMLMediaElement | null = null
 let restoreAudio: (() => void) | null = null
 
 function Probe({ initial }: { initial: Song }) {
-  const { currentSong, status, playSong } = usePlayer()
+  const { currentSong, status, currentQuality, playSong } = usePlayer()
   return (
     <div>
       <div data-testid="title">{currentSong?.title ?? 'none'}</div>
+      <div data-testid="quality">{currentQuality?.quality ?? 'none'}</div>
       <div data-testid="status">{status}</div>
       <button onClick={() => playSong(initial, [initial])}>play</button>
     </div>
@@ -107,6 +108,8 @@ const play = async () => {
   expect(screen.getByTestId('status').textContent).toBe('playing')
 }
 
+const currentQuality = () => screen.getByTestId('quality').textContent
+
 describe('connection-aware quality selection at load time', () => {
   it('loads the LQ URL when the connection is slow', async () => {
     setConnection({ effectiveType: '3g', rtt: 300, downlink: 0.7, saveData: false })
@@ -117,6 +120,7 @@ describe('connection-aware quality selection at load time', () => {
     )
     await play()
     expect(playerAudio?.src).toBe(LQ)
+    expect(currentQuality()).toBe('lq')
   })
 
   it('loads the HQ URL on a fast connection', async () => {
@@ -128,6 +132,7 @@ describe('connection-aware quality selection at load time', () => {
     )
     await play()
     expect(playerAudio?.src).toBe(HQ)
+    expect(currentQuality()).toBe('hq')
   })
 
   it('silently uses HQ when a slow-connection song has no LQ version', async () => {
@@ -139,6 +144,7 @@ describe('connection-aware quality selection at load time', () => {
     )
     await play()
     expect(playerAudio?.src).toBe(HQ_ONLY)
+    expect(currentQuality()).toBe('hq')
   })
 
   it('loads HQ when the Network Information API is unavailable', async () => {
@@ -149,5 +155,6 @@ describe('connection-aware quality selection at load time', () => {
     )
     await play()
     expect(playerAudio?.src).toBe(HQ_ONLY)
+    expect(currentQuality()).toBe('hq')
   })
 })

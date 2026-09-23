@@ -2,6 +2,14 @@ import type { Song } from '../types/song'
 
 export type PlaybackStatus = 'idle' | 'loading' | 'playing' | 'paused' | 'error'
 export type RepeatMode = 'off' | 'all' | 'one'
+export type QualityTier = 'hq' | 'lq'
+
+/** Which audio tier the currently loaded song is playing at, and why. Set once
+ *  when the song loads (mirrors the pickAudioSource decision for that song). */
+export interface ActiveQuality {
+  quality: QualityTier
+  reason: string
+}
 
 export interface PlayerState {
   /** Source order of the loaded songs. */
@@ -20,6 +28,8 @@ export interface PlayerState {
   /** One-shot flag that tells the audio layer to start playing the current song. */
   playIntent: { startAt: number | null } | null
   error: string | null
+  /** Quality tier of the song the audio layer currently has loaded. */
+  currentQuality: ActiveQuality | null
 }
 
 export interface PersistedPreferences {
@@ -46,6 +56,7 @@ export function createInitialState(preferences: PersistedPreferences = {}): Play
     shuffle: preferences.shuffle ?? false,
     playIntent: null,
     error: null,
+    currentQuality: null,
   }
 }
 
@@ -175,6 +186,7 @@ export type PlayerAction =
   | { type: 'SET_STATUS'; status: PlaybackStatus }
   | { type: 'PLAY_FAILED' }
   | { type: 'CONSUME_PLAY_INTENT' }
+  | { type: 'SET_QUALITY'; quality: ActiveQuality | null }
 
 /** Builds the play intent for NEXT/PREVIOUS, preserving pause state. */
 function intentFor(wasPlaying: boolean, restart: boolean): { startAt: number | null } | null {
@@ -197,6 +209,7 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
         duration: 0,
         playIntent: { startAt: action.startAt ?? null },
         error: null,
+        currentQuality: null,
       }
     }
 
@@ -226,6 +239,7 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
         duration: restart ? state.duration : 0,
         playIntent: intentFor(wasPlaying, restart),
         error: null,
+        currentQuality: null,
       }
     }
 
@@ -245,6 +259,7 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
         duration: restart ? state.duration : 0,
         playIntent: intentFor(true, restart),
         error: null,
+        currentQuality: null,
       }
     }
 
@@ -260,6 +275,7 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
         duration: restart ? state.duration : 0,
         playIntent: intentFor(wasPlaying, restart),
         error: null,
+        currentQuality: null,
       }
     }
 
@@ -320,6 +336,10 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
     case 'CONSUME_PLAY_INTENT': {
       if (state.playIntent === null) return state
       return { ...state, playIntent: null }
+    }
+
+    case 'SET_QUALITY': {
+      return { ...state, currentQuality: action.quality }
     }
 
     default:

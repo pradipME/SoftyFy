@@ -13,6 +13,7 @@ import {
   SkipForwardIcon,
 } from '../ui/icons'
 import { VolumeControl } from './VolumeControl'
+import { LqBadge } from './LqBadge'
 
 interface PlayerBarProps {
   onOpenSheet: () => void
@@ -31,6 +32,7 @@ export function PlayerBar({ onOpenSheet }: PlayerBarProps) {
     duration,
     shuffle,
     repeat,
+    currentQuality,
     togglePlay,
     next,
     previous,
@@ -82,7 +84,10 @@ export function PlayerBar({ onOpenSheet }: PlayerBarProps) {
               </div>
             </CoverGlow>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-fg">{currentSong.title}</p>
+              <p className="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-fg">
+                <span className="min-w-0 truncate">{currentSong.title}</span>
+                {currentQuality?.quality === 'lq' ? <LqBadge /> : null}
+              </p>
               <p className={`truncate text-xs ${isError ? 'text-danger' : 'text-muted'}`}>
                 {isError ? 'Unable to play this song.' : currentSong.artist}
               </p>
