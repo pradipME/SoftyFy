@@ -18,7 +18,7 @@ import {
 } from '../ui/icons'
 import { ProgressBar } from './ProgressBar'
 import { VolumeControl } from './VolumeControl'
-import { LqBadge } from './LqBadge'
+import { QualityNote } from './QualityNote'
 
 interface NowPlayingSheetProps {
   open: boolean
@@ -147,11 +147,9 @@ export function NowPlayingSheet({ open, onClose }: NowPlayingSheetProps) {
 
             <div className="flex shrink-0 items-center justify-between gap-4 px-6 pb-1">
               <div className="min-w-0">
-                <h2 className="flex min-w-0 items-center gap-2 text-2xl font-bold tracking-tight text-fg">
-                  <span className="min-w-0 truncate">{currentSong.title}</span>
-                  {currentQuality !== null ? <LqBadge quality={currentQuality.quality} /> : null}
-                </h2>
+                <h2 className="truncate text-2xl font-bold tracking-tight text-fg">{currentSong.title}</h2>
                 <p className="truncate text-sm text-muted">{currentSong.artist}</p>
+                {currentQuality !== null ? <QualityNote quality={currentQuality.quality} /> : null}
               </div>
               {isPlaying ? <EqualizerBars /> : null}
             </div>

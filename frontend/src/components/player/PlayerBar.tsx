@@ -13,7 +13,7 @@ import {
   SkipForwardIcon,
 } from '../ui/icons'
 import { VolumeControl } from './VolumeControl'
-import { LqBadge } from './LqBadge'
+import { QualityNote } from './QualityNote'
 
 interface PlayerBarProps {
   onOpenSheet: () => void
@@ -66,7 +66,7 @@ export function PlayerBar({ onOpenSheet }: PlayerBarProps) {
           />
         </div>
 
-        <div className="flex h-16 items-center gap-2 px-2.5 sm:px-3">
+        <div className="flex min-h-16 items-center gap-2 px-2.5 py-2 sm:px-3">
           <button
             type="button"
             onClick={onOpenSheet}
@@ -84,13 +84,11 @@ export function PlayerBar({ onOpenSheet }: PlayerBarProps) {
               </div>
             </CoverGlow>
             <div className="min-w-0 flex-1">
-              <p className="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-fg">
-                <span className="min-w-0 truncate">{currentSong.title}</span>
-                {currentQuality !== null ? <LqBadge quality={currentQuality.quality} /> : null}
-              </p>
+              <p className="truncate text-sm font-semibold text-fg">{currentSong.title}</p>
               <p className={`truncate text-xs ${isError ? 'text-danger' : 'text-muted'}`}>
                 {isError ? 'Unable to play this song.' : currentSong.artist}
               </p>
+              {currentQuality !== null ? <QualityNote quality={currentQuality.quality} /> : null}
             </div>
           </button>
 
