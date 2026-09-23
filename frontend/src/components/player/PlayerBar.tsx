@@ -86,7 +86,7 @@ export function PlayerBar({ onOpenSheet }: PlayerBarProps) {
             <div className="min-w-0 flex-1">
               <p className="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-fg">
                 <span className="min-w-0 truncate">{currentSong.title}</span>
-                {currentQuality?.quality === 'lq' ? <LqBadge /> : null}
+                {currentQuality !== null ? <LqBadge quality={currentQuality.quality} /> : null}
               </p>
               <p className={`truncate text-xs ${isError ? 'text-danger' : 'text-muted'}`}>
                 {isError ? 'Unable to play this song.' : currentSong.artist}

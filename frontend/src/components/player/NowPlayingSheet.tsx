@@ -149,7 +149,7 @@ export function NowPlayingSheet({ open, onClose }: NowPlayingSheetProps) {
               <div className="min-w-0">
                 <h2 className="flex min-w-0 items-center gap-2 text-2xl font-bold tracking-tight text-fg">
                   <span className="min-w-0 truncate">{currentSong.title}</span>
-                  {currentQuality?.quality === 'lq' ? <LqBadge /> : null}
+                  {currentQuality !== null ? <LqBadge quality={currentQuality.quality} /> : null}
                 </h2>
                 <p className="truncate text-sm text-muted">{currentSong.artist}</p>
               </div>
