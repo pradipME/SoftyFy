@@ -88,7 +88,7 @@ export function PlayerBar({ onOpenSheet }: PlayerBarProps) {
               <p className={`truncate text-xs ${isError ? 'text-danger' : 'text-muted'}`}>
                 {isError ? 'Unable to play this song.' : currentSong.artist}
               </p>
-              {currentQuality !== null ? <QualityNote quality={currentQuality.quality} /> : null}
+              {currentQuality !== null ? <QualityNote quality={currentQuality} /> : null}
             </div>
           </button>
 

@@ -39,9 +39,10 @@ import {
   type ActiveQuality,
   type PlaybackStatus,
   type RepeatMode,
+  type StreamingQuality,
 } from './playerReducer'
 
-export type { PlaybackStatus, RepeatMode } from './playerReducer'
+export type { PlaybackStatus, RepeatMode, StreamingQuality } from './playerReducer'
 
 export interface PlayerApi {
   currentSong: Song | null
@@ -55,6 +56,10 @@ export interface PlayerApi {
   error: string | null
   /** Quality tier (hq/lq) the current song was loaded at, set once at load. */
   currentQuality: ActiveQuality | null
+  /** The "Streaming quality" setting: auto (measure) or a forced tier. */
+  streamingQuality: StreamingQuality
+  /** Changes the setting for the NEXT song; never reloads the current one. */
+  setStreamingQuality: (quality: StreamingQuality) => void
   /** Plays `song` within `queue` (the queue is used for next/prev/auto-advance). */
   playSong: (song: Song, queue: Song[]) => void
   /** Increments whenever the user selects a song via `playSong`. */
@@ -194,7 +199,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       return
     }
 
-    const choice = pickAudioSource(warmSong)
+    // The warm preload must be pointed at the SAME tier the real load will use,
+    // otherwise the "next" track is downloaded twice (once per tier).
+    const choice = pickAudioSource(warmSong, stateRef.current.streamingQuality)
     const candidates = buildAudioCandidates(choice.src)
     const knownGood = workingSourcesRef.current[warmSong.id]
     const preferred = preferKnownGood(candidates, knownGood)[0]
@@ -392,6 +399,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'CYCLE_REPEAT' })
   }, [])
 
+  const setStreamingQuality = useCallback((quality: StreamingQuality) => {
+    dispatch({ type: 'SET_STREAMING_QUALITY', quality })
+  }, [])
+
   // The single song-load pipeline: load a source only when the song id changes
   // and consume the one-shot play intent (so play() runs at most once per
   // transition).
@@ -408,7 +419,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       return
     }
     lastSongChangeRef.current = Date.now()
-    const choice = pickAudioSource(song)
+    // Read through the ref on purpose: the preference is deliberately NOT a
+    // dependency of this effect, so changing "Streaming quality" applies to the
+    // next song and never reloads (or mid-stream swaps) the one already playing.
+    const preference = stateRef.current.streamingQuality
+    const choice = pickAudioSource(song, preference)
     dispatch({
       type: 'SET_QUALITY',
       quality: { quality: choice.quality, reason: choice.reason },
@@ -418,7 +433,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       candidates,
       workingSourcesRef.current[song.id],
     )
-    loadAndPlay(song.id, orderedCandidates, playIntent?.startAt ?? null, playIntent !== null)
+    loadAndPlay(song.id, orderedCandidates, playIntent?.startAt ?? null, playIntent !== null, choice.quality)
     if (playIntent !== null) {
       logApp('song.start', {
         songId: song.id,
@@ -427,6 +442,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         slow: isSlowConnection(),
         quality: choice.quality,
         qualityReason: choice.reason,
+        preference,
         src: choice.src,
       })
       dispatch({ type: 'CONSUME_PLAY_INTENT' })
@@ -458,10 +474,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         muted: state.muted,
         repeat: state.repeat,
         shuffle: state.shuffle,
+        streamingQuality: state.streamingQuality,
       },
       safeStorage(),
     )
-  }, [state.volume, state.muted, state.repeat, state.shuffle])
+  }, [state.volume, state.muted, state.repeat, state.shuffle, state.streamingQuality])
 
   // Persist resume position immediately on pause (covers the "close app while paused" case).
   useEffect(() => {
@@ -655,6 +672,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       repeat: state.repeat,
       error: state.error,
       currentQuality: state.currentQuality,
+      streamingQuality: state.streamingQuality,
+      setStreamingQuality,
       playSong,
       selectionEpoch,
       togglePlay,
@@ -677,6 +696,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       state.repeat,
       state.error,
       state.currentQuality,
+      state.streamingQuality,
+      setStreamingQuality,
       playSong,
       selectionEpoch,
       togglePlay,

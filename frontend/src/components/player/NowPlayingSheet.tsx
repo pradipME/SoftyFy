@@ -19,6 +19,7 @@ import {
 import { ProgressBar } from './ProgressBar'
 import { VolumeControl } from './VolumeControl'
 import { QualityNote } from './QualityNote'
+import { QualitySetting } from './QualitySetting'
 
 interface NowPlayingSheetProps {
   open: boolean
@@ -149,7 +150,7 @@ export function NowPlayingSheet({ open, onClose }: NowPlayingSheetProps) {
               <div className="min-w-0">
                 <h2 className="truncate text-2xl font-bold tracking-tight text-fg">{currentSong.title}</h2>
                 <p className="truncate text-sm text-muted">{currentSong.artist}</p>
-                {currentQuality !== null ? <QualityNote quality={currentQuality.quality} /> : null}
+                {currentQuality !== null ? <QualityNote quality={currentQuality} /> : null}
               </div>
               {isPlaying ? <EqualizerBars /> : null}
             </div>
@@ -208,6 +209,10 @@ export function NowPlayingSheet({ open, onClose }: NowPlayingSheetProps) {
                   ) : null}
                 </span>
               </IconButton>
+            </div>
+
+            <div className="shrink-0 px-6 pb-3">
+              <QualitySetting />
             </div>
 
             <div className="shrink-0 pb-[calc(env(safe-area-inset-bottom)+10px)]">

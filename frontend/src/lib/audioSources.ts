@@ -17,8 +17,18 @@
  * not Release streams (local /audio/... files, arbitrary HTTPS) are also
  * returned as their sole candidate.
  */
+import type { QualityTier, StreamingQuality } from '../context/playerReducer'
 import type { Song } from '../types/song'
-import { slowConnectionReason } from './mediaDebug'
+import { connectionSummary, logApp } from './mediaDebug'
+import { autoQualityDecision, networkMemorySnapshot } from './networkMemory'
+
+/** Prefix marking a reason that came from the user's setting, not the network. */
+const MANUAL_REASON_PREFIX = 'manual:'
+
+/** True when the manual "Streaming quality" setting decided this tier. */
+export function isManualQualityReason(reason: string): boolean {
+  return reason.startsWith(MANUAL_REASON_PREFIX)
+}
 
 export function buildAudioCandidates(source: string): string[] {
   return [source]
@@ -39,7 +49,7 @@ export interface QualityChoice {
   /** The URL audio should load from for this song, decided NOW. */
   src: string
   /** Which quality tier was picked. */
-  quality: 'hq' | 'lq'
+  quality: QualityTier
   /** Human-readable explanation (no LQ version, connection type, etc.). */
   reason: string
 }
@@ -50,17 +60,61 @@ export interface QualityChoice {
  *
  * The decision runs ONCE when a song starts loading (and again for the
  * preloaded "next" song), never mid-playback, so changing network conditions
- * cannot swap buffers under an active stream and glitch the audio. If a song
- * has no `audioSrcLQ` yet this silently falls back to `audioSrc`, exactly as
- * before LQ existed.
+ * cannot swap buffers under an active stream and glitch the audio. A song with
+ * no `audioSrcLQ` falls back to `audioSrc` exactly as before LQ existed — that
+ * check comes first because HQ is then the only URL there is, whatever the
+ * setting says.
+ *
+ * Signals are weighted by how much they can actually be trusted:
+ *
+ *   1. the manual "Streaming quality" setting — the user outranks every guess,
+ *   2. measured reality from the session (stalls, time-to-buffer) — see
+ *      {@link networkMemory}; `navigator.connection` cannot see a weak mobile
+ *      signal, so this is what actually fixed the bad buffering,
+ *   3. `navigator.connection` as a secondary hint for before anything has been
+ *      measured,
+ *   4. HQ, because "not measurable yet" is not evidence of a slow network.
  */
-export function pickAudioSource(song: Song): QualityChoice {
-  if (song.audioSrcLQ === undefined) {
-    return { src: song.audioSrc, quality: 'hq', reason: 'no-lq-version' }
-  }
-  const reason = slowConnectionReason()
-  if (reason !== null) {
-    return { src: song.audioSrcLQ, quality: 'lq', reason }
-  }
-  return { src: song.audioSrc, quality: 'hq', reason: 'fast-connection' }
+export function pickAudioSource(song: Song, preference: StreamingQuality = 'auto'): QualityChoice {
+  const lq = song.audioSrcLQ
+  const decision =
+    lq === undefined
+      ? { quality: 'hq' as QualityTier, reason: 'no-lq-version' }
+      : decideQuality(preference)
+  const src = decision.quality === 'lq' ? (lq as string) : song.audioSrc
+  logDecision(song, decision.quality, decision.reason, preference)
+  return { src, quality: decision.quality, reason: decision.reason }
+}
+
+function decideQuality(preference: StreamingQuality): { quality: QualityTier; reason: string } {
+  if (preference === 'high') return { quality: 'hq', reason: `${MANUAL_REASON_PREFIX}high` }
+  if (preference === 'low') return { quality: 'lq', reason: `${MANUAL_REASON_PREFIX}low` }
+  return autoQualityDecision()
+}
+
+/**
+ * Records the decision and everything that justified it in the media debug
+ * ring buffer (?debug=1 → DebugOverlay), including the measured time-to-buffer
+ * and stall count behind an automatic downgrade.
+ */
+function logDecision(
+  song: Song,
+  quality: QualityTier,
+  reason: string,
+  preference: StreamingQuality,
+): void {
+  const memory = networkMemorySnapshot()
+  logApp('quality.decide', {
+    songId: song.id,
+    quality,
+    reason,
+    preference,
+    timeToBufferMs: memory.timeToBufferMs,
+    stalls: memory.stalls,
+    fillRate: memory.fillRate,
+    weak: memory.weak,
+    goodStreak: memory.goodStreak,
+    sampleCount: memory.sampleCount,
+    ...connectionSummary(),
+  })
 }

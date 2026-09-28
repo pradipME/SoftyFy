@@ -1,16 +1,29 @@
 // @vitest-environment jsdom
-import { render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { cleanup, render, screen } from '@testing-library/react'
+import { afterEach, describe, expect, it } from 'vitest'
 import { QualityNote } from './QualityNote'
 
+afterEach(cleanup)
+
 describe('QualityNote', () => {
-  it('shows the weak-internet explanation for LQ directly as text', () => {
-    render(<QualityNote quality="lq" />)
-    expect(screen.getByText("You're on low quality because of weak internet")).toBeTruthy()
+  it('explains an automatic LQ drop as a weak internet', () => {
+    render(<QualityNote quality={{ quality: 'lq', reason: 'weak-network:stalls:2' }} />)
+    expect(screen.getByText('Low quality — weak internet')).toBeTruthy()
   })
 
-  it('shows the high-quality note for HQ directly as text', () => {
-    render(<QualityNote quality="hq" />)
-    expect(screen.getByText("You're on high quality")).toBeTruthy()
+  it('blames the user only when they pinned the tier themselves', () => {
+    render(<QualityNote quality={{ quality: 'lq', reason: 'manual:low' }} />)
+    expect(screen.getByText('Low quality — set by you')).toBeTruthy()
+  })
+
+  it('shows the high-quality note for HQ', () => {
+    render(<QualityNote quality={{ quality: 'hq', reason: 'measured-fast:600ms' }} />)
+    expect(screen.getByText('High quality')).toBeTruthy()
+  })
+
+  it('says nothing about the network when HQ was forced by the setting', () => {
+    render(<QualityNote quality={{ quality: 'hq', reason: 'manual:high' }} />)
+    expect(screen.getByText('High quality')).toBeTruthy()
+    expect(screen.queryByText(/weak internet/)).toBeNull()
   })
 })

@@ -4,6 +4,20 @@ export type PlaybackStatus = 'idle' | 'loading' | 'playing' | 'paused' | 'error'
 export type RepeatMode = 'off' | 'all' | 'one'
 export type QualityTier = 'hq' | 'lq'
 
+/**
+ * The user's "Streaming quality" setting. `auto` measures the network; `high`
+ * and `low` force that tier for every song that has a low-bitrate twin. It is
+ * a session-wide preference, NOT part of the per-song decision: changing it
+ * never reloads the song that is already playing.
+ */
+export type StreamingQuality = 'auto' | 'high' | 'low'
+
+export const STREAMING_QUALITIES: readonly StreamingQuality[] = ['auto', 'high', 'low']
+
+export function isStreamingQuality(value: unknown): value is StreamingQuality {
+  return STREAMING_QUALITIES.includes(value as StreamingQuality)
+}
+
 /** Which audio tier the currently loaded song is playing at, and why. Set once
  *  when the song loads (mirrors the pickAudioSource decision for that song). */
 export interface ActiveQuality {
@@ -30,6 +44,8 @@ export interface PlayerState {
   error: string | null
   /** Quality tier of the song the audio layer currently has loaded. */
   currentQuality: ActiveQuality | null
+  /** The manual "Streaming quality" setting, persisted across sessions. */
+  streamingQuality: StreamingQuality
 }
 
 export interface PersistedPreferences {
@@ -37,6 +53,7 @@ export interface PersistedPreferences {
   muted?: boolean
   repeat?: RepeatMode
   shuffle?: boolean
+  streamingQuality?: StreamingQuality
 }
 
 export const DEFAULT_PLAYBACK_ERROR = 'Unable to play this song.'
@@ -57,6 +74,9 @@ export function createInitialState(preferences: PersistedPreferences = {}): Play
     playIntent: null,
     error: null,
     currentQuality: null,
+    streamingQuality: isStreamingQuality(preferences.streamingQuality)
+      ? preferences.streamingQuality
+      : 'auto',
   }
 }
 
@@ -187,6 +207,7 @@ export type PlayerAction =
   | { type: 'PLAY_FAILED' }
   | { type: 'CONSUME_PLAY_INTENT' }
   | { type: 'SET_QUALITY'; quality: ActiveQuality | null }
+  | { type: 'SET_STREAMING_QUALITY'; quality: StreamingQuality }
 
 /** Builds the play intent for NEXT/PREVIOUS, preserving pause state. */
 function intentFor(wasPlaying: boolean, restart: boolean): { startAt: number | null } | null {
@@ -340,6 +361,14 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
 
     case 'SET_QUALITY': {
       return { ...state, currentQuality: action.quality }
+    }
+
+    case 'SET_STREAMING_QUALITY': {
+      // Deliberately leaves `currentQuality` alone: the tier of a song is
+      // decided once, at load time, and switching the preference mid-song must
+      // never swap the buffer under a playing track.
+      if (state.streamingQuality === action.quality) return state
+      return { ...state, streamingQuality: action.quality }
     }
 
     default:

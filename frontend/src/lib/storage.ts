@@ -1,4 +1,4 @@
-import type { PersistedPreferences } from '../context/playerReducer'
+import { isStreamingQuality, type PersistedPreferences } from '../context/playerReducer'
 
 export interface ResumePosition {
   /** Seconds played into the song when it was last left. */
@@ -40,6 +40,9 @@ export function loadPreferences(storage: Storage | null): PersistedPreferences |
       muted: typeof parsed.muted === 'boolean' ? parsed.muted : undefined,
       repeat: parsed.repeat ?? undefined,
       shuffle: typeof parsed.shuffle === 'boolean' ? parsed.shuffle : undefined,
+      streamingQuality: isStreamingQuality(parsed.streamingQuality)
+        ? parsed.streamingQuality
+        : undefined,
     }
   } catch {
     return null

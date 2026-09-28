@@ -78,6 +78,16 @@ export function isSlowConnection(): boolean {
 }
 
 /**
+ * Whether the Network Information API exists at all. `slowConnectionReason()`
+ * returns `null` both for "fast" and for "no API", and the quality decision
+ * words those differently (a hint vs. nothing measurable), so it needs to tell
+ * them apart.
+ */
+export function hasConnectionInfo(): boolean {
+  return connectionInfo() !== undefined
+}
+
+/**
  * Returns a short reason string when the connection is considered slow, or
  * `null` when it is not. Single source of truth for the slow-connection
  * decision so the warm-preload timing, the LQ-quality pick, and debugging logs

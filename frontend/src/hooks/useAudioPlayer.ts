@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react'
-import type { PlaybackStatus } from '../context/playerReducer'
+import type { PlaybackStatus, QualityTier } from '../context/playerReducer'
 import {
   bufferedAheadOf,
   bufferedMeasurableAhead,
@@ -8,6 +8,7 @@ import {
   logApp,
   round,
 } from '../lib/mediaDebug'
+import { recordLoadSample } from '../lib/networkMemory'
 
 export interface AudioPlayerHandlers {
   onTimeUpdate: (time: number) => void
@@ -52,17 +53,36 @@ const BUFFER_GUARD_POLL_MS = 300
 const BUFFER_GUARD_MAX_MS = 12_000
 
 /**
+ * Per-song measurement of what the network actually delivered, gathered for
+ * free from the load that is already happening (see `lib/networkMemory`):
+ * how long until {@link MIN_START_BUFFER_S} of runway was buffered, plus how
+ * many times playback stalled. Folded into the session memory when the song is
+ * over so the NEXT song's tier can be chosen from evidence instead of a guess.
+ */
+interface LoadMeasurement {
+  songId: string
+  quality: QualityTier
+  /** Epoch ms the media load started. */
+  startedAt: number
+  /** ms until the runway was filled; null until measured, and after a give-up. */
+  timeToBufferMs: number | null
+  stalls: number
+}
+
+/**
  * Wraps a single shared HTMLAudioElement. The PlayerProvider owns the result,
  * so exactly one audio element lives for the whole app and playback survives
  * page navigation.
  *
- * `loadAndPlay(songId, srcs, startAt, shouldPlay)` is the only playback entry
- * point. `srcs` is an ordered list of URLs for one song (see
+ * `loadAndPlay(songId, srcs, startAt, shouldPlay, quality)` is the only playback
+ * entry point. `srcs` is an ordered list of URLs for one song (see
  * `buildAudioCandidates`). Songs have exactly ONE candidate — a GitHub Release
  * asset URL (softyfy-audio-v1) — replacing Drive streaming after Google's
  * anti-abuse flagging 403'd every API key AND the keyless download endpoints
  * reject browser cross-site media requests. GitHub serves the asset with byte
- * ranges (206), no key, nothing to flag.
+ * ranges (206), no key, nothing to flag. `quality` is the tier the caller
+ * already decided for this song; it is only recorded so the load can be
+ * measured and compared against later ones.
  *
  * ## Stall / error recovery
  * When the network stalls mid-playback (`waiting` / `stalled`) a watchdog
@@ -110,6 +130,30 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
   /** Guards the end-of-song handlers (ended event, pause/tail fallbacks) against
    *  firing auto-advance twice in a row for the same song end. */
   const endHandledRef = useRef(false)
+  /** The load being measured right now, if any. Flushed into the session
+   *  network memory when the song ends or the next one starts. */
+  const loadMeasureRef = useRef<LoadMeasurement | null>(null)
+
+  /** Hands the finished song's measurement to the network memory, once. */
+  const flushLoadSample = useCallback(() => {
+    const measurement = loadMeasureRef.current
+    loadMeasureRef.current = null
+    if (measurement === null) return
+    recordLoadSample({
+      songId: measurement.songId,
+      quality: measurement.quality,
+      timeToBufferMs: measurement.timeToBufferMs,
+      stalls: measurement.stalls,
+    })
+  }, [])
+
+  /** One `waiting`/`stalled` transition, not one event: a single stall fires
+   *  `waiting` and then `stalled` for the same gap in the data. */
+  const countStall = useCallback(() => {
+    const measurement = loadMeasureRef.current
+    if (measurement === null) return
+    measurement.stalls += 1
+  }, [])
 
   const clearStallTimer = useCallback(() => {
     if (stallTimerRef.current !== null) {
@@ -133,8 +177,10 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
     }
   }, [])
 
-  /** Buffer is healthy - transition to 'playing' and remember the working URL. */
-  const completeBufferedStart = useCallback(() => {
+  /** Buffer is healthy - transition to 'playing' and remember the working URL.
+   *  `buffered` is false when the guard gave up at its deadline, in which case
+   *  there is no honest time-to-buffer to report. */
+  const completeBufferedStart = useCallback((buffered: boolean) => {
     pendingStartBufferRef.current = false
     if (bufferGuardTimerRef.current !== null) {
       clearTimeout(bufferGuardTimerRef.current)
@@ -144,6 +190,12 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
     const songId = songIdRef.current
     const src = lastSrcRef.current
     if (audio === null) return
+    // First time the runway is filled is the throughput measurement — the
+    // download was already in flight for playback, so this costs nothing.
+    const measurement = loadMeasureRef.current
+    if (buffered && measurement !== null && measurement.timeToBufferMs === null) {
+      measurement.timeToBufferMs = Date.now() - measurement.startedAt
+    }
     handlersRef.current.onStatusChange('playing')
     if (songId !== null && src !== null) {
       handlersRef.current.onSourceReady(songId, src)
@@ -160,8 +212,11 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
   const handleEnded = useCallback(() => {
     if (endHandledRef.current) return
     endHandledRef.current = true
+    // The song is over, so its stalls and time-to-buffer are final. Recording
+    // them now means the next song can pick its tier from what really happened.
+    flushLoadSample()
     handlersRef.current.onEnded()
-  }, [])
+  }, [flushLoadSample])
 
   /**
    * Initial-startup buffer guard: when a song starts with less than
@@ -200,7 +255,7 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
         return
       }
       if (healthy() || Date.now() >= bufferGuardDeadlineRef.current) {
-        completeBufferedStart()
+        completeBufferedStart(healthy())
         return
       }
       bufferGuardTimerRef.current = setTimeout(poll, BUFFER_GUARD_POLL_MS)
@@ -212,7 +267,7 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
       bufferGuardDeadlineRef.current = Date.now() + BUFFER_GUARD_MAX_MS
     }
     if (healthy()) {
-      completeBufferedStart()
+      completeBufferedStart(true)
       return
     }
     handlersRef.current.onStatusChange('loading')
@@ -432,6 +487,7 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
     }
     const onWaiting = () => {
       if (suppressLoadingRef.current) return
+      if (!stallFlagRef.current) countStall()
       stallFlagRef.current = true
       logEvent('media.waiting', () => ({
         currentTime: round(audio.currentTime),
@@ -445,6 +501,7 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
     }
     const onStalled = () => {
       if (suppressLoadingRef.current) return
+      if (!stallFlagRef.current) countStall()
       stallFlagRef.current = true
       logEvent('media.stalled', () => ({
         currentTime: round(audio.currentTime),
@@ -524,7 +581,7 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
       audio.removeEventListener('error', onError)
       audio.removeEventListener('ended', onEnded)
     }
-  }, [attemptRecovery, clearStallTimer, startBufferedStart, handleEnded, logEvent])
+  }, [attemptRecovery, clearStallTimer, startBufferedStart, handleEnded, logEvent, countStall])
 
   useEffect(() => {
     return () => {
@@ -535,13 +592,22 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
   }, [clearStallTimer, clearBufferGuard, clearRecoveryTimer])
 
   const loadAndPlay = useCallback(
-    (songId: string, srcs: string[], startAt: number | null, shouldPlay: boolean) => {
+    (
+      songId: string,
+      srcs: string[],
+      startAt: number | null,
+      shouldPlay: boolean,
+      quality: QualityTier = 'hq',
+    ) => {
       const audio = audioRef.current
       if (audio === null) return
       if (srcs.length === 0) return
       const preferred = srcs[0]
       const srcChanged = lastSrcRef.current !== preferred
       if (srcChanged) {
+        // The previous song's verdict is final before its replacement's
+        // measurement starts, so the two can never overwrite each other.
+        flushLoadSample()
         lastSrcRef.current = preferred
         songIdRef.current = songId
         candidatesRef.current = srcs
@@ -571,6 +637,20 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
         }
       }
       if (shouldPlay) {
+        // Measuring starts here, not when the src was assigned: a track queued
+        // while the player was paused would otherwise be scored on the time it
+        // spent sitting idle, and one that is never played would report a
+        // buffer timeout it never had. Reusing an existing measurement keeps
+        // the stalls and the time-to-buffer across a pause/resume.
+        if (loadMeasureRef.current === null) {
+          loadMeasureRef.current = {
+            songId,
+            quality,
+            startedAt: Date.now(),
+            timeToBufferMs: null,
+            stalls: 0,
+          }
+        }
         suppressLoadingRef.current = false
         userPausedRef.current = false
         pendingStartBufferRef.current = true
@@ -599,7 +679,7 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
         audio.pause()
       }
     },
-    [attemptRecovery, clearStallTimer, clearRecoveryTimer, startBufferedStart],
+    [attemptRecovery, clearStallTimer, clearRecoveryTimer, startBufferedStart, flushLoadSample],
   )
 
   const clearSource = useCallback(() => {
@@ -608,6 +688,7 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
     clearStallTimer()
     clearBufferGuard()
     clearRecoveryTimer()
+    flushLoadSample()
     stallFlagRef.current = false
     retryCountRef.current = 0
     recoveringRef.current = false
@@ -619,7 +700,7 @@ export function useAudioPlayer(handlers: AudioPlayerHandlers) {
     candidateIndexRef.current = 0
     audio.removeAttribute('src')
     audio.load()
-  }, [clearStallTimer, clearBufferGuard, clearRecoveryTimer])
+  }, [clearStallTimer, clearBufferGuard, clearRecoveryTimer, flushLoadSample])
 
   const seekTo = useCallback((time: number) => {
     const audio = audioRef.current
