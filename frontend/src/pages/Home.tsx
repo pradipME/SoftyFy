@@ -90,7 +90,7 @@ function NowPlayingBanner({
         </div>
         <div className="min-w-0 flex-1">
           <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-widest text-accent">
-            {isPlaying ? '▶ Now Playing' : '⏸ Paused'}
+            {isPlaying ? ' Now Playing' : ' Paused'}
           </p>
           <p className="truncate text-base font-bold text-fg">{song.title}</p>
           <p className="truncate text-sm text-muted">{song.artist}</p>
