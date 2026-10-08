@@ -600,6 +600,28 @@ export const SONGS: Song[] = [
     coverSrc: 'https://drive.google.com/thumbnail?id=1gp-f38-3_CYxEvnFoLfJuxdgKlfSw9UT&sz=w1000',
     library: 'Sometimes',
   },
+  {
+    id: 'tu-sanwal-phul-kastoori',
+    title: 'Tu Sanwal Phul Kastori',
+    artist: 'Unknown Artist',
+    album: 'Sometimes',
+    durationSec: 93,
+    audioSrc: 'https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/tu-sanwal-phul-kastoori.mp3',
+    audioSrcLQ: 'https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/tu-sanwal-phul-kastoori.mp3-lq.mp3',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1Uwh8v-dOeJRYLnCpH_o92e9lnjUuhDTL&sz=w1000',
+    library: 'Sometimes',
+  },
+  {
+    id: 'sammi-meri-waar',
+    title: 'Sammi Meri Waar',
+    artist: 'Lashari x Shanzy Sial',
+    album: 'Sometimes',
+    durationSec: 142,
+    audioSrc: 'https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/sammi-meri-waar.mp3',
+    audioSrcLQ: 'https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/sammi-meri-waar.mp3-lq.mp3',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1RZ6d7JOs5RXXtyIJaUTKxlhwMzxD3zn9&sz=w1000',
+    library: 'Sometimes',
+  },
   // ── Qwali ────────────────────────────────────────────────────────────────
   {
     id: 'tumhe-dillagi',
