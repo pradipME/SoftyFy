@@ -583,7 +583,7 @@ export const SONGS: Song[] = [
     title: 'Taare',
     artist: 'Farak',
     album: 'Sometimes',
-    durationSec: 181,
+    durationSec: 125,
     audioSrc: 'https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/taare.mp3',
     audioSrcLQ: 'https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/taare.mp3-lq.mp3',
     coverSrc: 'https://drive.google.com/thumbnail?id=1e_aML9VACrurCI8TSqhsEKaIC-BivM1Y&sz=w1000',
