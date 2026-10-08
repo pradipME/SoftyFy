@@ -1,7 +1,8 @@
-import { useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { MotionConfig } from 'framer-motion'
 import { HashRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { AppShell } from './components/layout/AppShell'
+import { SplashScreen } from './components/layout/SplashScreen'
 import { DebugOverlay } from './components/debug/DebugOverlay'
 import { PwaUpdater } from './components/pwa/PwaUpdater'
 import { InstallPrompt } from './components/pwa/InstallPrompt'
@@ -27,8 +28,12 @@ function LaunchToHome() {
 }
 
 export default function App() {
+  const [splashDone, setSplashDone] = useState(false)
+  const handleSplashDone = useCallback(() => setSplashDone(true), [])
+
   return (
     <MotionConfig reducedMotion="user">
+      {!splashDone && <SplashScreen onDone={handleSplashDone} />}
       <HashRouter>
         <LaunchToHome />
         <PlayerProvider>

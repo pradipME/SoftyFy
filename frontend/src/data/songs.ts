@@ -622,6 +622,17 @@ export const SONGS: Song[] = [
     coverSrc: 'https://drive.google.com/thumbnail?id=1RZ6d7JOs5RXXtyIJaUTKxlhwMzxD3zn9&sz=w1000',
     library: 'Sometimes',
   },
+  {
+    id: 'chalry-chalry-waal',
+    title: 'Chalry Chalry Waal',
+    artist: 'Lashari x Shanzy Sial',
+    album: 'Sometimes',
+    durationSec: 135,
+    audioSrc: 'https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/chalry-chalry-waal.mp3',
+    audioSrcLQ: 'https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/chalry-chalry-waal.mp3-lq.mp3',
+    coverSrc: 'https://drive.google.com/thumbnail?id=1JgwVpB0i9Fc3XrptFark8SlYFdhR4qFd&sz=w1000',
+    library: 'Sometimes',
+  },
   // ── Qwali ────────────────────────────────────────────────────────────────
   {
     id: 'tumhe-dillagi',
