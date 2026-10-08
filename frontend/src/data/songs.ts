@@ -572,7 +572,7 @@ export const SONGS: Song[] = [
     title: 'Aarzu',
     artist: 'Noor, Khan, Madhurxo',
     album: 'Sometimes',
-    durationSec: 226,
+    durationSec: 190,
     audioSrc: 'https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/aarzu.mp3',
     audioSrcLQ: 'https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/aarzu.mp3-lq.mp3',
     coverSrc: 'https://drive.google.com/thumbnail?id=1Eb1kvFhGHWpRq-Ifs1yl_p5b9BEpDBsQ&sz=w1000',
