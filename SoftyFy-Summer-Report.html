@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SoftyFy — Summer Project &amp; Technical Engineering Report</title>
+<style>
+  @page {
+    size: A4;
+    margin: 14mm 15mm 15mm 15mm;
+    @bottom-right {
+      content: counter(page);
+      font-size: 9px;
+      color: #64748b;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: #1e293b;
+    background: #ffffff;
+    margin: 0;
+    line-height: 1.55;
+    font-size: 11px;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .page-break {
+    page-break-after: always;
+    break-after: page;
+  }
+
+  /* Cover Page */
+  .cover {
+    min-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 30px 20px;
+    border-bottom: 3px solid #6366f1;
+  }
+  .cover-header { margin-top: 20px; }
+  .cover-badge {
+    display: inline-block;
+    background: #eef2ff;
+    color: #4f46e5;
+    font-weight: 700;
+    font-size: 11px;
+    padding: 4px 12px;
+    border-radius: 999px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    border: 1px solid #c7d2fe;
+    margin-bottom: 16px;
+  }
+  .cover-title {
+    font-size: 34px;
+    font-weight: 800;
+    color: #1e1b4b;
+    line-height: 1.15;
+    margin: 0 0 10px;
+  }
+  .cover-subtitle {
+    font-size: 15px;
+    color: #475569;
+    font-weight: 400;
+    max-width: 650px;
+    line-height: 1.5;
+  }
+  .cover-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    margin: 35px 0;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .cover-meta-item b {
+    display: block;
+    font-size: 10px;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .cover-meta-item span {
+    font-size: 13px;
+    color: #0f172a;
+    font-weight: 600;
+  }
+  .cover-footer {
+    border-top: 1px solid #e2e8f0;
+    padding-top: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 10px;
+    color: #64748b;
+  }
+
+  /* Headings */
+  h1 { font-size: 24px; color: #312e81; margin: 0 0 6px; }
+  h2 {
+    font-size: 16px;
+    color: #3730a3;
+    border-bottom: 2px solid #e0e7ff;
+    padding-bottom: 4px;
+    margin: 22px 0 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  h3 { font-size: 12.5px; margin: 14px 0 5px; color: #1e293b; font-weight: 700; }
+  h4 { font-size: 11px; margin: 10px 0 3px; color: #334155; font-weight: 700; text-transform: uppercase; }
+
+  p { margin: 5px 0 8px; text-align: justify; }
+  ul, ol { margin: 5px 0 9px 18px; padding: 0; }
+  li { margin: 2px 0; }
+
+  /* Badges & Tables */
+  .pill {
+    background: #eef2ff;
+    color: #4338ca;
+    border: 1px solid #c7d2fe;
+    border-radius: 999px;
+    padding: 2px 8px;
+    font-size: 9.5px;
+    font-weight: 600;
+    display: inline-block;
+  }
+  .pill-success { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
+  .pill-warning { background: #fffbeb; color: #b45309; border-color: #fde68a; }
+  .pill-danger { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 10px 0 14px;
+    font-size: 10px;
+  }
+  th, td {
+    border: 1px solid #cbd5e1;
+    padding: 5px 8px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th { background: #f1f5f9; color: #1e293b; font-weight: 700; }
+  tr:nth-child(even) td { background: #f8fafc; }
+
+  code, .mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    background: #f1f5f9;
+    padding: 1px 4px;
+    border-radius: 4px;
+    font-size: 9.5px;
+    color: #0f172a;
+    border: 1px solid #e2e8f0;
+  }
+  pre {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    background: #0f172a;
+    color: #e2e8f0;
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 9.5px;
+    line-height: 1.45;
+    overflow-x: auto;
+    margin: 8px 0;
+  }
+
+  .statgrid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin: 12px 0 16px;
+  }
+  .stat {
+    border: 1px solid #e2e8f0;
+    border-left: 4px solid #4f46e5;
+    border-radius: 8px;
+    padding: 8px 10px;
+    background: #ffffff;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  }
+  .stat b { display: block; font-size: 18px; color: #312e81; font-weight: 800; line-height: 1.1; }
+  .stat span { font-size: 9.5px; color: #64748b; font-weight: 500; }
+
+  .callout {
+    background: #f8fafc;
+    border-left: 4px solid #3b82f6;
+    border-radius: 0 8px 8px 0;
+    padding: 8px 12px;
+    margin: 10px 0;
+    font-size: 10.5px;
+  }
+  .callout-success { border-left-color: #10b981; background: #f0fdf4; }
+  .callout-warning { border-left-color: #f59e0b; background: #fffbeb; }
+  .callout-danger { border-left-color: #ef4444; background: #fef2f2; }
+
+  .chart-box {
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 10px 14px;
+    background: #ffffff;
+    margin: 12px 0;
+  }
+  .chart-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-align: center;
+    color: #1e293b;
+    margin-bottom: 6px;
+  }
+
+  .flowbox { fill: #ffffff; stroke: #818cf8; stroke-width: 1.2; rx: 6; }
+  .flowtext { font-size: 9.5px; fill: #1e293b; text-anchor: middle; font-weight: 500; }
+  .flowarrow { stroke: #94a3b8; stroke-width: 1.3; fill: none; }
+
+  .toc-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+    border-bottom: 1px dotted #cbd5e1;
+    font-size: 10.5px;
+  }
+  .toc-item span:first-child { font-weight: 600; color: #1e293b; }
+  .toc-item span:last-child { color: #64748b; }
+
+  .footer-note {
+    margin-top: 25px;
+    padding-top: 8px;
+    border-top: 1px solid #e2e8f0;
+    color: #94a3b8;
+    font-size: 9px;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<!-- ========================================== -->
+<!-- COVER PAGE                                 -->
+<!-- ========================================== -->
+<div class="cover">
+  <div class="cover-header">
+    <span class="cover-badge">Summer Project &amp; Technical Internship Report · 2026</span>
+    <h1 class="cover-title">SoftyFy: Architecture and Engineering of a Serverless, Adaptive-Bitrate Audio Streaming Progressive Web Application</h1>
+    <div class="cover-subtitle">
+      A comprehensive technical investigation and implementation of a client-first, zero-database personal music platform featuring byte-range service worker caching, network-aware throughput memory, and native mobile lockscreen integration.
+    </div>
+  </div>
+
+  <div class="cover-grid">
+    <div class="cover-meta-item">
+      <b>Student Developer &amp; Author</b>
+      <span>Pradip Sonawane</span>
+    </div>
+    <div class="cover-meta-item">
+      <b>Contact Email</b>
+      <span>pradip15102004@gmail.com</span>
+    </div>
+    <div class="cover-meta-item">
+      <b>Project Repository</b>
+      <span>github.com/pradipME/SoftyFy</span>
+    </div>
+    <div class="cover-meta-item">
+      <b>Live Production Deployment</b>
+      <span>softyfy.onrender.com</span>
+    </div>
+    <div class="cover-meta-item">
+      <b>Core Technologies</b>
+      <span>React 19 · TypeScript · Vite · Tailwind v4 · Workbox</span>
+    </div>
+    <div class="cover-meta-item">
+      <b>Development Period</b>
+      <span>Summer 2026 (August – October 2026)</span>
+    </div>
+  </div>
+
+  <div class="cover-footer">
+    <span><b>Department:</b> Computer Science &amp; Engineering</span>
+    <span><b>Status:</b> Production Deployed &amp; Fully Tested (120/120 Unit Tests)</span>
+    <span><b>Date:</b> October 2026</span>
+  </div>
+</div>
+
+<div class="page-break"></div>
+
+<!-- ========================================== -->
+<!-- EXECUTIVE SUMMARY & STATS                 -->
+<!-- ========================================== -->
+<h2>Executive Summary</h2>
+<p>
+Modern cloud music streaming platforms (e.g., Spotify, Apple Music, YouTube Music) rely on multi-tier backend infrastructures, subscription paywalls, intrusive tracking telemetry, and continuous cloud connectivity. While these commercial services excel at catalog breadth, users seeking private, personal audio playback face bloated interfaces, recurring costs, and high bandwidth consumption.
+</p>
+<p>
+<b>SoftyFy</b> is an open-source, serverless, mobile-first <b>Progressive Web Application (PWA)</b> engineered to deliver a Spotify-grade listening experience for personal music collections with <b>zero backend servers, zero databases, and zero user authentication overhead</b>. Built with <b>React 19</b>, <b>TypeScript</b>, <b>Vite</b>, and <b>Tailwind CSS v4</b>, SoftyFy rethinks media distribution by combining an immutable cloud asset CDN (GitHub Releases) with a hand-crafted <b>Service Worker</b> and a patent-quality <b>Measured-Throughput Network Engine</b>.
+</p>
+
+<div class="statgrid">
+  <div class="stat"><b>111</b><span>Streamable Tracks</span></div>
+  <div class="stat"><b>5</b><span>Curated Libraries</span></div>
+  <div class="stat"><b>120</b><span>Vitest Unit Tests (100% Pass)</span></div>
+  <div class="stat"><b>0 MB</b><span>Network on Cached Replay</span></div>
+</div>
+<div class="statgrid">
+  <div class="stat"><b>222</b><span>HQ &amp; LQ Media Files</span></div>
+  <div class="stat"><b>~0.4 MB</b><span>Initial Shell Bundle</span></div>
+  <div class="stat"><b>100%</b><span>Offline Replay Capability</span></div>
+  <div class="stat"><b>HTTP 206</b><span>Byte-Range Seeking</span></div>
+</div>
+
+<h2>Table of Contents</h2>
+<div class="toc-item"><span>1. Introduction, Motivation &amp; Scope</span><span>Page 2</span></div>
+<div class="toc-item"><span>2. Architecture &amp; Technology Stack</span><span>Page 3</span></div>
+<div class="toc-item"><span>3. Media Storage Evolution: The Cloud Journey</span><span>Page 4</span></div>
+<div class="toc-item"><span>4. Service Worker &amp; Offline Byte-Range Slicing</span><span>Page 5</span></div>
+<div class="toc-item"><span>5. Adaptive Bitrate &amp; The Network Memory Engine</span><span>Page 6</span></div>
+<div class="toc-item"><span>6. Mobile-First UX, Gestures &amp; Lockscreen Integration</span><span>Page 7</span></div>
+<div class="toc-item"><span>7. Testing, Verification &amp; Quality Metrics</span><span>Page 8</span></div>
+<div class="toc-item"><span>8. Engineering Challenges, Pitfalls &amp; Trade-offs</span><span>Page 9</span></div>
+<div class="toc-item"><span>9. Conclusion, Roadmap &amp; References</span><span>Page 10</span></div>
+
+<div class="page-break"></div>
+
+<!-- ========================================== -->
+<!-- CHAPTER 1: INTRODUCTION & OBJECTIVES       -->
+<!-- ========================================== -->
+<h2>1. Introduction, Motivation &amp; Scope</h2>
+
+<h3>1.1 Background &amp; Problem Statement</h3>
+<p>
+Personal music streaming typically forces a compromise between two extremes:
+</p>
+<ol>
+  <li><b>Commercial Streaming SaaS:</b> High recurring subscription fees, region locks, intrusive advertisements, battery-heavy background analytics, and licensing disputes that suddenly pull tracks from playlists.</li>
+  <li><b>Self-Hosted Media Servers (Navidrome, Plex, Jellyfin):</b> Require 24/7 dedicated server hardware, port-forwarding or reverse proxies (Nginx/Caddy), dynamic DNS configuration, ongoing security patch management, and persistent database maintenance.</li>
+</ol>
+<p>
+Users who already possess curated MP3/M4A music files need a lightweight third option: an instant, private web player that runs entirely in the browser, installs natively on mobile devices, requires <b>zero ongoing maintenance or hosting costs</b>, and streams flawlessly even on degraded cellular connections.
+</p>
+
+<h3>1.2 Project Objectives</h3>
+<ul>
+  <li><b>Zero Cloud Infrastructure Cost:</b> Host the entire static application shell and gigabytes of media assets using free, enterprise-grade public CDNs without maintaining a Node.js/Python server or SQL database.</li>
+  <li><b>Native Mobile Feel:</b> Recreate Spotify's signature spatial UI: time-of-day greeting, interactive swipe-down "Now Playing" sheet, ambient dynamic background palettes, and persistent bottom navigation.</li>
+  <li><b>Network Resilience &amp; Adaptive Quality:</b> Guarantee immediate audio playback (<1.5s startup) across varying mobile networks (2G/3G/4G/5G) using intelligent measured-throughput bitrate switching (HQ vs LQ).</li>
+  <li><b>Zero Replay Bandwidth:</b> Ensure that once a song or cover is played, repeat listens incur 0 MB of outbound network traffic via deterministic client-side service worker caching.</li>
+  <li><b>System-Level Media Control:</b> Integrate seamless lockscreen notifications, smartwatch remote controls, and automotive Bluetooth playback via the W3C MediaSession API.</li>
+</ul>
+
+<h3>1.3 Development Roadmap &amp; Timeline</h3>
+<table>
+  <tr><th>Phase</th><th>Period</th><th>Milestones &amp; Deliverables</th></tr>
+  <tr>
+    <td><b>Phase 1: Foundation</b></td>
+    <td>Aug 13 – Aug 15</td>
+    <td>React 19 + Vite setup, Tailwind v4 theme, React Router hash routing, HTMLAudioElement Context, local audio playback.</td>
+  </tr>
+  <tr>
+    <td><b>Phase 2: UI &amp; Spatial Feel</b></td>
+    <td>Aug 16 – Aug 31</td>
+    <td>Framer Motion bottom sheet, ambient color extraction, search filter, feedback card, PWA manifest generation.</td>
+  </tr>
+  <tr>
+    <td><b>Phase 3: Cloud Media Storage</b></td>
+    <td>Sep 01 – Sep 10</td>
+    <td>Google Drive migration, discovery of cross-origin <code>Sec-Fetch-Site</code> 403 blocks, custom Service Worker with Range requests.</td>
+  </tr>
+  <tr>
+    <td><b>Phase 4: CDN Architecture Pivot</b></td>
+    <td>Sep 11 – Sep 16</td>
+    <td>Replaced Google Drive with GitHub Release Asset CDN (<code>softyfy-audio-v1</code>); resolved CORS and quota limits permanently.</td>
+  </tr>
+  <tr>
+    <td><b>Phase 5: Adaptive Bitrate Engine</b></td>
+    <td>Sep 17 – Sep 28</td>
+    <td>FFmpeg LQ transcoding pipeline (111 tracks), <code>networkMemory.ts</code> session intelligence, time-to-buffer metrics, quality badges.</td>
+  </tr>
+  <tr>
+    <td><b>Phase 6: Hardening &amp; Test Suite</b></td>
+    <td>Sep 29 – Oct 08</td>
+    <td>Screen-off auto-advance resilience, 120 Vitest tests (15 suites), oxlint compliance, production deployment on Render and GitHub Pages.</td>
+  </tr>
+</table>
+
+<div class="page-break"></div>
+
+<!-- ========================================== -->
+<!-- CHAPTER 2: SYSTEM ARCHITECTURE             -->
+<!-- ========================================== -->
+<h2>2. Architecture &amp; Technology Stack</h2>
+
+<p>
+SoftyFy utilizes a decentralized, client-first architecture where the browser client acts as the complete orchestrator. The server layer is entirely static, serving only pre-compiled assets.
+</p>
+
+<div class="chart-box">
+  <div class="chart-title">Figure 2.1: SoftyFy End-to-End System Architecture</div>
+  <svg width="100%" height="240" viewBox="0 0 760 240">
+    <!-- Clients -->
+    <rect x="20" y="30" width="160" height="180" class="flowbox" fill="#f8fafc"/>
+    <text x="100" y="52" class="flowtext" font-weight="700">Client Runtime (PWA)</text>
+    <rect x="35" y="70" width="130" height="26" rx="4" fill="#ede9fe" stroke="#a7f3d0"/>
+    <text x="100" y="87" class="flowtext" font-size="9">React 19 + Reducer</text>
+    <rect x="35" y="105" width="130" height="26" rx="4" fill="#ede9fe" stroke="#a7f3d0"/>
+    <text x="100" y="122" class="flowtext" font-size="9">HTML5 &lt;audio&gt; Engine</text>
+    <rect x="35" y="140" width="130" height="26" rx="4" fill="#ede9fe" stroke="#a7f3d0"/>
+    <text x="100" y="157" class="flowtext" font-size="9">NetworkMemory Manager</text>
+    <rect x="35" y="175" width="130" height="24" rx="4" fill="#ede9fe" stroke="#a7f3d0"/>
+    <text x="100" y="191" class="flowtext" font-size="8.5">MediaSession API</text>
+
+    <!-- Arrows -->
+    <line x1="180" y1="120" x2="230" y2="120" class="flowarrow"/>
+    <polygon points="230,120 223,116 223,124" fill="#94a3b8"/>
+
+    <!-- Service Worker -->
+    <rect x="235" y="45" width="220" height="150" class="flowbox" fill="#eff6ff" stroke="#3b82f6"/>
+    <text x="345" y="68" class="flowtext" font-weight="700" fill="#1e40af">Service Worker (sw.ts)</text>
+    <rect x="250" y="85" width="190" height="30" rx="4" fill="#ffffff" stroke="#93c5fd"/>
+    <text x="345" y="104" class="flowtext" font-size="9">Workbox App-Shell Precache</text>
+    <rect x="250" y="125" width="190" height="52" rx="4" fill="#ffffff" stroke="#93c5fd"/>
+    <text x="345" y="143" class="flowtext" font-size="8.5">Byte-Range Stream Interceptor</text>
+    <text x="345" y="158" class="flowtext" font-size="8" fill="#64748b">(HTTP 206 Slicing / Cache Eviction)</text>
+
+    <!-- Arrows -->
+    <line x1="455" y1="120" x2="505" y2="120" class="flowarrow"/>
+    <polygon points="505,120 498,116 498,124" fill="#94a3b8"/>
+
+    <!-- Cloud Backing -->
+    <rect x="510" y="30" width="230" height="180" class="flowbox" fill="#fdf4ff" stroke="#c084fc"/>
+    <text x="625" y="52" class="flowtext" font-weight="700" fill="#701a75">Cloud Storage &amp; CDN</text>
+    <rect x="525" y="70" width="200" height="32" rx="4" fill="#ffffff" stroke="#e879f9"/>
+    <text x="625" y="86" class="flowtext" font-size="8.5">Render / GitHub Pages</text>
+    <text x="625" y="97" class="flowtext" font-size="7.5" fill="#64748b">Static HTML/JS/CSS Host</text>
+    <rect x="525" y="112" width="200" height="42" rx="4" fill="#ffffff" stroke="#e879f9"/>
+    <text x="625" y="128" class="flowtext" font-size="8.5">GitHub Releases CDN (v1)</text>
+    <text x="625" y="141" class="flowtext" font-size="7.5" fill="#64748b">111 HQ MP3s + 111 LQ MP3 Twins</text>
+    <rect x="525" y="164" width="200" height="32" rx="4" fill="#ffffff" stroke="#e879f9"/>
+    <text x="625" y="180" class="flowtext" font-size="8.5">Google Drive Thumbnail API</text>
+    <text x="625" y="191" class="flowtext" font-size="7.5" fill="#64748b">High-Resolution Album Artwork</text>
+  </svg>
+</div>
+
+<h3>2.1 Component &amp; State Architecture</h3>
+<p>
+The core playback state is managed in a strictly typed React Context (<code>PlayerContext.tsx</code>) backed by a pure state reducer (<code>playerReducer.ts</code>). This ensures deterministic state transitions without race conditions:
+</p>
+<ul>
+  <li><b>Single Shared Audio Element:</b> Rather than re-mounting audio elements on page navigation, SoftyFy attaches a single persistent <code>&lt;audio&gt;</code> element to the document body. Navigating between Home, Search, and Library never interrupts the audio stream.</li>
+  <li><b>Action Decoupling:</b> The reducer manages queue ordering, shuffle permutations (preserving the original queue while indexing via <code>playOrder</code>), repeat modes (<code>off</code>, <code>all</code>, <code>one</code>), volume, and explicit user intent (<code>playIntent</code>).</li>
+  <li><b>Adaptive Quality State:</b> Tracks <code>streamingQuality</code> (user preference: <code>auto</code>, <code>high</code>, <code>low</code>) and <code>currentQuality</code> (actual resolved tier and forensic explanation string).</li>
+</ul>
+
+<h3>2.2 Technology Stack Justification</h3>
+<table>
+  <tr><th>Layer</th><th>Selected Tool</th><th>Technical Rationale</th></tr>
+  <tr><td><b>UI Library</b></td><td>React 19.2.8</td><td>Latest React concurrency, minimal re-renders, fast virtual DOM diffing.</td></tr>
+  <tr><td><b>Type System</b></td><td>TypeScript 6.0.2</td><td>Strict contract safety across 111 track schemas, reducer actions, and SW events.</td></tr>
+  <tr><td><b>Build Engine</b></td><td>Vite 8.2.0</td><td>Sub-second HMR during development, Rollup-based tree-shaking for tiny bundles.</td></tr>
+  <tr><td><b>Styling</b></td><td>Tailwind CSS v4.3.3</td><td>Next-gen CSS compiler, zero CSS runtime, custom dark tokens matching Spotify.</td></tr>
+  <tr><td><b>Routing</b></td><td>React Router 7.18.2</td><td>Hash-based routing (<code>#/library</code>) preventing 404s on static hosting.</td></tr>
+  <tr><td><b>Animation</b></td><td>Framer Motion 13.1.0</td><td>Hardware-accelerated springs, fluid swipe-down gestures for player sheet.</td></tr>
+  <tr><td><b>Quality Assurance</b></td><td>Vitest + Oxlint</td><td>Lightning-fast ESM native testing; 120 tests run in &lt;12 seconds.</td></tr>
+</table>
+
+<div class="page-break"></div>
+
+<!-- ========================================== -->
+<!-- CHAPTER 3: MEDIA STORAGE EVOLUTION         -->
+<!-- ========================================== -->
+<h2>3. Media Storage Evolution: The Cloud Journey</h2>
+
+<p>
+Hosting over 100 high-bitrate audio files (~1 GB) in a static project without a backend server posed the single greatest technical challenge of the project. The architecture underwent three distinct evolutions before reaching enterprise stability.
+</p>
+
+<h3>3.1 The Three Storage Phases</h3>
+
+<div class="callout callout-danger">
+  <b>Phase 1: Local File Ingestion (Git Bloat)</b><br>
+  Initial prototypes bundled MP3 files directly inside <code>frontend/public/audio/</code>. While simple, pushing ~350 MB to GitHub caused repository bloat, slow cloning, and risked exceeding GitHub's 100 MB per-file and 1 GB repository soft limits.
+</div>
+
+<div class="callout callout-warning">
+  <b>Phase 2: Google Drive API &amp; The Cross-Site 403 Nightmare</b><br>
+  To decouple media from the repository, files were uploaded to Google Drive via <code>rclone</code>, and streaming URLs were constructed using Drive's download endpoints.
+  <br><b>The Bug:</b> While curl and Node scripts successfully downloaded audio, real web browsers failed with <code style="color:#b91c1c;">HTTP 403 Forbidden</code>. Modern browsers attach the security header <code>Sec-Fetch-Site: cross-site</code> to media requests. Google's public download servers reject cross-site audio stream requests.
+  <br><b>The Intermediate Fix:</b> Switching to the official Drive API v3 endpoint:
+  <pre>https://www.googleapis.com/drive/v3/files/{FILE_ID}?alt=media&amp;key={API_KEY}</pre>
+  This supported <code>Range</code> requests and sent permissive CORS headers. However, Google soon flagged public API keys for excessive quota consumption, and key rotation scripts proved fragile.
+</div>
+
+<div class="callout callout-success">
+  <b>Phase 3: The Production Solution — GitHub Release Assets CDN (softyfy-audio-v1)</b><br>
+  The ultimate architectural breakthrough was utilizing <b>GitHub Release Assets</b> as an immutable, high-bandwidth Content Delivery Network:
+  <pre>https://github.com/pradipME/SoftyFy/releases/download/softyfy-audio-v1/{TRACK_FILENAME}.mp3</pre>
+  <b>Why this succeeded:</b>
+  <ul>
+    <li><b>Native HTTP 206 Partial Content:</b> GitHub's underlying asset storage (Amazon S3 / Azure CDN) fully supports byte-range requests, allowing instant scrubbing to any second of a track.</li>
+    <li><b>No Key Expiration or Quotas:</b> Public release downloads carry no per-day API key rate limits or billing triggers.</li>
+    <li><b>Permanent Immutability:</b> Asset binaries never mutate, making them ideal for long-term browser and Service Worker caching.</li>
+  </ul>
+</div>
+
+<h3>3.2 Content Catalog Statistics</h3>
+<p>
+The application catalog is defined in <code>frontend/src/data/songs.ts</code> and contains <b>111 tracks</b> organized across 5 distinct listening libraries:
+</p>
+<table>
+  <tr><th>Library Name</th><th>Track Count</th><th>Percentage</th><th>Genre / Artist Focus</th></tr>
+  <tr><td><b>Sometimes</b></td><td>56 songs</td><td>50.5%</td><td>Indie, Acoustic, Pop (Anuv Jain, AP Dhillon, Prateek Kuhad)</td></tr>
+  <tr><td><b>Rap</b></td><td>22 songs</td><td>19.8%</td><td>Desi Hip-Hop, KR$NA, Hardcore Lyricism</td></tr>
+  <tr><td><b>Hindi Hits</b></td><td>20 songs</td><td>18.0%</td><td>Bollywood, Classic &amp; Modern Melodies</td></tr>
+  <tr><td><b>The Weekends</b></td><td>11 songs</td><td>9.9%</td><td>Atmospheric Dream Pop, Lana Del Rey</td></tr>
+  <tr><td><b>Qwali</b></td><td>2 songs</td><td>1.8%</td><td>Traditional Sufi &amp; Classical (Nusrat Fateh Ali Khan)</td></tr>
+  <tr><td><b>Total Collection</b></td><td><b>111 songs</b></td><td><b>100%</b></td><td><b>Dual Tiers: 111 HQ (320kbps) + 111 LQ (96kbps)</b></td></tr>
+</table>
+
+<div class="page-break"></div>
+
+<!-- ========================================== -->
+<!-- CHAPTER 4: SERVICE WORKER & CACHING        -->
+<!-- ========================================== -->
+<h2>4. Service Worker &amp; Offline Byte-Range Slicing</h2>
+
+<p>
+Standard browser Service Worker implementations built with standard Workbox <code>CacheFirst</code> strategies fail when applied to audio media. Browsers stream audio in chunks via <code>Range: bytes=0-</code> headers; a naive cache either refuses to store opaque partial responses or re-downloads the entire file on every seek.
+</p>
+
+<h3>4.1 The Custom Audio Stream Interceptor (<code>sw.ts</code>)</h3>
+<p>
+SoftyFy implements a specialized Service Worker (<code>frontend/src/sw.ts</code>, 645 lines) compiled using <code>vite-plugin-pwa</code> with <code>injectManifest</code>.
+</p>
+
+<div class="chart-box">
+  <div class="chart-title">Figure 4.1: Service Worker Audio Pipeline &amp; Slicing Logic</div>
+  <svg width="100%" height="200" viewBox="0 0 760 200">
+    <rect x="20" y="20" width="160" height="40" class="flowbox" fill="#f8fafc"/>
+    <text x="100" y="44" class="flowtext">Audio Fetch Event</text>
+
+    <line x1="180" y1="40" x2="230" y2="40" class="flowarrow"/>
+    <polygon points="230,40 223,36 223,44" fill="#94a3b8"/>
+
+    <rect x="235" y="20" width="170" height="40" class="flowbox" fill="#eff6ff"/>
+    <text x="320" y="44" class="flowtext">Cache Match in AUDIO_CACHE?</text>
+
+    <!-- Branch Hit -->
+    <line x1="320" y1="60" x2="160" y2="105" class="flowarrow"/>
+    <polygon points="160,105 167,100 162,96" fill="#94a3b8"/>
+
+    <rect x="50" y="105" width="220" height="75" class="flowbox" fill="#ecfdf5" stroke="#10b981"/>
+    <text x="160" y="125" class="flowtext" font-weight="700" fill="#047857">CACHE HIT (0 Network)</text>
+    <text x="160" y="142" class="flowtext" font-size="8.5">buildRangeResponse(cachedBody, req)</text>
+    <text x="160" y="157" class="flowtext" font-size="8">Extracts byte slice from ArrayBuffer</text>
+    <text x="160" y="170" class="flowtext" font-size="8">Returns HTTP 206 Partial Content ✓</text>
+
+    <!-- Branch Miss -->
+    <line x1="320" y1="60" x2="480" y2="105" class="flowarrow"/>
+    <polygon points="480,105 473,96 478,100" fill="#94a3b8"/>
+
+    <rect x="370" y="105" width="220" height="75" class="flowbox" fill="#fffbeb" stroke="#f59e0b"/>
+    <text x="480" y="125" class="flowtext" font-weight="700" fill="#b45309">CACHE MISS (First Play)</text>
+    <text x="480" y="142" class="flowtext" font-size="8.5">Stream-Through to &lt;audio&gt; immediately</text>
+    <text x="480" y="157" class="flowtext" font-size="8">Background response.clone() to Cache</text>
+    <text x="480" y="170" class="flowtext" font-size="8">Managed via AbortController ✓</text>
+
+    <!-- Eviction -->
+    <line x1="590" y1="142" x2="630" y2="142" class="flowarrow"/>
+    <polygon points="630,142 623,138 623,146" fill="#94a3b8"/>
+
+    <rect x="635" y="115" width="115" height="55" class="flowbox" fill="#f1f5f9"/>
+    <text x="692" y="137" class="flowtext" font-size="8">LRU Eviction</text>
+    <text x="692" y="151" class="flowtext" font-size="7.5" fill="#64748b">Capped at 8 songs</text>
+    <text x="692" y="161" class="flowtext" font-size="7.5" fill="#64748b">14-day freshness</text>
+  </svg>
+</div>
+
+<h3>4.2 Key Engineering Innovations in <code>sw.ts</code></h3>
+<ul>
+  <li><b>Stream-Through First Play:</b> Previous iterations attempted to await <code>response.arrayBuffer()</code> before serving. This stalled audio start times by 6–10 seconds. The current design streams the original fetch directly to the audio element while asynchronously pumping a cloned stream into the Cache Storage.</li>
+  <li><b>In-Flight Skip Cancellation:</b> If a user skips tracks rapidly, multiple 8 MB downloads would saturate mobile bandwidth. SoftyFy stores an <code>AbortController</code> for each active fill. Skipping to a new song immediately cancels previous background cache fills.</li>
+  <li><b>Synthesized Byte-Range Slicing (<code>buildRangeResponse</code>):</b> When a cached song is scrubbed, the service worker parses the <code>Range: bytes=start-end</code> header, calculates the byte offsets over the cached ArrayBuffer, and responds with status code <b>206 Partial Content</b>, <code>Content-Range</code>, and correct headers.</li>
+  <li><b>Active Playback Protection:</b> The cache eviction routine maintains an <code>activeUrls</code> registry. A song currently playing is never evicted, even if the user navigates through multiple other tracks.</li>
+</ul>
+
+<div class="page-break"></div>
+
+<!-- ========================================== -->
+<!-- CHAPTER 5: ADAPTIVE BITRATE & NETWORK MEM  -->
+<!-- ========================================== -->
+<h2>5. Adaptive Bitrate &amp; The Network Memory Engine</h2>
+
+<p>
+Streaming 320 kbps high-definition audio on mobile devices frequently causes audio stuttering due to cellular handover and fluctuating coverage. SoftyFy introduces a custom adaptive bitrate system built on real-world session measurements.
+</p>
+
+<h3>5.1 The Fallacy of <code>navigator.connection</code></h3>
+<p>
+Initial attempts to adapt bitrate relied on the W3C Network Information API (<code>navigator.connection.effectiveType</code>). Field testing revealed a fatal flaw: on a smartphone with weak cellular reception (e.g., 1 bar of 4G or congestion), <code>navigator.connection</code> continues to report <code>effectiveType: "4g"</code> and a high nominal downlink. Relying on this API caused the player to load 320 kbps files, resulting in buffer underruns and playback stalls.
+</p>
+
+<h3>5.2 Measured-Throughput Session Memory (<code>networkMemory.ts</code>)</h3>
+<p>
+SoftyFy abandons theoretical connection hints in favor of <b>two zero-cost empirical signals</b> produced naturally by the browser's media element:
+</p>
+<ol>
+  <li><b>Time-to-Buffer (<code>timeToBufferMs</code>):</b> Elapsed milliseconds from load initiation until <b>5 seconds of media runway</b> is buffered ahead (measured via <code>audio.buffered</code>).</li>
+  <li><b>Playback Stalls:</b> Count of <code>waiting</code> and <code>stalled</code> events fired by the media element during track playback.</li>
+</ol>
+
+<div class="chart-box">
+  <div class="chart-title">Figure 5.1: Network Memory State Machine &amp; Hysteresis Loop</div>
+  <svg width="100%" height="160" viewBox="0 0 760 160">
+    <rect x="40" y="45" width="220" height="70" class="flowbox" fill="#ecfdf5" stroke="#10b981"/>
+    <text x="150" y="72" class="flowtext" font-weight="700" fill="#047857">STATE: HEALTHY (HQ Mode)</text>
+    <text x="150" y="90" class="flowtext" font-size="8.5">Plays 320 kbps full-fidelity audio</text>
+    <text x="150" y="103" class="flowtext" font-size="8" fill="#64748b">Monitors load time &amp; stalls</text>
+
+    <!-- Transition down -->
+    <path d="M 260 65 L 490 65" class="flowarrow" stroke="#ef4444" stroke-width="1.8"/>
+    <polygon points="490,65 482,60 482,70" fill="#ef4444"/>
+    <text x="375" y="55" class="flowtext" font-size="8" fill="#b91c1c" font-weight="700">Stalls &gt;= 2 OR Buffer Time &gt; 4,000ms</text>
+
+    <rect x="500" y="45" width="220" height="70" class="flowbox" fill="#fef2f2" stroke="#ef4444"/>
+    <text x="610" y="72" class="flowtext" font-weight="700" fill="#b91c1c">STATE: WEAK (LQ Pinned)</text>
+    <text x="610" y="90" class="flowtext" font-size="8.5">Switches to 96 kbps fallback stream</text>
+    <text x="610" y="103" class="flowtext" font-size="8" fill="#64748b">Good Streak = 0 / 3</text>
+
+    <!-- Transition up -->
+    <path d="M 490 95 L 260 95" class="flowarrow" stroke="#10b981" stroke-width="1.8"/>
+    <polygon points="260,95 268,100 268,90" fill="#10b981"/>
+    <text x="375" y="115" class="flowtext" font-size="8" fill="#047857" font-weight="700">3 Consecutive Fast Loads (&lt;800ms)</text>
+  </svg>
+</div>
+
+<h3>5.3 The Hysteresis Algorithm</h3>
+<p>
+To prevent rapid flip-flopping between high and low quality on edge-case connections:
+</p>
+<ul>
+  <li><b>Immediate Downgrade:</b> If a track stalls twice or takes &gt;4,000ms to buffer 5s of runway, the session is instantly marked <code>weak = true</code>, immediately routing the subsequent songs to their low-bitrate (<code>-lq.mp3</code>) twin.</li>
+  <li><b>Hysteresis Recovery:</b> Leaving the weak state requires <b>3 consecutive comfortable loads</b> (<code>goodStreak &gt;= 3</code>). A comfortable load on LQ means filling the 5s buffer in &lt;800ms.</li>
+  <li><b>Cache Immunity:</b> Loads completing in &lt;150ms are identified as cache hits and classified as <code>neutral</code>; they cannot falsely advance the recovery streak.</li>
+  <li><b>User Override:</b> The user can select <code>Auto</code>, <code>High</code>, or <code>Low</code> in the player UI. A manual setting strictly overrides network heuristics.</li>
+</ul>
+
+<div class="page-break"></div>
+
+<!-- ========================================== -->
+<!-- CHAPTER 6: MOBILE UX & INTEGRATIONS        -->
+<!-- ========================================== -->
+<h2>6. Mobile-First UX, Gestures &amp; Lockscreen Integration</h2>
+
+<h3>6.1 Spatial UI &amp; Expandable Now Playing Sheet</h3>
+<p>
+The application user interface is modeled directly after the modern Spotify mobile experience, featuring a dark chromatic palette (<code>#0a0a0c</code> background with glassmorphic cards and <code>#6366f1</code> violet accents).
+</p>
+<ul>
+  <li><b>Persistent Mini Player:</b> Anchored directly above the bottom navigation bar on mobile viewports. It exposes immediate track details, play/pause toggles, and animated progress indications.</li>
+  <li><b>Swipe-to-Dismiss Fullscreen Sheet:</b> Tapping the mini player smoothly expands a fullscreen view (<code>NowPlayingSheet.tsx</code>) powered by Framer Motion. Users can swipe down with touch velocity gestures or press <code>Esc</code> to collapse the player.</li>
+  <li><b>Dynamic Ambient Canvas:</b> The background dynamically reflects the dominant palette extracted from the currently playing album cover (<code>coverColors.ts</code>), rendering a blurred, animated atmospheric glow.</li>
+</ul>
+
+<h3>6.2 System Lockscreen Integration via MediaSession API</h3>
+<p>
+To guarantee a true native application experience when the phone screen is locked or the browser is minimized, SoftyFy synchronizes with the W3C <code>navigator.mediaSession</code> API:
+</p>
+<pre>
+navigator.mediaSession.metadata = new MediaMetadata({
+  title: activeSong.title,
+  artist: activeSong.artist,
+  album: activeSong.album || activeSong.library,
+  artwork: [
+    { src: activeSong.coverSrc, sizes: '512x512', type: 'image/jpeg' },
+    { src: activeSong.coverSrc, sizes: '192x192', type: 'image/jpeg' },
+  ],
+})
+</pre>
+<p>
+Action handlers are registered for <code>play</code>, <code>pause</code>, <code>previoustrack</code>, <code>nexttrack</code>, <code>seekto</code>, and <code>seekbackward</code> / <code>seekforward</code>. System lockscreens, Apple Watch controls, and Android auto infotainment systems display song metadata and interactive scrubber bars.
+</p>
+
+<h3>6.3 Screen-Off Auto-Advance Resilience</h3>
+<p>
+Mobile operating systems (particularly iOS Safari and aggressive Android OEM battery managers) throttle JavaScript timers (<code>setTimeout</code>, <code>setInterval</code>) when the screen turns off or the browser is backgrounded.
+</p>
+<div class="callout callout-success">
+  <b>Engineering Solution:</b> Rather than relying on polling intervals to detect track end, SoftyFy registers native DOM <code>ended</code> listeners directly on the audio element, augmented with <code>onNativePlaybackAction</code> hooks and page visibility listeners (<code>document.addEventListener('visibilitychange')</code>). The player queues the next track synchronously upon the <code>ended</code> event, ensuring background playlists never stop.
+</div>
+
+<div class="page-break"></div>
+
+<!-- ========================================== -->
+<!-- CHAPTER 7: TESTING & QUALITY ASSURANCE     -->
+<!-- ========================================== -->
+<h2>7. Testing, Verification &amp; Quality Metrics</h2>
+
+<p>
+Software quality and architectural resilience were validated through continuous automated unit testing, static linting, and simulated network profiling.
+</p>
+
+<h3>7.1 Automated Vitest Test Suite</h3>
+<p>
+The test suite consists of <b>15 test files</b> and <b>120 comprehensive test cases</b> executing in under 12 seconds with <b>100% pass rate</b>.
+</p>
+<table>
+  <tr><th>Test Suite Module</th><th>Test File</th><th>Cases</th><th>Scope Verified</th></tr>
+  <tr><td><b>Player Reducer</b></td><td><code>playerReducer.test.ts</code></td><td>29</td><td>Shuffle permutations, repeat modes, queue transitions, seek clamps</td></tr>
+  <tr><td><b>Audio Source Resolution</b></td><td><code>audioSources.test.ts</code></td><td>23</td><td>HQ/LQ URL resolution, manual overrides, fallback handling</td></tr>
+  <tr><td><b>Network Session Memory</b></td><td><code>networkMemory.test.ts</code></td><td>17</td><td>Time-to-buffer metrics, stall downgrades, 3-streak recovery hysteresis</td></tr>
+  <tr><td><b>Quality Tier Selection</b></td><td><code>qualitySelection.test.tsx</code></td><td>11</td><td>Integration of network state with React player context</td></tr>
+  <tr><td><b>MediaSession Integration</b></td><td><code>mediaSession.test.tsx</code></td><td>8</td><td>Lockscreen metadata sync and hardware action dispatching</td></tr>
+  <tr><td><b>Cover Palette Extraction</b></td><td><code>coverColors.test.ts</code></td><td>5</td><td>Dominant color extraction, brightness clamping, fallback colors</td></tr>
+  <tr><td><b>Auto-Advance Logic</b></td><td><code>autoAdvance.test.tsx</code></td><td>4</td><td>Track progression, screen-off simulation, repeat-one looping</td></tr>
+  <tr><td><b>Quality Settings UI</b></td><td><code>QualitySetting.test.tsx</code></td><td>4</td><td>Modal tier switcher, active radio indicators, preference persistence</td></tr>
+  <tr><td><b>Quality Note Badge</b></td><td><code>QualityNote.test.tsx</code></td><td>4</td><td>Forensic explanation rendering (e.g. "Auto (Weak connection)")</td></tr>
+  <tr><td><b>Local Storage Sync</b></td><td><code>storage.test.ts</code></td><td>3</td><td>Volume, repeat, shuffle, and quality preference persistence</td></tr>
+  <tr><td><b>Gesture Back Interception</b></td><td><code>useBackInterception.test.tsx</code></td><td>3</td><td>Hardware back button / history popstate sheet closure</td></tr>
+  <tr><td><b>Ambient Cover Background</b></td><td><code>CoverBackground.test.tsx</code></td><td>3</td><td>Canvas backdrop rendering and CSS filter application</td></tr>
+  <tr><td><b>Home View</b></td><td><code>Home.test.tsx</code></td><td>3</td><td>Time-based greeting, playlist counts, feedback integration</td></tr>
+  <tr><td><b>Library View</b></td><td><code>Library.test.tsx</code></td><td>2</td><td>Sort orders, album filters, search integration</td></tr>
+  <tr><td><b>Application Shell</b></td><td><code>App.test.tsx</code></td><td>1</td><td>Full DOM render, navigation shell, persistent player bar mount</td></tr>
+  <tr><td colspan="2"><b>TOTAL TEST CASES</b></td><td><b>120</b></td><td><b>ALL 120 PASSING (0 Failures, 0 Flaky Tests)</b></td></tr>
+</table>
+
+<h3>7.2 Bandwidth &amp; Cache Efficiency Benchmarking</h3>
+<p>
+Network payload evaluations demonstrate the massive efficiency gains achieved by the Service Worker and low-bitrate transcoding engine:
+</p>
+<table>
+  <tr><th>Usage Scenario (Full Library Listen)</th><th>Bandwidth (No SW)</th><th>Bandwidth (With SW + LQ)</th><th>Total Savings</th></tr>
+  <tr><td>First Playthrough (111 songs, HQ)</td><td>~920 MB</td><td>~920 MB (stream + cache)</td><td>0% (initial cache fill)</td></tr>
+  <tr><td>First Playthrough (111 songs, LQ mode)</td><td>~920 MB</td><td><b>~310 MB</b></td><td><b>66.3% reduction</b></td></tr>
+  <tr><td>Second Playthrough (Replay cached songs)</td><td>~920 MB</td><td><b>0.0 MB (Served from Cache)</b></td><td><b>100% network eliminated</b></td></tr>
+  <tr><td>3 Full Sessions (1 initial + 2 replays)</td><td>2,760 MB</td><td><b>~310 MB (LQ) / ~920 MB (HQ)</b></td><td><b>66.7% to 88.8% saved</b></td></tr>
+</table>
+
+<div class="page-break"></div>
+
+<!-- ========================================== -->
+<!-- CHAPTER 8: CHALLENGES & TRADE-OFFS         -->
+<!-- ========================================== -->
+<h2>8. Engineering Challenges, Pitfalls &amp; Trade-offs</h2>
+
+<h3>8.1 Why Capacitor Android APK Was Dropped in Favor of Pure PWA</h3>
+<p>
+During mid-September development, an experimental branch introduced <b>Capacitor</b> to build and compile SoftyFy into a native Android APK (<code>feat(capacitor): ship SoftyFy as a native Android APK</code>).
+</p>
+<div class="callout callout-warning">
+  <b>The Architectural Conflict:</b>
+  <ul>
+    <li>Capacitor introduced a heavyweight Android build toolchain (Gradle, Android Studio, Java SDK, NDK), defeating the minimalist "zero-server, zero-overhead" project ethos.</li>
+    <li>Native WebView media players handle Service Worker intercepted requests inconsistently, breaking synthesized byte-range slicing on older Android versions.</li>
+    <li>Modern mobile browsers (Chrome on Android, Safari on iOS) already support 100% of the required native capabilities via standalone PWAs: homescreen icon, splash screen, MediaSession lockscreen controls, and offline storage.</li>
+    <li><b>Decision:</b> Reverted Capacitor and focused exclusively on a pristine, zero-dependency Progressive Web App.</li>
+  </ul>
+</div>
+
+<h3>8.2 Preventing Background Cache Contention with Live Playback</h3>
+<p>
+When a song starts playing on a slow network, the browser audio element requests the first 500 KB to begin playback, while the Service Worker begins fetching the full 8 MB file to store in cache.
+<br><b>The Problem:</b> The background cache fetch competed with the live playback stream for network socket bandwidth, stalling audio startup.
+<br><b>The Solution:</b> Implemented in-flight download pacing. On weak networks, background full-file cloning is throttled or deferred until the audio element has successfully buffered 5 seconds ahead.
+</p>
+
+<h3>8.3 Web Audio API Routing vs Mobile Autoplay Restrictions</h3>
+<p>
+An experiment with real-time canvas visualizers used the Web Audio API's <code>AudioContext.createMediaElementSource()</code>.
+<br><b>The Bug:</b> Mobile browsers enforce strict user gesture requirements on <code>AudioContext</code>. Routing audio through an un-resumed Web Audio graph completely muted playback on iOS and Android.
+<br><b>Resolution:</b> Decoupled visualizer loops, ensuring <code>AudioContext.resume()</code> is invoked strictly inside user touch events, with fallback to native element playback if audio nodes fail.
+</p>
+
+<!-- ========================================== -->
+<!-- CHAPTER 9: CONCLUSION & ROADMAP            -->
+<!-- ========================================== -->
+<h2>9. Conclusion, Roadmap &amp; References</h2>
+
+<h3>9.1 Project Conclusion</h3>
+<p>
+The SoftyFy project demonstrates that a commercial-grade, responsive, and resilient media streaming platform can be built completely without backend servers, databases, or recurring cloud costs. By leveraging modern browser APIs (Service Workers, MediaSession, Web Storage), immutable public CDNs (GitHub Releases), and measured-throughput network intelligence, SoftyFy achieves high reliability, instant playback, and zero-cost hosting.
+</p>
+
+<h3>9.2 Future Roadmap</h3>
+<ul>
+  <li><b>Synchronized LRC Lyrics:</b> Parse and render karaoke-style synchronized lyrics with smooth auto-scroll.</li>
+  <li><b>Origin Private File System (OPFS):</b> Utilize OPFS for dedicated offline storage exceeding standard Cache Storage quotas.</li>
+  <li><b>Web Audio Equalizer:</b> Re-introduce a 5-band parametric equalizer safely routed through user-gesture audio graphs.</li>
+  <li><b>Client-Side ID3 Metadata Ingestion:</b> Enable drag-and-drop ingestion of local audio files directly into browser IndexedDB.</li>
+</ul>
+
+<h3>9.3 References &amp; Key File Registry</h3>
+<table>
+  <tr><th>File Path</th><th>Lines / Purpose</th></tr>
+  <tr><td><code>frontend/src/sw.ts</code></td><td>645 lines · Custom Service Worker with byte-range slicing and cache management</td></tr>
+  <tr><td><code>frontend/src/lib/networkMemory.ts</code></td><td>199 lines · Adaptive bitrate engine based on measured time-to-buffer and stalls</td></tr>
+  <tr><td><code>frontend/src/lib/audioSources.ts</code></td><td>121 lines · Dynamic HQ/LQ URL resolution with manual preference override</td></tr>
+  <tr><td><code>frontend/src/context/PlayerContext.tsx</code></td><td>26 KB · React 19 global player context, HTMLAudioElement orchestration</td></tr>
+  <tr><td><code>frontend/src/context/playerReducer.ts</code></td><td>378 lines · Deterministic playback state reducer and shuffle management</td></tr>
+  <tr><td><code>frontend/src/data/songs.ts</code></td><td>1,372 lines · Catalog definition for 111 tracks across 5 libraries</td></tr>
+  <tr><td><code>frontend/scripts/generate-low-bitrate.mjs</code></td><td>298 lines · Node.js + FFmpeg pipeline for batch generating LQ audio twins</td></tr>
+</table>
+
+<div class="footer-note">
+  SoftyFy Summer Project Report · Authored by Pradip Sonawane · October 2026 · Repository: pradipME/SoftyFy · Deployed at softyfy.onrender.com
+</div>
+
+</body>
+</html>

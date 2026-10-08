@@ -42,27 +42,27 @@
   }
 
   ::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
+    width: 6px;
+    height: 6px;
   }
 
   ::-webkit-scrollbar-thumb {
-    background-color: var(--color-line);
+    background-color: var(--color-elevated-hover);
     border-radius: 8px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background-color: var(--color-elevated-hover);
+    background-color: #3a3a3a;
   }
 
-  /* Hide the native search input clear button (styled input looks cleaner). */
+  /* Hide the native search input clear button */
   input[type='search']::-webkit-search-cancel-button {
     -webkit-appearance: none;
     appearance: none;
   }
 }
 
-/* Seek/volume slider: filled progress + white thumb on hover. */
+/* ─── Scrubber ──────────────────────────────────────────────────────────── */
 .scrubber {
   -webkit-appearance: none;
   appearance: none;
@@ -72,10 +72,15 @@
     to right,
     var(--color-accent) 0%,
     var(--color-accent) var(--fill, 0%),
-    var(--color-elevated) var(--fill, 0%),
-    var(--color-elevated) 100%
+    rgba(255,255,255,0.12) var(--fill, 0%),
+    rgba(255,255,255,0.12) 100%
   );
   cursor: pointer;
+  transition: height 150ms ease;
+}
+
+.scrubber:hover {
+  height: 5px;
 }
 
 .scrubber:disabled {
@@ -85,25 +90,28 @@
 .scrubber::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
   border-radius: 9999px;
   background: var(--color-fg);
+  box-shadow: 0 0 6px rgba(0,0,0,0.5);
   opacity: 0;
-  transition: opacity 120ms ease;
+  transition: opacity 120ms ease, transform 120ms ease;
 }
 
 .scrubber:hover::-webkit-slider-thumb,
 .scrubber:focus-visible::-webkit-slider-thumb {
   opacity: 1;
+  transform: scale(1.1);
 }
 
 .scrubber::-moz-range-thumb {
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
   border: none;
   border-radius: 9999px;
   background: var(--color-fg);
+  box-shadow: 0 0 6px rgba(0,0,0,0.5);
   opacity: 0;
   transition: opacity 120ms ease;
 }
@@ -113,15 +121,12 @@
   opacity: 1;
 }
 
-/* Animated equalizer bars used for the currently playing row. */
+/* ─── Equalizer bars ─────────────────────────────────────────────────────── */
 @keyframes softyfy-eq {
-  0%,
-  100% {
-    transform: scaleY(0.3);
-  }
-  50% {
-    transform: scaleY(1);
-  }
+  0%, 100% { transform: scaleY(0.25); }
+  25%       { transform: scaleY(0.8); }
+  50%       { transform: scaleY(1); }
+  75%       { transform: scaleY(0.6); }
 }
 
 .eq-bar {
@@ -129,36 +134,110 @@
   animation: softyfy-eq 1s ease-in-out infinite;
 }
 
-@layer utilities {
-  /* Horizontal card rails and other scroll containers keep native scrolling
-     but without a visible scrollbar. */
-  .no-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-  .no-scrollbar::-webkit-scrollbar {
-    display: none;
-  }
+/* ─── Pulse-glow ────────────────────────────────────────────────────────── */
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-accent) 0%, transparent); }
+  50%      { box-shadow: 0 0 24px 4px color-mix(in srgb, var(--color-accent) 35%, transparent); }
 }
 
-/* Respect reduced-motion: collapse all CSS animations/transitions so the UI
-   never relies on motion to be usable. Framer-Motion gets the same signal via
-   MotionConfig reducedMotion="user". */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.001ms !important;
-    scroll-behavior: auto !important;
-  }
+/* ─── Shimmer skeleton ───────────────────────────────────────────────────── */
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position:  400px 0; }
 }
 
-.story-card {
-  background: linear-gradient(135deg, #1db95422, #12121200);
-  border: 1px solid var(--color-line);
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--color-elevated) 25%,
+    var(--color-elevated-hover) 50%,
+    var(--color-elevated) 75%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.8s infinite;
+}
+
+/* ─── Float ─────────────────────────────────────────────────────────────── */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-6px); }
+}
+
+/* ─── Slow spin ─────────────────────────────────────────────────────────── */
+@keyframes spin-slow {
+  to { transform: rotate(360deg); }
+}
+
+/* ─── Wave visualizer bars ──────────────────────────────────────────────── */
+@keyframes wave-1 { 0%,100% { transform: scaleY(0.3); } 50% { transform: scaleY(1.0); } }
+@keyframes wave-2 { 0%,100% { transform: scaleY(0.5); } 50% { transform: scaleY(0.7); } }
+@keyframes wave-3 { 0%,100% { transform: scaleY(0.7); } 50% { transform: scaleY(0.4); } }
+@keyframes wave-4 { 0%,100% { transform: scaleY(0.4); } 50% { transform: scaleY(0.9); } }
+@keyframes wave-5 { 0%,100% { transform: scaleY(0.6); } 50% { transform: scaleY(0.3); } }
+
+.wave-bar { transform-origin: bottom; }
+.wave-bar:nth-child(1) { animation: wave-1 0.9s ease-in-out infinite; }
+.wave-bar:nth-child(2) { animation: wave-2 0.7s ease-in-out infinite 0.1s; }
+.wave-bar:nth-child(3) { animation: wave-3 1.0s ease-in-out infinite 0.2s; }
+.wave-bar:nth-child(4) { animation: wave-4 0.8s ease-in-out infinite 0.05s; }
+.wave-bar:nth-child(5) { animation: wave-5 1.1s ease-in-out infinite 0.15s; }
+
+/* ─── Glass card utilities ──────────────────────────────────────────────── */
+.glass-card {
+  background: rgba(255,255,255,0.04);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
+}
+
+.glass-card-strong {
+  background: rgba(255,255,255,0.07);
+  backdrop-filter: blur(24px) saturate(200%);
+  -webkit-backdrop-filter: blur(24px) saturate(200%);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 20px;
+}
+
+/* ─── Album card hover ──────────────────────────────────────────────────── */
+.album-card {
+  position: relative;
+  transition: transform 180ms cubic-bezier(.34,1.56,.64,1), box-shadow 180ms ease;
+}
+.album-card:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 16px 40px rgba(0,0,0,0.5);
+}
+.album-card:active {
+  transform: translateY(0) scale(0.98);
+}
+
+/* ─── Active song row highlight ─────────────────────────────────────────── */
+.song-row-active {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--color-accent) 12%, transparent), transparent 70%);
+}
+
+/* ─── Gradient text ─────────────────────────────────────────────────────── */
+.gradient-text {
+  background: linear-gradient(135deg, var(--color-fg) 0%, var(--color-accent-strong) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* ─── Sidebar gradient logo area ────────────────────────────────────────── */
+.sidebar-logo-bg {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--color-accent) 20%, transparent) 0%, transparent 100%);
   border-radius: 12px;
+  padding: 10px 12px;
+  margin: -4px -8px 8px;
+}
+
+/* ─── Feedback / story cards ────────────────────────────────────────────── */
+.story-card {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--color-accent) 10%, transparent), transparent 80%);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 16px;
   padding: 24px;
   margin: 20px auto;
   max-width: 700px;
@@ -186,72 +265,96 @@
   opacity: 0.8;
 }
 
-@media (max-width: 600px) {
-  .story-card {
-    padding: 16px;
-    margin: 16px 10px;
-  }
-  .story-title {
-    font-size: 18px;
-  }
-  .story-text {
-    font-size: 13px;
-  }
-}
-
-.feedback-card {
-  background: #181818;
-  border: 1px solid #282828;
-  border-radius: 12px;
-  padding: 24px;
-  margin: 20px auto;
-  max-width: 700px;
-}
-
-.feedback-title {
-  color: #ffffff;
-  font-size: 18px;
-  font-weight: 700;
-  margin-bottom: 8px;
-}
-
-.feedback-text {
-  color: #b3b3b3;
-  font-size: 14px;
-  margin-bottom: 16px;
+.feedback-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
 }
 
 .feedback-input {
   width: 100%;
-  background: #121212;
-  border: 1px solid #333;
-  border-radius: 8px;
-  padding: 12px;
-  color: #fff;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  padding: 12px 14px;
+  color: var(--color-fg);
   font-size: 14px;
   font-family: inherit;
   resize: vertical;
   margin-bottom: 12px;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
 }
 
 .feedback-input:focus {
   outline: none;
-  border-color: #1db954;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 20%, transparent);
 }
 
 .feedback-btn {
-  background: #1db954;
+  background: var(--color-accent);
   color: #000;
   border: none;
-  border-radius: 24px;
-  padding: 10px 24px;
+  border-radius: 30px;
+  padding: 11px 28px;
   font-weight: 700;
   font-size: 14px;
   cursor: pointer;
-  transition: transform 0.2s;
+  transition: transform 150ms cubic-bezier(.34,1.56,.64,1), background 150ms ease, box-shadow 150ms ease;
+  align-self: flex-start;
 }
 
 .feedback-btn:hover {
-  transform: scale(1.05);
-  background: #1ed760;
+  transform: scale(1.06);
+  background: var(--color-accent-strong);
+  box-shadow: 0 6px 20px color-mix(in srgb, var(--color-accent) 40%, transparent);
+}
+
+.feedback-btn:active {
+  transform: scale(0.97);
+}
+
+@media (max-width: 600px) {
+  .story-card { padding: 16px; margin: 16px 10px; }
+  .story-title { font-size: 18px; }
+  .story-text  { font-size: 13px; }
+}
+
+/* ─── Utilities ─────────────────────────────────────────────────────────── */
+@layer utilities {
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .animate-float {
+    animation: float 3.5s ease-in-out infinite;
+  }
+
+  .animate-spin-slow {
+    animation: spin-slow 12s linear infinite;
+  }
+
+  .animate-pulse-glow {
+    animation: pulse-glow 2.5s ease-in-out infinite;
+  }
+}
+
+/* ─── Reduced motion ────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }

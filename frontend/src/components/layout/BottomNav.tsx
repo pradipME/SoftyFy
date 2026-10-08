@@ -8,7 +8,7 @@ import { NAV_ITEMS } from './navItems'
 export function BottomNav() {
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-white/5 bg-base/65 backdrop-blur-xl md:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-white/[0.06] bg-base/70 backdrop-blur-2xl md:hidden"
       aria-label="Main"
     >
       <div className="grid grid-cols-3 pb-[env(safe-area-inset-bottom)]">
@@ -26,13 +26,15 @@ export function BottomNav() {
             {({ isActive }) => (
               <>
                 <span
-                  className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
-                    isActive ? 'bg-accent/15' : ''
+                  className={`flex h-7 w-14 items-center justify-center rounded-full transition-all duration-200 ${
+                    isActive ? 'bg-accent/20 shadow-[0_0_10px_rgba(29,185,84,0.2)]' : ''
                   }`}
                 >
-                  <Icon className={`h-[22px] w-[22px] ${isActive ? 'text-accent' : ''}`} />
+                  <Icon className={`h-[22px] w-[22px] transition-all duration-200 ${isActive ? 'text-accent scale-110' : ''}`} />
                 </span>
-                <span className="text-[11px] font-semibold">{label}</span>
+                <span className={`text-[11px] font-semibold transition-colors ${isActive ? 'text-fg' : 'text-muted'}`}>
+                  {label}
+                </span>
               </>
             )}
           </NavLink>
