@@ -38,13 +38,24 @@ const SPLASH_MS = 3300
 const SPLASH_MS_REDUCED = 1600
 
 export function SplashScreen({ onDone }: { onDone: () => void }) {
+  const emblem = `${import.meta.env.BASE_URL}emblem-splash.webp`
+
   useEffect(() => {
     const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
     const timer = window.setTimeout(onDone, reduced ? SPLASH_MS_REDUCED : SPLASH_MS)
-    return () => window.clearTimeout(timer)
-  }, [onDone])
 
-  const emblem = `${import.meta.env.BASE_URL}emblem-splash.webp`
+    // Fallback: if the artwork can't load, don't hold a blank splash on
+    // screen — hand over to the homepage immediately. The timeout above is
+    // the other safety net, so the splash never outlives its animation.
+    const probe = new window.Image()
+    probe.onerror = onDone
+    probe.src = emblem
+
+    return () => {
+      window.clearTimeout(timer)
+      probe.onerror = null
+    }
+  }, [onDone, emblem])
 
   return (
     <div className="splash-screen" aria-hidden="true">
