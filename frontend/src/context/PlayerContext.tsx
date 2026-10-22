@@ -46,6 +46,10 @@ export type { PlaybackStatus, RepeatMode, StreamingQuality } from './playerReduc
 
 export interface PlayerApi {
   currentSong: Song | null
+  /** Loaded source-order queue used by the existing playback engine. */
+  queue: Song[]
+  /** Remaining tracks in their current playback order (including shuffle). */
+  upcomingSongs: Song[]
   status: PlaybackStatus
   currentTime: number
   duration: number
@@ -525,6 +529,17 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const currentSong = currentSongOf(state)
+  const upcomingSongs = useMemo(
+    () => {
+      const orderedIndices = state.repeat === 'one'
+        ? [state.playOrder[state.position]].filter((index): index is number => index !== undefined)
+        : state.repeat === 'all' && state.position >= 0
+          ? [...state.playOrder.slice(state.position + 1), ...state.playOrder.slice(0, state.position)]
+          : state.playOrder.slice(state.position + 1)
+      return orderedIndices.map((index) => state.queue[index]).filter((song): song is Song => song !== undefined)
+    },
+    [state.playOrder, state.position, state.queue, state.repeat],
+  )
 
   // Media Session API — lockscreen / OS media controls where available.
   // Every handler delegates to the exact same functions the in-app buttons
@@ -663,6 +678,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const api = useMemo<PlayerApi>(
     () => ({
       currentSong,
+      queue: state.queue,
+      upcomingSongs,
       status: state.status,
       currentTime: state.currentTime,
       duration: state.duration,
@@ -687,6 +704,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }),
     [
       currentSong,
+      state.queue,
+      upcomingSongs,
       state.status,
       state.currentTime,
       state.duration,

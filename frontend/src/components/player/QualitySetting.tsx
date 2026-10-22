@@ -18,8 +18,8 @@ const OPTIONS: readonly { value: StreamingQuality; label: string; hint: string }
 export function QualitySetting() {
   const { streamingQuality, setStreamingQuality } = usePlayer()
   return (
-    <div className="flex items-center justify-between gap-3">
-      <span className="text-[11px] font-medium text-dim">Streaming quality</span>
+    <div className="flex items-center justify-between gap-3 sonic-quality-setting">
+      <span className="sonic-quality-label">Streaming quality</span>
       <div
         role="radiogroup"
         aria-label="Streaming quality"

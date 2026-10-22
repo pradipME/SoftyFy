@@ -12,12 +12,21 @@ interface SongListProps {
 
 export function SongList({ songs, queue = songs, showIndex = true }: SongListProps) {
   return (
-    <Stagger className="flex flex-col gap-0.5">
-      {songs.map((song, i) => (
-        <StaggerItem key={song.id}>
-          <SongRow song={song} queue={queue} index={showIndex ? i : undefined} />
-        </StaggerItem>
-      ))}
-    </Stagger>
+    <div className={`sonic-song-list${showIndex ? '' : ' is-search-results'}`}>
+      <div className="sonic-track-head" aria-hidden="true">
+        {showIndex ? <span>No.</span> : <span />}
+        <span />
+        <span>Track</span>
+        <span>Collection</span>
+        <span>Time</span>
+      </div>
+      <Stagger className="sonic-song-list-rows">
+        {songs.map((song, i) => (
+          <StaggerItem key={song.id}>
+            <SongRow song={song} queue={queue} index={showIndex ? i : undefined} />
+          </StaggerItem>
+        ))}
+      </Stagger>
+    </div>
   )
 }

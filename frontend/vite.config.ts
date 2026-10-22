@@ -26,8 +26,8 @@ export default defineConfig({
         short_name: 'SoftyFy',
         description:
           'SoftyFy — a static, offline-friendly Spotify-style player for your personal music collection.',
-        theme_color: '#121212',
-        background_color: '#121212',
+        theme_color: '#080b0c',
+        background_color: '#080b0c',
         display: 'standalone',
         orientation: 'portrait',
         start_url: SOFTYFY_BASE,

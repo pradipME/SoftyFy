@@ -1,15 +1,13 @@
 import { useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
-import { StaggerItem } from '../components/motion/Stagger'
+import type { CSSProperties } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { SongList } from '../components/song/SongList'
-import { Cover } from '../components/song/Cover'
-import { Button } from '../components/ui/Button'
-import { ArrowLeftIcon, ArrowRightIcon } from '../components/ui/icons'
+import { ArrowLeftIcon, ArrowRightIcon, PlayIcon } from '../components/ui/icons'
 import { SONGS } from '../data/songs'
+import { usePlayer } from '../context/PlayerContext'
 import type { Song } from '../types/song'
 
 type SortKey = 'title' | 'artist' | 'duration'
-
 const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: 'title', label: 'Title' },
   { key: 'artist', label: 'Artist' },
@@ -17,97 +15,84 @@ const SORT_OPTIONS: { key: SortKey; label: string }[] = [
 ]
 
 function sortSongs(songs: Song[], key: SortKey, ascending: boolean): Song[] {
-  const sorted = [...songs].sort((a, b) => {
-    switch (key) {
-      case 'duration':
-        return a.durationSec - b.durationSec
-      case 'artist':
-        return a.artist.localeCompare(b.artist)
-      default:
-        return a.title.localeCompare(b.title)
-    }
-  })
+  const sorted = [...songs].sort((a, b) => key === 'duration'
+    ? a.durationSec - b.durationSec
+    : key === 'artist' ? a.artist.localeCompare(b.artist) : a.title.localeCompare(b.title))
   return ascending ? sorted : sorted.reverse()
 }
 
 export function LibraryPage() {
   const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
   const albumFilter = searchParams.get('album')
-
+  const { playSong } = usePlayer()
   const baseSongs = useMemo(
-    () => (albumFilter ? SONGS.filter((s) => s.library === albumFilter) : SONGS),
+    () => albumFilter ? SONGS.filter((song) => song.library === albumFilter) : SONGS,
     [albumFilter],
   )
-
   const [sortKey, setSortKey] = useState<SortKey>('title')
   const [ascending, setAscending] = useState(true)
   const sorted = useMemo(() => sortSongs(baseSongs, sortKey, ascending), [baseSongs, sortKey, ascending])
-
   const heading = albumFilter ?? 'Your Library'
-
-  // If viewing a specific album, show cover of first song
-  const heroCover = albumFilter && baseSongs.length > 0 ? baseSongs[0].coverSrc : null
+  const heroCover = baseSongs[0]?.coverSrc
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* ── Album hero (when filtering by album) ──────────────────── */}
-      {heroCover ? (
-        <StaggerItem>
-          <div className="glass-card flex items-center gap-5 p-4 sm:p-5">
-            <Cover
-              src={heroCover}
-              alt={heading}
-              className="h-24 w-24 shrink-0 rounded-2xl shadow-xl sm:h-32 sm:w-32"
-            />
-            <div className="min-w-0">
-              <p className="mb-1 text-[11px] font-semibold uppercase tracking-widest text-muted">Album</p>
-              <h1 className="truncate text-2xl font-bold tracking-tight sm:text-3xl">{heading}</h1>
-              <p className="mt-1 text-sm text-muted">{sorted.length} songs</p>
-            </div>
+    <div className="sonic-page sonic-page--compact">
+      {albumFilter ? (
+        <header className="sonic-album-hero" style={{ '--album-accent': colorForCollection(albumFilter) } as CSSProperties}>
+          {heroCover && <img src={heroCover} alt="" className="sonic-album-cover-bg" />}
+          <div className="sonic-album-copy">
+            <p className="sonic-eyebrow">Curated collection</p>
+            <h1 className="sonic-page-title">{heading}</h1>
+            <p>{sorted.length} tracks · in your personal archive</p>
+            {sorted.length > 0 && (
+              <button type="button" className="sonic-action-primary mt-5" onClick={() => playSong(sorted[0], sorted)}>
+                <PlayIcon /> Play collection
+              </button>
+            )}
           </div>
-        </StaggerItem>
+        </header>
       ) : (
-        <StaggerItem className="flex flex-col gap-1">
-          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{heading}</h1>
-          <p className="text-sm text-muted">{sorted.length} songs</p>
-        </StaggerItem>
+        <header>
+          <p className="sonic-eyebrow">Everything you keep close</p>
+          <h1 className="sonic-page-title mt-3">Your Library</h1>
+          <p className="sonic-page-intro">{SONGS.length} tracks, arranged for the way you listen.</p>
+          {sorted.length > 0 && (
+            <button type="button" className="sonic-action-primary mt-5" onClick={() => playSong(sorted[0], sorted)}>
+              <PlayIcon /> Play all
+            </button>
+          )}
+        </header>
       )}
 
-      {/* ── Sort controls ─────────────────────────────────────────── */}
-      <StaggerItem>
-        <div className="no-scrollbar flex items-center gap-2 overflow-x-auto">
-          <span className="shrink-0 text-xs text-dim">Sort by</span>
-          <div className="flex items-center gap-1">
-            {SORT_OPTIONS.map(({ key, label }) => (
-              <Button
-                key={key}
-                size="sm"
-                variant={sortKey === key ? 'primary' : 'secondary'}
-                onClick={() => setSortKey(key)}
-              >
-                {label}
-              </Button>
-            ))}
-          </div>
-          <Button
-            size="sm"
-            variant="secondary"
-            aria-label={
-              ascending ? 'Sorted ascending — tap to reverse' : 'Sorted descending — tap to reverse'
-            }
-            onClick={() => setAscending((value) => !value)}
-          >
-            {ascending ? (
-              <ArrowRightIcon className="h-4 w-4" />
-            ) : (
-              <ArrowLeftIcon className="h-4 w-4" />
-            )}
-          </Button>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="sonic-sortbar" aria-label="Sort tracks">
+          <span className="sonic-sort-label">Order by</span>
+          {SORT_OPTIONS.map(({ key, label }) => (
+            <button key={key} type="button" className={`sonic-sort-button${sortKey === key ? ' is-active' : ''}`} aria-pressed={sortKey === key} onClick={() => setSortKey(key)}>
+              {label}
+            </button>
+          ))}
+          <button type="button" className="sonic-sort-button flex w-9 items-center justify-center" aria-label={ascending ? 'Sorted ascending, reverse order' : 'Sorted descending, reverse order'} onClick={() => setAscending((value) => !value)}>
+            {ascending ? <ArrowRightIcon className="h-3.5 w-3.5" /> : <ArrowLeftIcon className="h-3.5 w-3.5" />}
+          </button>
         </div>
-      </StaggerItem>
+        {albumFilter && <button type="button" className="sonic-text-link border-0 bg-transparent" onClick={() => navigate('/library')}>All tracks ↗</button>}
+      </div>
 
-      {/* ── Song list ─────────────────────────────────────────────── */}
-      <SongList songs={sorted} queue={sorted} />
+      {sorted.length > 0 ? (
+        <SongList songs={sorted} queue={sorted} />
+      ) : (
+        <div className="sonic-empty" role="status">
+          <div><strong>Collection not found</strong><p>That collection may have moved. Return to your library to explore the archive.</p></div>
+        </div>
+      )}
     </div>
   )
+}
+
+function colorForCollection(seed: string): string {
+  let hash = 0
+  for (const character of seed) hash = (hash * 31 + character.charCodeAt(0)) >>> 0
+  return `hsl(${hash % 360} 24% 40%)`
 }

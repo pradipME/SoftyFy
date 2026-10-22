@@ -1,188 +1,158 @@
 import { useMemo } from 'react'
+import type { CSSProperties } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
 import { Stagger, StaggerItem } from '../components/motion/Stagger'
 import { Cover } from '../components/song/Cover'
 import { CreditFooter } from '../components/ui/CreditFooter'
+import { PlayIcon } from '../components/ui/icons'
 import { SONGS, SONGS_BY_LIBRARY } from '../data/songs'
 import { usePlayer } from '../context/PlayerContext'
 
 function greetingFor(date: Date): string {
   const hour = date.getHours()
-  if (hour < 5) return 'Good night'
-  if (hour < 12) return 'Good morning'
-  if (hour < 18) return 'Good afternoon'
-  return 'Good evening'
+  if (hour < 5) return 'After hours'
+  if (hour < 12) return 'A new day'
+  if (hour < 18) return 'Midday listening'
+  return 'Evening mode'
 }
 
 export function HomePage() {
   const greeting = useMemo(() => greetingFor(new Date()), [])
-  const { currentSong, status } = usePlayer()
+  const navigate = useNavigate()
+  const { currentSong, status, playSong } = usePlayer()
+  const collections = Object.entries(SONGS_BY_LIBRARY)
+  const currentCollection = currentSong?.library && SONGS_BY_LIBRARY[currentSong.library]
+    ? currentSong.library
+    : collections[0]?.[0]
+  const featuredSongs = currentCollection ? SONGS_BY_LIBRARY[currentCollection] ?? [] : []
+  const featuredSong = currentSong && currentSong.library === currentCollection ? currentSong : featuredSongs[0]
   const isPlaying = status === 'playing'
 
-  return (
-    <div className="flex flex-col gap-10">
-      {/* ── Hero greeting ───────────────────────────────────────────── */}
-      <StaggerItem className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-          <span className="gradient-text">{greeting}</span> 
-        </h1>
-        <p className="text-sm text-muted">
-          {SONGS.length} songs across{' '}
-          <span className="font-semibold text-fg">{Object.keys(SONGS_BY_LIBRARY).length} albums</span>{' '}
-          — no account needed
-        </p>
-      </StaggerItem>
+  const playCollection = (name: string, songs: typeof SONGS) => {
+    const selected = currentSong && currentSong.library === name ? currentSong : songs[0]
+    if (selected) playSong(selected, songs)
+  }
 
-      {/* ── Currently playing banner (if any) ──────────────────────── */}
+  return (
+    <div className="sonic-page sonic-page--home">
+      <section
+        className="sonic-feature"
+        style={{ '--feature-accent': colorForCollection(featuredSong?.id ?? currentCollection ?? 'sonic') } as CSSProperties}
+        aria-labelledby="home-title"
+      >
+        <div className="sonic-feature-copy">
+          <p className="sonic-eyebrow">{greeting} · your private archive</p>
+          <h1 className="sonic-display" id="home-title">Your soundtrack,<br /><em>in living color.</em></h1>
+          <p className="sonic-feature-sub">
+            {featuredSong
+              ? `A collection called ${currentCollection} is ready in your listening room. ${featuredSongs.length} tracks, one continuous mood.`
+              : 'Your personal music archive, gathered into one quiet place.'}
+          </p>
+          <div className="sonic-feature-actions">
+            {featuredSongs.length > 0 && (
+              <button type="button" className="sonic-action-primary" onClick={() => playCollection(currentCollection!, featuredSongs)}>
+                <PlayIcon /> Play collection
+              </button>
+            )}
+            {currentCollection && (
+              <button type="button" className="sonic-action-quiet" onClick={() => navigate(`/library?album=${encodeURIComponent(currentCollection)}`)}>
+                Explore collection <span aria-hidden="true">↗</span>
+              </button>
+            )}
+          </div>
+        </div>
+        <div className="sonic-feature-art" aria-hidden="true">
+          <div className="sonic-art-orbit" />
+          {featuredSong && <Cover key={featuredSong.id} src={featuredSong.coverSrc} alt="" className="sonic-feature-cover" />}
+          <span className="sonic-art-index">COLLECTION 01 / {String(collections.length).padStart(2, '0')}</span>
+        </div>
+      </section>
+
       {currentSong && (
-        <StaggerItem>
-          <NowPlayingBanner song={currentSong} isPlaying={isPlaying} />
-        </StaggerItem>
+        <section aria-label="Current listening">
+          <div className="sonic-section-head">
+            <div>
+              <p className="sonic-eyebrow">The room is alive</p>
+              <h2>On your frequency</h2>
+            </div>
+            <span className="sonic-current-tag">{isPlaying ? 'Now playing' : 'Last selected'}</span>
+          </div>
+          <button type="button" className="sonic-current-strip w-full bg-transparent text-left" onClick={() => document.dispatchEvent(new CustomEvent('softyfy:open-player'))}>
+            <Cover key={currentSong.id} src={currentSong.coverSrc} alt={currentSong.title} />
+            <span className="sonic-current-copy">
+              <strong>{currentSong.title}</strong>
+              <span>{currentSong.artist} · {currentSong.library}</span>
+            </span>
+            <span className="sonic-eyebrow">{isPlaying ? 'Listening' : 'Continue'} ↗</span>
+          </button>
+        </section>
       )}
 
-      {/* ── Albums grid ────────────────────────────────────────────── */}
-      <section>
-        <StaggerItem>
-          <h2 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted">
-            Your Albums
-          </h2>
-        </StaggerItem>
-        <Stagger className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-          {Object.entries(SONGS_BY_LIBRARY).map(([name, songs]) => (
+      <section aria-labelledby="soundtrack-title">
+        <div className="sonic-section-head">
+          <div>
+            <p className="sonic-eyebrow">A personal listening archive</p>
+            <h2 id="soundtrack-title">Your soundtrack</h2>
+            <p>{SONGS.length} songs across {collections.length} collections</p>
+          </div>
+          <button type="button" className="sonic-text-link" onClick={() => navigate('/library')}>All tracks ↗</button>
+        </div>
+        <Stagger className="sonic-collection-grid">
+          {collections.map(([name, songs], index) => (
             <StaggerItem key={name}>
-              <AlbumCard name={name} songs={songs} />
+              <CollectionCard
+                name={name}
+                songs={songs}
+                index={index}
+                onOpen={() => navigate(`/library?album=${encodeURIComponent(name)}`)}
+                onPlay={() => playCollection(name, songs)}
+              />
             </StaggerItem>
           ))}
         </Stagger>
       </section>
 
-      {/* ── Feedback section ────────────────────────────────────────── */}
-      <StaggerSection />
-
-      <CreditFooter className="mt-4" />
+      <CreditFooter className="mt-1" />
     </div>
   )
 }
 
-/* ── Currently-playing banner ──────────────────────────────────────────── */
-function NowPlayingBanner({
-  song,
-  isPlaying,
+function CollectionCard({
+  name,
+  songs,
+  index,
+  onOpen,
+  onPlay,
 }: {
-  song: (typeof SONGS)[number]
-  isPlaying: boolean
+  name: string
+  songs: typeof SONGS
+  index: number
+  onOpen: () => void
+  onPlay: () => void
 }) {
+  const cover = songs[0]?.coverSrc ?? ''
   return (
-    <div className="glass-card overflow-hidden">
-      <div className="flex items-center gap-4 p-4">
-        <div className="relative shrink-0">
-          <Cover
-            src={song.coverSrc}
-            alt={song.title}
-            className={`h-16 w-16 rounded-xl shadow-lg ${isPlaying ? 'animate-pulse-glow' : ''}`}
-          />
-          {isPlaying && (
-            <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/30">
-              <WaveBars />
-            </div>
-          )}
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-widest text-accent">
-            {isPlaying ? ' Now Playing' : ' Paused'}
-          </p>
-          <p className="truncate text-base font-bold text-fg">{song.title}</p>
-          <p className="truncate text-sm text-muted">{song.artist}</p>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-/* ── Wave bars visualizer ──────────────────────────────────────────────── */
-function WaveBars() {
-  return (
-    <span className="flex h-4 items-end gap-px" aria-hidden>
-      {[1, 2, 3, 4, 5].map((i) => (
-        <span key={i} className="wave-bar h-full w-0.5 rounded-full bg-accent" />
-      ))}
-    </span>
-  )
-}
-
-/* ── Album card ────────────────────────────────────────────────────────── */
-function AlbumCard({ name, songs }: { name: string; songs: typeof SONGS }) {
-  const navigate = useNavigate()
-  const firstCover = songs[0]?.coverSrc ?? ''
-
-  return (
-    <button
-      onClick={() => navigate(`/library?album=${encodeURIComponent(name)}`)}
-      className="album-card group flex flex-col gap-3 rounded-xl bg-surface/60 p-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-    >
-      <div className="relative overflow-hidden rounded-lg">
-        <Cover
-          src={firstCover}
-          alt={name}
-          className="aspect-square w-full transition-transform duration-300 group-hover:scale-105"
-        />
-        {/* Hover overlay */}
-        <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-all duration-200 group-hover:bg-black/30">
-          <span className="flex h-10 w-10 scale-0 items-center justify-center rounded-full bg-accent text-black shadow-xl transition-transform duration-200 group-hover:scale-100">
-            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
-              <path d="M8 5v14l11-7Z" />
-            </svg>
-          </span>
-        </div>
-      </div>
-      <div className="min-w-0">
-        <p className="truncate text-sm font-semibold text-fg">{name}</p>
-        <p className="truncate text-xs text-muted">{songs.length} songs</p>
-      </div>
-    </button>
-  )
-}
-
-/* ── Feedback section ──────────────────────────────────────────────────── */
-function StaggerSection() {
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    const textarea = document.getElementById('feedbackInput') as HTMLTextAreaElement | null
-    const feedback = textarea?.value.trim()
-    if (!feedback) return
-
-    const phoneNumber = '918767137519'
-    const message = encodeURIComponent(`SoftyFy Feedback:\n\n${feedback}`)
-    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${message}`
-
-    window.open(whatsappUrl, '_blank')
-    textarea!.value = ''
-  }
-
-  return (
-    <motion.section
-      className="story-card"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.3 }}
-    >
-      <h3 className="text-lg font-bold text-[var(--color-fg)] mb-2">Got Feedback? 💬</h3>
-      <p className="text-sm text-[var(--color-muted)] mb-4">
-        Kuch bug mila ya suggestion dena hai? Bata do!
-      </p>
-      <form className="feedback-form" id="feedbackForm" onSubmit={handleSubmit}>
-        <textarea
-          id="feedbackInput"
-          className="feedback-input"
-          placeholder="Apna feedback yahan likho..."
-          rows={3}
-          required
-        />
-        <button type="submit" className="feedback-btn">
-          Send Feedback ↗
+    <article className="sonic-collection-card">
+      <div className="sonic-card-visual">
+        <button type="button" onClick={onOpen} aria-label={`Open ${name} collection`} className="sonic-card-art-wrap w-full border-0 p-0 text-left">
+          <Cover src={cover} alt={name} className="sonic-card-art" />
+          <span className="absolute left-3 top-3 z-10 text-[9px] tracking-[.16em] text-white/75">{String(index + 1).padStart(2, '0')}</span>
         </button>
-      </form>
-    </motion.section>
+        <button type="button" className="sonic-card-play" onClick={onPlay} aria-label={`Play ${name}`}>
+          <PlayIcon className="h-4 w-4" />
+        </button>
+      </div>
+      <button type="button" onClick={onOpen} className="block w-full border-0 bg-transparent p-0 text-left">
+        <span className="sonic-card-title">{name}</span>
+        <span className="sonic-card-meta">{songs.length} tracks · collection</span>
+      </button>
+    </article>
   )
+}
+
+function colorForCollection(seed: string): string {
+  let hash = 0
+  for (const character of seed) hash = (hash * 31 + character.charCodeAt(0)) >>> 0
+  const hue = hash % 360
+  return `hsl(${hue} 24% 42%)`
 }

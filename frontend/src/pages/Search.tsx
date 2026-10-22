@@ -1,86 +1,85 @@
 import { useMemo, useRef, useState } from 'react'
-import { StaggerItem } from '../components/motion/Stagger'
+import { useNavigate } from 'react-router-dom'
 import { SongList } from '../components/song/SongList'
 import { SearchIcon } from '../components/ui/icons'
-import { SONGS } from '../data/songs'
+import { LIBRARIES, SONGS } from '../data/songs'
 
 function matches(song: (typeof SONGS)[number], query: string): boolean {
   const q = query.trim().toLowerCase()
-  if (q === '') return false
-  return (
-    song.title.toLowerCase().includes(q) ||
-    song.artist.toLowerCase().includes(q) ||
-    (song.album ?? '').toLowerCase().includes(q)
-  )
+  if (!q) return false
+  return song.title.toLowerCase().includes(q) || song.artist.toLowerCase().includes(q) ||
+    (song.album ?? '').toLowerCase().includes(q) || song.library.toLowerCase().includes(q)
 }
 
 export function SearchPage() {
   const [query, setQuery] = useState('')
   const results = useMemo(() => SONGS.filter((song) => matches(song, query)), [query])
   const inputRef = useRef<HTMLInputElement>(null)
+  const navigate = useNavigate()
 
   return (
-    <div className="flex flex-col gap-5">
-      <StaggerItem className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold tracking-tight">Search</h1>
-        <p className="text-sm text-muted">Find something in your collection.</p>
-      </StaggerItem>
+    <div className="sonic-page sonic-page--compact">
+      <header>
+        <p className="sonic-eyebrow">Find a feeling</p>
+        <h1 className="sonic-page-title mt-3">Search the archive</h1>
+        <p className="sonic-page-intro">Find a track, artist, album, or collection already in your room.</p>
+      </header>
 
-      {/* Search input */}
-      <StaggerItem className="relative">
-        <SearchIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+      <div className="sonic-search-box">
+        <SearchIcon aria-hidden="true" />
         <input
           ref={inputRef}
           type="search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search songs, artists, albums…"
-          autoFocus
-          className="h-12 w-full rounded-2xl border border-white/[0.08] bg-white/[0.05] pl-11 pr-4 text-sm text-fg shadow-[0_8px_24px_rgba(0,0,0,0.3)] backdrop-blur-md placeholder:text-dim focus:border-accent/50 focus:bg-white/[0.07] focus:outline-none focus:ring-2 focus:ring-accent/40 transition-all duration-150"
+          placeholder="What are you in the mood to hear?"
+          aria-label="Search songs, artists, albums, and collections"
+          className="sonic-search-input"
         />
         {query && (
-          <button
-            type="button"
-            onClick={() => {
-              setQuery('')
-              inputRef.current?.focus()
-            }}
-            aria-label="Clear search"
-            className="absolute right-3 top-1/2 -translate-y-1/2 flex h-6 w-6 items-center justify-center rounded-full bg-white/10 text-muted hover:bg-white/20 hover:text-fg transition-colors"
-          >
-            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2}>
-              <path d="M6 6l12 12M18 6 6 18" strokeLinecap="round" />
-            </svg>
+          <button type="button" onClick={() => { setQuery(''); inputRef.current?.focus() }} aria-label="Clear search" className="sonic-search-clear">
+            <span aria-hidden="true">×</span>
           </button>
         )}
-      </StaggerItem>
+      </div>
 
-      {/* Results */}
-      {query.trim() === '' ? (
-        <div className="flex flex-col items-center gap-3 py-12 text-center">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/[0.04]">
-            <SearchIcon className="h-7 w-7 text-muted" />
+      {query.trim() ? (
+        results.length ? (
+          <section aria-label="Search results">
+            <div className="sonic-section-head mb-3">
+              <div>
+                <p className="sonic-eyebrow">Matches in your archive</p>
+                <h2>Tracks that found you</h2>
+              </div>
+              <p className="sonic-result-meta">{results.length} {results.length === 1 ? 'track' : 'tracks'}</p>
+            </div>
+            <SongList songs={results} queue={results} showIndex={false} />
+          </section>
+        ) : (
+          <div className="sonic-empty" role="status">
+            <div><strong>No signal found</strong><p>No tracks match “{query.trim()}”. Try a title, artist, or collection.</p></div>
           </div>
-          <p className="text-sm text-muted">
-            Start typing to search by title, artist, or album.
-          </p>
-        </div>
-      ) : results.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 py-12 text-center">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/[0.04]">
-            <span className="text-3xl">🎵</span>
-          </div>
-          <p className="text-sm text-muted">
-            No songs match &ldquo;{query.trim()}&rdquo;
-          </p>
-        </div>
+        )
       ) : (
-        <>
-          <p className="px-1 text-xs text-muted">
-            {results.length} {results.length === 1 ? 'result' : 'results'}
-          </p>
-          <SongList songs={results} queue={results} showIndex={false} />
-        </>
+        <section aria-labelledby="browse-collections">
+          <div className="sonic-section-head">
+            <div><p className="sonic-eyebrow">Start somewhere familiar</p><h2 id="browse-collections">Browse collections</h2></div>
+            <span className="sonic-result-meta">{LIBRARIES.length} collections</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {LIBRARIES.map((name, index) => (
+              <button
+                key={name}
+                type="button"
+                onClick={() => navigate(`/library?album=${encodeURIComponent(name)}`)}
+                className="border border-white/10 bg-white/[0.025] px-4 py-3 text-left transition-colors hover:border-accent/40 hover:bg-white/[0.05]"
+              >
+                <span className="mr-3 text-[9px] tracking-[.14em] text-accent">{String(index + 1).padStart(2, '0')}</span>
+                <span className="text-sm text-fg">{name}</span>
+              </button>
+            ))}
+          </div>
+        </section>
       )}
     </div>
   )
