@@ -35,7 +35,7 @@ function AlbumDetail({ title, songs }: { title: string; songs: Song[] }) {
   const navigate = useNavigate()
   const { playSong } = usePlayer()
   const [sortKey, setSortKey] = useState<SortKey>('title')
-  const [ascending, setAscending] = useState(true)
+  const ascending = true
   const [liked, setLiked] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
   const [menuSongId, setMenuSongId] = useState<string | null>(null)
