@@ -14,7 +14,6 @@ const ROUTE_LABELS: Record<string, string> = {
   '/': 'Home',
   '/search': 'Search',
   '/library': 'Library',
-  '/qwali': 'Qawwali archive',
 }
 
 /** Shared responsive chrome and persistent playback surfaces. */
@@ -44,7 +43,7 @@ export function AppShell() {
       <main className="sonic-main">
         <div className="sonic-main-inner">
           <header className="sonic-topbar">
-            <div className="sonic-breadcrumb"><span>SONIC NEXUS</span><span aria-hidden="true">/</span><strong>{pageLabel}</strong></div>
+            <div className="sonic-breadcrumb"><span>SoftyFy</span><span aria-hidden="true">/</span><strong>{pageLabel}</strong></div>
             <span className="sonic-top-meta">{SONGS.length} tracks · one personal archive</span>
           </header>
           <RouteTransition />

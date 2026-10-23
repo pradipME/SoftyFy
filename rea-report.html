@@ -1,0 +1,182 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>REA Reverse-Engineering Report — SoftyFy</title>
+<style>
+  body { font-family: "Segoe UI", Arial, sans-serif; max-width: 900px; margin: 0 auto; padding: 40px; color: #1a1a2e; line-height: 1.55; }
+  h1 { border-bottom: 3px solid #4a90d9; padding-bottom: 8px; }
+  h2 { border-bottom: 1px solid #ccc; padding-bottom: 4px; margin-top: 32px; }
+  h3 { margin-top: 20px; color: #333; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+  th, td { border: 1px solid #ccc; padding: 6px 10px; text-align: left; font-size: 0.92em; }
+  th { background: #f0f4fa; }
+  code, pre { background: #f4f4f4; border-radius: 3px; }
+  code { padding: 1px 4px; font-size: 0.9em; }
+  pre { padding: 12px; overflow-x: auto; font-size: 0.85em; }
+  .bug { background: #fff8f0; border-left: 4px solid #e07000; padding: 10px 14px; margin: 10px 0; }
+  .ok   { background: #f0faf0; border-left: 4px solid #2a8a2a; padding: 10px 14px; margin: 10px 0; }
+  .meta { color: #666; font-size: 0.85em; }
+</style>
+</head>
+<body>
+
+<h1>REA Reverse-Engineering Report — SoftyFy</h1>
+<p class="meta">Read-only static analysis · Generated 2026-10-19 · Target: C:\Projects\SoftyFy</p>
+
+<h2>1. High-Level Architecture</h2>
+<table>
+  <tr><th>Layer</th><th>Location</th><th>Notes</th></tr>
+  <tr><td>Framework</td><td>React 18 + TypeScript + Vite</td><td>StrictMode enabled in <code>main.tsx</code></td></tr>
+  <tr><td>Routing</td><td>HashRouter</td><td>Routes: <code>/</code>, <code>/library</code>, <code>/search</code>, <code>/qwali</code> inside <code>AppShell</code></td></tr>
+  <tr><td>State</td><td><code>PlayerContext</code> + <code>playerReducer</code></td><td>Single top-level provider wrapping <code>App</code></td></tr>
+  <tr><td>Audio layer</td><td><code>useAudioPlayer</code> hook</td><td>One <code>&lt;audio&gt;</code> element; no native streaming API beyond the element</td></tr>
+  <tr><td>Hosting</td><td>GitHub Release assets</td><td><code>softyfy-audio-v1</code> tag; Google Drive was abandoned (403 + <code>Sec-Fetch-Site</code> rejections)</td></tr>
+  <tr><td>Service worker</td><td><code>sw.ts</code> (exists, not deeply analysed)</td><td>Registered via <code>VitePWA</code> or custom registration — not verified</td></tr>
+</table>
+
+<h2>2. Player State &amp; Reducer</h2>
+<h3>2.1 State Shape</h3>
+<ul>
+  <li><code>queue</code>, <code>currentIndex</code>, <code>currentSong</code>, <code>status</code> (<code>'loading' | 'playing' | 'paused' | 'error'</code>), <code>positionSec</code>, <code>durationSec</code>, <code>volume</code>, <code>muted</code>, <code>shuffle</code>, <code>repeatMode</code> (<code>'off' | 'all' | 'one'</code>), <code>streamingQuality</code> (<code>'auto' | 'high' | 'low'</code>), <code>activeQuality</code> (<code>'hq' | 'lq' | null</code>), <code>selectionEpoch</code>, <code>playIntent</code>.</li>
+  <li><code>playIntent</code> is a one-shot token (<code>{ id, kind: 'play' | 'pause' }</code>); the provider effect picks it up, acts, then dispatches <code>CLEAR_PLAY_INTENT</code>.</li>
+</ul>
+
+<h3>2.2 Key Actions</h3>
+<ul>
+  <li><code>PLAY_SONG({ song, queue, index })</code> — sets queue + bumps <code>selectionEpoch</code> + sets <code>playIntent(play)</code></li>
+  <li><code>AUTO_NEXT</code> / <code>NEXT</code> / <code>PREV</code> — advance via <code>buildOrder</code> (shuffle-aware)</li>
+  <li><code>SET_STREAMING_QUALITY</code> — session preference only; applied at next song load, never reloads current</li>
+  <li><code>SET_VOLUME</code> — sets volume; unmutes when volume &gt; 0</li>
+  <li><code>RESTART</code> — seeks to 0 on <code>repeat: 'one'</code></li>
+</ul>
+
+<h2>3. Audio-Playback Pipeline</h2>
+<h3>3.1 Source Resolution</h3>
+<p><code>buildAudioCandidates()</code> returns exactly one candidate (GitHub Release URL). Google Drive fallback was removed because 403 responses with key-flagging and <code>Sec-Fetch-Site: cross-site</code> made it unreliable. Failure now triggers retry-with-backoff (1 s → 4 s), not a second host.</p>
+<h3>3.2 Quality Decision</h3>
+<p>Per song: <code>pickAudioSource()</code> chooses HQ or LQ using <code>streamingQuality</code> preference + <code>networkMemory</code> (time-to-buffer and stall counts). The Network Information API is NOT consulted directly; when its fields are absent, the connection is assumed fast.</p>
+<h3>3.3 Load &amp; Recovery</h3>
+<table>
+  <tr><th>Constant</th><th>Value</th><th>Meaning</th></tr>
+  <tr><td><code>STALL_TIMEOUT_MS</code></td><td>10 000 ms</td><td>Watchdog: no progress → stall</td></tr>
+  <tr><td><code>MAX_RECOVERY_ATTEMPTS</code></td><td>1</td><td>One retry per load; initial load + 1 = 2 requests</td></tr>
+  <tr><td><code>NEAR_END_THRESHOLD_S</code></td><td>2 s</td><td>Stall near end → treat as ended</td></tr>
+  <tr><td><code>RECOVERY_BACKOFF_MS</code></td><td>1 000 → 4 000 ms</td><td>Retry delay</td></tr>
+  <tr><td><code>TARGET_BUFFER_S</code></td><td>5 s</td><td>Buffered-start guard</td></tr>
+  <tr><td><code>PROGRESS_EVIDENCE_MS</code></td><td>1 500 ms</td><td>Progress-update threshold</td></tr>
+  <tr><td><code>WARM_THROTTLE_MS</code></td><td>3 000 ms</td><td>Warm-preload throttle</td></tr>
+</table>
+<p>Single-fire <code>ended</code> handling via <code>endHandledRef</code>. <code>onPlay</code> + <code>onPlaying</code> both set status to playing (benign but redundant).</p>
+
+<h2>4. UI Interactions</h2>
+<ul>
+  <li><strong>SongRow click</strong> — if current song → <code>togglePlay()</code>; else <code>playSong(song, queue)</code></li>
+  <li><strong>Keyboard shortcuts</strong> (global <code>keydown</code>): Space = play/pause, ← / → = seek ±5 s, M = mute toggle; ignored when focus is in an input</li>
+  <li><strong>PlayerBar</strong> — mini-player; maps status → loading spinner / play / pause / error icon; falls back to <code>durationSec</code> for display</li>
+  <li><strong>NowPlayingSheet</strong> — auto-opens when <code>selectionEpoch &gt; 0</code> (user-initiated play only, not auto-advance)</li>
+  <li><strong>QualitySetting</strong> — radiogroup (Auto / High / Low); preference persists in localStorage under <code>softyfy:preferences</code></li>
+  <li><strong>QualityNote</strong> — distinguishes manual low quality vs automatic low quality via <code>isManualQualityReason()</code></li>
+  <li><strong>useBackInterception</strong> — pushes a <code>history.pushState({ softyfyOverlay: true })</code> marker so Back closes overlays without disturbing HashRouter routing</li>
+  <li><strong>MediaSession</strong> — position state updated; metadata set on song change</li>
+</ul>
+
+<h2>5. Diagnostics (mediaDebug.ts)</h2>
+<ul>
+  <li>Inert unless <code>?debug</code> URL param or <code>localStorage['softyfy-debug'] === '1'</code></li>
+  <li>Ring buffers (max 400 entries each): events, stalls, recovery attempts</li>
+  <li>Logs go to in-memory arrays only — never console</li>
+</ul>
+
+<h2>6. Potential Bugs &amp; Edge Cases</h2>
+
+<div class="bug"><strong>B1 — Stale playIntent re-run race (PlayerContext.tsx ~line 448)</strong><br>
+The song-load effect reads <code>playIntent</code> from state. Under React StrictMode (double-effect in dev) or rapid queue changes, a cleared-then-restored intent could re-trigger a load for the wrong index. Mitigated by the one-shot <code>CLEAR_PLAY_INTENT</code> dispatch, but timing windows exist.</div>
+
+<div class="bug"><strong>B2 — SET_VOLUME auto-unmute (playerReducer.ts)</strong><br>
+<code>SET_VOLUME</code> unmutes whenever volume &gt; 0 (<code>muted: volume === 0 ? state.muted : false</code>). Adjusting the volume slider while deliberately muted will unexpectedly unmute.</div>
+
+<div class="bug"><strong>B3 — AUTO_NEXT forces status 'loading' even when paused (playerReducer.ts)</strong><br>
+After an auto-next the status is set to <code>'loading'</code> and the playIntent is set to play, meaning auto-advance always starts playback even if the user had explicitly paused before the track ended.</div>
+
+<div class="bug"><strong>B4 — Stall watchdog false positives on silence (useAudioPlayer.ts)</strong><br>
+If a track has a silent intro, <code>currentTime</code> may not change for several seconds and the watchdog (10 s) could falsely declare a stall and trigger a recovery reload.</div>
+
+<div class="bug"><strong>B5 — isSlowConnection assumes "fast" when Network API absent (networkMemory.ts)</strong><br>
+No <code>navigator.connection</code> → falls back to fast-connection defaults. On slow networks without the API (Firefox, older Safari) the quality downgrade is never triggered.</div>
+
+<div class="bug"><strong>B6 — useBackInterception marker leak (useBackInterception.ts)</strong><br>
+If the user navigates away abruptly (external link, tab close) while an overlay is open, the <code>softyfyOverlay</code> history marker is never popped; the next Back press may close nothing.</div>
+
+<div class="bug"><strong>B7 — loadAndPlay shouldPlay=false path (useAudioPlayer.ts)</strong><br>
+When <code>shouldPlay</code> is false the hook loads the new source but does not explicitly <code>pause()</code> the element; if the previous song was playing, the audio element may briefly keep playing the old source until the new <code>src</code> takes effect.</div>
+
+<div class="bug"><strong>B8 — bufferedMeasurableAhead returning null treated as healthy (useAudioPlayer.ts)</strong><br>
+When <code>buffered</code> is empty (<code>null</code> ahead), the buffer guard treats it as "not starved" rather than "unknown", so playback can enter a starvation loop without triggering recovery.</div>
+
+<div class="bug"><strong>B9 — No UI feedback for forced HQ (PlayerContext.tsx / audioSources.ts)</strong><br>
+When <code>streamingQuality === 'auto'</code> and memory says LQ, <code>activeQuality</code> is set to <code>'lq'</code>, but the PlayerBar quality badge may not visibly change (depends on display logic), leaving users unaware of a quality downgrade.</div>
+
+<div class="bug"><strong>B10 — AbortError vs autoplay-policy conflation (useAudioPlayer.ts)</strong><br>
+When <code>play()</code> rejects with an autoplay-policy error (user hasn't interacted yet), it is caught as a generic error and status is set to <code>'error'</code>, not distinguished from a network abort. This may show a misleading "playback error" on first visit.</div>
+
+<div class="bug"><strong>B11 — Stale resumePositions entries never cleaned (storage.ts / PlayerContext.tsx)</strong><br>
+Positions are saved per song but never evicted when a song is removed from the library or the queue; the resume map grows unbounded over a long session.</div>
+
+<div class="bug"><strong>B12 — onStalled + onWaiting both set loading (useAudioPlayer.ts)</strong><br>
+Both events fire on network stall, causing two rapid status updates to <code>'loading'</code>; UI may flicker between loading states.</div>
+
+<div class="bug"><strong>B13 — restart threshold RESTART_THRESHOLD_SECONDS = 3 (PlayerContext.tsx)</strong><br>
+Magic constant: if user is within 3 s of start, PREV restarts rather than going to the previous track; not configurable, not documented in UI.</div>
+
+<div class="bug"><strong>B14 — warmNextSong race on rapid song changes (PlayerContext.tsx ~line 232)</strong><br>
+The warm-target guard checks <code>warmTargetRef</code> after a throttle; if the user rapidly changes songs, the throttle window may block the new target and the previously warmed song stays wasted.</div>
+
+<div class="bug"><strong>B15 — Cover palette fallback silent (useSongPalette.ts)</strong><br>
+When cover image load fails for palette extraction, the hook silently falls back to default colors; no warning logged, so theming bugs are hard to diagnose.</div>
+
+<h2>7. Data-Flow Summary</h2>
+<pre>
+User click (SongRow / AlbumCard)
+  → dispatch(PLAY_SONG)  [reducer: queue, selectionEpoch++, playIntent]
+    → PlayerContext effect detects playIntent
+      → pickAudioSource(streamingQuality, networkMemory, song)
+        → buildAudioCandidates(song, tier)  [single GitHub URL]
+        → audioRef.load() via loadAndPlay() in useAudioPlayer
+        → MediaSession metadata + position state
+      → dispatch(CLEAR_PLAY_INTENT)
+    → AppShell sees selectionEpoch > 0 → opens NowPlayingSheet
+
+Audio element events (timeupdate / ended / stalled / error / waiting)
+  → useAudioPlayer handlers
+    → dispatches: SET_POSITION, AUTO_NEXT, SET_STATUS, RECOVER_ATTEMPT
+      → reducer updates state → consumers re-render
+
+Warm preload (throttled 3 s)
+  → fetch HEAD / range probe on next queue item's URL
+    → caches Audio element via audioCache
+</pre>
+
+<h2>8. Methodology</h2>
+<ul>
+  <li>All conclusions drawn from static source reading (grep / glob / read tools) — no files were created, edited, or mutated during analysis.</li>
+  <li>No builds, installs, or test runs were performed.</li>
+  <li>Git state left untouched.</li>
+</ul>
+
+<h2>9. Files Analysed</h2>
+<ul>
+  <li><code>frontend/src/context/playerReducer.ts</code>, <code>PlayerContext.tsx</code></li>
+  <li><code>frontend/src/hooks/useAudioPlayer.ts</code>, <code>useBackInterception.ts</code></li>
+  <li><code>frontend/src/lib/audioSources.ts</code>, <code>networkMemory.ts</code>, <code>mediaDebug.ts</code>, <code>storage.ts</code></li>
+  <li><code>frontend/src/types/song.ts</code></li>
+  <li><code>frontend/src/components/player/PlayerBar.tsx</code>, <code>QualitySetting.tsx</code>, <code>QualityNote.tsx</code>, <code>VolumeControl.tsx</code></li>
+  <li><code>frontend/src/components/song/SongRow.tsx</code></li>
+  <li><code>frontend/src/components/layout/AppShell.tsx</code></li>
+  <li><code>frontend/src/pages/Home.tsx</code></li>
+  <li><code>frontend/src/App.tsx</code>, <code>main.tsx</code></li>
+</ul>
+
+<p class="meta">Report generated by REA reverse-engineering workflow — read-only, no mutations.</p>
+</body>
+</html>

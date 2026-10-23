@@ -1,5 +1,5 @@
 import { AnimatePresence, motion, useMotionValue, useReducedMotion, type PanInfo } from 'framer-motion'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import type { ReactNode } from 'react'
 import { usePlayer } from '../../context/PlayerContext'
 import { useBackInterception } from '../../hooks/useBackInterception'
@@ -7,7 +7,6 @@ import { CoverBackground } from '../ambient/CoverBackground'
 import { Cover } from '../song/Cover'
 import {
   ChevronDownIcon,
-  ListMusicIcon,
   LoaderIcon,
   PauseIcon,
   PlayIcon,
@@ -17,20 +16,18 @@ import {
   SkipForwardIcon,
 } from '../ui/icons'
 import { ProgressBar } from './ProgressBar'
-import { VolumeControl } from './VolumeControl'
 import { QualityNote } from './QualityNote'
 import { QualitySetting } from './QualitySetting'
 
 interface NowPlayingSheetProps { open: boolean; onClose: () => void }
 
-/** Expanded cinematic transport with artwork, live queue, and stream settings. */
+/** Expanded cinematic transport with artwork and stream settings. */
 export function NowPlayingSheet({ open, onClose }: NowPlayingSheetProps) {
   const {
-    currentSong, status, shuffle, repeat, currentQuality, upcomingSongs, queue,
-    togglePlay, next, previous, toggleShuffle, cycleRepeat, playSong,
+    currentSong, status, shuffle, repeat, currentQuality,
+    togglePlay, next, previous, toggleShuffle, cycleRepeat,
   } = usePlayer()
   const reduced = useReducedMotion()
-  const [queueOpen, setQueueOpen] = useState(false)
   useBackInterception(open, onClose)
 
   const y = useMotionValue(0)
@@ -55,7 +52,6 @@ export function NowPlayingSheet({ open, onClose }: NowPlayingSheetProps) {
 
   const isPlaying = status === 'playing'
   const isLoading = status === 'loading'
-  const playbackQueue = [currentSong, ...upcomingSongs].filter((song) => queue.some((item) => item.id === song.id))
 
   return (
     <AnimatePresence>
@@ -95,7 +91,7 @@ export function NowPlayingSheet({ open, onClose }: NowPlayingSheetProps) {
 
               <section className="sonic-now-play-column" aria-label="Playback details">
                 <div className="sonic-now-heading">
-                  <span>SONIC NEXUS · Now playing</span>
+                  <span>SoftyFy · Now playing</span>
                   <button type="button" className="sonic-now-close" onClick={onClose} aria-label="Collapse now playing"><ChevronDownIcon /></button>
                 </div>
 
@@ -119,40 +115,13 @@ export function NowPlayingSheet({ open, onClose }: NowPlayingSheetProps) {
 
                 <div className="sonic-now-settings">
                   <div className="sonic-now-quality"><QualitySetting /></div>
-                  <VolumeControl expanded />
                 </div>
-
-                <button type="button" className={`sonic-queue-toggle${queueOpen ? ' is-active' : ''}`} aria-expanded={queueOpen} onClick={() => setQueueOpen((value) => !value)}>
-                  <ListMusicIcon /> {queueOpen ? 'Hide listening queue' : `Listening queue · ${1 + upcomingSongs.length}`} <span aria-hidden="true">{queueOpen ? '−' : '+'}</span>
-                </button>
-                {queueOpen && (
-                  <div className="sonic-queue-panel">
-                    <h3>Up next</h3>
-                    <div className="sonic-queue-list">
-                      <QueueTrack song={currentSong} current onSelect={() => playSong(currentSong, playbackQueue)} />
-                      {upcomingSongs.map((song, index) => (
-                        <QueueTrack key={`${song.id}-${index}`} song={song} onSelect={() => playSong(song, playbackQueue)} />
-                      ))}
-                      {upcomingSongs.length === 0 && <p className="px-2 py-3 text-[10px] text-muted">End of this listening queue.</p>}
-                    </div>
-                  </div>
-                )}
               </section>
             </div>
           </motion.div>
         </motion.div>
       )}
     </AnimatePresence>
-  )
-}
-
-function QueueTrack({ song, current = false, onSelect }: { song: NonNullable<ReturnType<typeof usePlayer>['currentSong']>; current?: boolean; onSelect: () => void }) {
-  return (
-    <button type="button" className="sonic-queue-item" onClick={onSelect}>
-      <Cover src={song.coverSrc} alt="" />
-      <span><strong>{song.title}</strong><span>{song.artist}</span></span>
-      {current ? <span className="sonic-queue-current">Playing</span> : <span aria-hidden="true">↗</span>}
-    </button>
   )
 }
 

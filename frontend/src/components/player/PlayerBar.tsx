@@ -11,7 +11,6 @@ import {
   SkipBackIcon,
   SkipForwardIcon,
 } from '../ui/icons'
-import { VolumeControl } from './VolumeControl'
 import { ProgressBar } from './ProgressBar'
 
 interface PlayerBarProps { onOpenSheet: () => void }
@@ -57,7 +56,6 @@ export function PlayerBar({ onOpenSheet }: PlayerBarProps) {
         </div>
 
         <div className="sonic-player-tools">
-          <VolumeControl />
           <button type="button" className="sonic-expand-button" onClick={onOpenSheet} aria-label="Expand now playing"><ChevronUpIcon /></button>
         </div>
       </div>

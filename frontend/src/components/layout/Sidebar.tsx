@@ -3,21 +3,21 @@ import { LIBRARIES, SONGS, SONGS_BY_LIBRARY } from '../../data/songs'
 import { Music2Icon } from '../ui/icons'
 import { NAV_ITEMS } from './navItems'
 
-/** Desktop navigation for the SONIC NEXUS listening room. */
+/** Desktop navigation for SoftyFy. */
 export function Sidebar() {
   return (
-    <aside className="sonic-sidebar" aria-label="SONIC NEXUS navigation">
-      <NavLink to="/" className="sonic-brand" aria-label="SONIC NEXUS home">
+    <aside className="sonic-sidebar" aria-label="SoftyFy navigation">
+      <NavLink to="/" className="sonic-brand" aria-label="SoftyFy home">
         <span className="sonic-brand-mark"><Music2Icon className="h-5 w-5" /></span>
         <span>
-          <span className="sonic-brand-name">SONIC<br />NEXUS</span>
+          <span className="sonic-brand-name">SoftyFy</span>
           <span className="sonic-brand-caption">Personal listening room</span>
         </span>
       </NavLink>
 
       <p className="sonic-side-label">Listen</p>
       <nav className="sonic-nav" aria-label="Main">
-        {NAV_ITEMS.filter(({ to }) => to !== '/qwali').map(({ to, label, icon: Icon, end }) => (
+        {NAV_ITEMS.map(({ to, label, icon: Icon, end }) => (
           <NavLink
             key={to}
             to={to}
