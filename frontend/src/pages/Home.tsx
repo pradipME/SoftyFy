@@ -1,158 +1,90 @@
 import { useMemo } from 'react'
-import type { CSSProperties } from 'react'
+import { motion, type Variants } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import { Stagger, StaggerItem } from '../components/motion/Stagger'
 import { Cover } from '../components/song/Cover'
-import { CreditFooter } from '../components/ui/CreditFooter'
 import { PlayIcon } from '../components/ui/icons'
 import { SONGS, SONGS_BY_LIBRARY } from '../data/songs'
 import { usePlayer } from '../context/PlayerContext'
+import { formatPlaybackTime } from '../lib/format'
 
-function greetingFor(date: Date): string {
-  const hour = date.getHours()
-  if (hour < 5) return 'After hours'
-  if (hour < 12) return 'A new day'
-  if (hour < 18) return 'Midday listening'
-  return 'Evening mode'
+const stagger: Variants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.045, delayChildren: 0.025 } },
+}
+
+const cardReveal: Variants = {
+  hidden: { opacity: 0, y: 15, scale: 0.97 },
+  show: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.34, ease: 'easeOut' } },
+}
+
+const sectionReveal: Variants = {
+  hidden: { opacity: 0, y: 16 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' } },
 }
 
 export function HomePage() {
-  const greeting = useMemo(() => greetingFor(new Date()), [])
   const navigate = useNavigate()
   const { currentSong, status, playSong } = usePlayer()
   const collections = Object.entries(SONGS_BY_LIBRARY)
-  const currentCollection = currentSong?.library && SONGS_BY_LIBRARY[currentSong.library]
-    ? currentSong.library
-    : collections[0]?.[0]
-  const featuredSongs = currentCollection ? SONGS_BY_LIBRARY[currentCollection] ?? [] : []
-  const featuredSong = currentSong && currentSong.library === currentCollection ? currentSong : featuredSongs[0]
-  const isPlaying = status === 'playing'
-
-  const playCollection = (name: string, songs: typeof SONGS) => {
-    const selected = currentSong && currentSong.library === name ? currentSong : songs[0]
-    if (selected) playSong(selected, songs)
-  }
+  const quickPicks = useMemo(() => {
+    if (!currentSong) return SONGS.slice(0, 9)
+    const rest = SONGS.filter((song) => song.id !== currentSong.id)
+    return [currentSong, ...rest].slice(0, 9)
+  }, [currentSong])
 
   return (
-    <div className="sonic-page sonic-page--home">
-      <section
-        className="sonic-feature"
-        style={{ '--feature-accent': colorForCollection(featuredSong?.id ?? currentCollection ?? 'sonic') } as CSSProperties}
-        aria-labelledby="home-title"
-      >
-        <div className="sonic-feature-copy">
-          <p className="sonic-eyebrow">{greeting} · your private archive</p>
-          <h1 className="sonic-display" id="home-title">Your soundtrack,<br /><em>in living color.</em></h1>
-          <p className="sonic-feature-sub">
-            {featuredSong
-              ? `A collection called ${currentCollection} is ready in your listening room. ${featuredSongs.length} tracks, one continuous mood.`
-              : 'Your personal music archive, gathered into one quiet place.'}
-          </p>
-          <div className="sonic-feature-actions">
-            {featuredSongs.length > 0 && (
-              <button type="button" className="sonic-action-primary" onClick={() => playCollection(currentCollection!, featuredSongs)}>
-                <PlayIcon /> Play collection
-              </button>
-            )}
-            {currentCollection && (
-              <button type="button" className="sonic-action-quiet" onClick={() => navigate(`/library?album=${encodeURIComponent(currentCollection)}`)}>
-                Explore collection <span aria-hidden="true">↗</span>
-              </button>
-            )}
-          </div>
+    <motion.div className="sonic-page sonic-page--home metro-home" initial="hidden" animate="show" variants={stagger}>
+      <motion.div className="metro-chips" aria-label="Your collections" variants={sectionReveal}>
+        <motion.button type="button" className="metro-chip is-selected" onClick={() => navigate('/')} whileTap={{ scale: 0.96 }}>For you</motion.button>
+        {collections.slice(0, 5).map(([name]) => (
+          <motion.button key={name} type="button" className="metro-chip" onClick={() => navigate(`/library?album=${encodeURIComponent(name)}`)} whileTap={{ scale: 0.96 }}>{name}</motion.button>
+        ))}
+      </motion.div>
+
+      <motion.section aria-labelledby="albums-title" variants={sectionReveal}>
+        <div className="metro-section-heading">
+          <div><p className="sonic-eyebrow">Browse your collection</p><h2 id="albums-title">Albums</h2></div>
         </div>
-        <div className="sonic-feature-art" aria-hidden="true">
-          <div className="sonic-art-orbit" />
-          {featuredSong && <Cover key={featuredSong.id} src={featuredSong.coverSrc} alt="" className="sonic-feature-cover" />}
-          <span className="sonic-art-index">COLLECTION 01 / {String(collections.length).padStart(2, '0')}</span>
-        </div>
-      </section>
+        <motion.div className="metro-albums-grid" variants={stagger} initial="hidden" animate="show">
+          {collections.map(([name, songs]) => (
+            <motion.button key={name} type="button" className="metro-album-tile" variants={cardReveal} whileTap={{ scale: 0.96 }} onClick={() => navigate(`/library?album=${encodeURIComponent(name)}`)}>
+              <Cover src={songs[0]?.coverSrc ?? ''} alt="" className="metro-album-tile-cover" />
+              <span className="metro-album-tile-title">{name}<small>{songs.length} songs</small></span>
+            </motion.button>
+          ))}
+        </motion.div>
+      </motion.section>
 
       {currentSong && (
-        <section aria-label="Current listening">
-          <div className="sonic-section-head">
-            <div>
-              <p className="sonic-eyebrow">The room is alive</p>
-              <h2>On your frequency</h2>
-            </div>
-            <span className="sonic-current-tag">{isPlaying ? 'Now playing' : 'Last selected'}</span>
+        <motion.section aria-labelledby="keep-listening-title" variants={sectionReveal}>
+          <div className="metro-section-heading">
+            <div><p className="sonic-eyebrow">Pick up where you left off</p><h2 id="keep-listening-title">Keep listening</h2></div>
           </div>
-          <button type="button" className="sonic-current-strip w-full bg-transparent text-left" onClick={() => document.dispatchEvent(new CustomEvent('softyfy:open-player'))}>
-            <Cover key={currentSong.id} src={currentSong.coverSrc} alt={currentSong.title} />
-            <span className="sonic-current-copy">
-              <strong>{currentSong.title}</strong>
-              <span>{currentSong.artist} · {currentSong.library}</span>
-            </span>
-            <span className="sonic-eyebrow">{isPlaying ? 'Listening' : 'Continue'} ↗</span>
-          </button>
-        </section>
+          <motion.div className="metro-horizontal-list" variants={stagger} initial="hidden" animate="show">
+            {collections.map(([name, songs]) => (
+              <motion.button key={name} type="button" className="metro-album-card" variants={cardReveal} whileTap={{ scale: 0.96 }} onClick={() => playSong(songs[0], songs)}>
+                <span className="metro-album-cover-wrap"><Cover src={songs[0]?.coverSrc ?? ''} alt="" className="metro-album-cover" /><span className="metro-album-play"><PlayIcon /></span></span>
+                <strong>{name}</strong><span>{songs.length} songs</span>
+              </motion.button>
+            ))}
+          </motion.div>
+        </motion.section>
       )}
 
-      <section aria-labelledby="soundtrack-title">
-        <div className="sonic-section-head">
-          <div>
-            <p className="sonic-eyebrow">A personal listening archive</p>
-            <h2 id="soundtrack-title">Your soundtrack</h2>
-            <p>{SONGS.length} songs across {collections.length} collections</p>
-          </div>
-          <button type="button" className="sonic-text-link" onClick={() => navigate('/library')}>All tracks ↗</button>
+      <motion.section aria-labelledby="quick-picks-title" variants={sectionReveal}>
+        <div className="metro-section-heading">
+          <div><p className="sonic-eyebrow">Picked from your music</p><h2 id="quick-picks-title">Speed dial</h2></div>
+          <motion.button type="button" className="metro-more" onClick={() => navigate('/library')} aria-label="See all songs" whileTap={{ scale: 0.88, rotate: 18 }}>•••</motion.button>
         </div>
-        <Stagger className="sonic-collection-grid">
-          {collections.map(([name, songs], index) => (
-            <StaggerItem key={name}>
-              <CollectionCard
-                name={name}
-                songs={songs}
-                index={index}
-                onOpen={() => navigate(`/library?album=${encodeURIComponent(name)}`)}
-                onPlay={() => playCollection(name, songs)}
-              />
-            </StaggerItem>
+        <motion.div className="metro-horizontal-list metro-song-shelf" variants={stagger} initial="hidden" animate="show">
+          {quickPicks.map((song) => (
+            <motion.button key={song.id} type="button" className="metro-song-card" variants={cardReveal} whileTap={{ scale: 0.96 }} onClick={() => playSong(song, SONGS)}>
+              <motion.span className="metro-song-card-art" layoutId={`now-playing-art-${song.id}`}><Cover src={song.coverSrc} alt="" className="metro-song-cover" />{currentSong?.id === song.id && status === 'playing' && <i className="metro-song-playing" />}</motion.span>
+              <strong>{song.title}</strong><span>{song.artist}{song.durationSec > 0 ? ` · ${formatPlaybackTime(song.durationSec)}` : ''}</span>
+            </motion.button>
           ))}
-        </Stagger>
-      </section>
-
-      <CreditFooter className="mt-1" />
-    </div>
+        </motion.div>
+      </motion.section>
+    </motion.div>
   )
-}
-
-function CollectionCard({
-  name,
-  songs,
-  index,
-  onOpen,
-  onPlay,
-}: {
-  name: string
-  songs: typeof SONGS
-  index: number
-  onOpen: () => void
-  onPlay: () => void
-}) {
-  const cover = songs[0]?.coverSrc ?? ''
-  return (
-    <article className="sonic-collection-card">
-      <div className="sonic-card-visual">
-        <button type="button" onClick={onOpen} aria-label={`Open ${name} collection`} className="sonic-card-art-wrap w-full border-0 p-0 text-left">
-          <Cover src={cover} alt={name} className="sonic-card-art" />
-          <span className="absolute left-3 top-3 z-10 text-[9px] tracking-[.16em] text-white/75">{String(index + 1).padStart(2, '0')}</span>
-        </button>
-        <button type="button" className="sonic-card-play" onClick={onPlay} aria-label={`Play ${name}`}>
-          <PlayIcon className="h-4 w-4" />
-        </button>
-      </div>
-      <button type="button" onClick={onOpen} className="block w-full border-0 bg-transparent p-0 text-left">
-        <span className="sonic-card-title">{name}</span>
-        <span className="sonic-card-meta">{songs.length} tracks · collection</span>
-      </button>
-    </article>
-  )
-}
-
-function colorForCollection(seed: string): string {
-  let hash = 0
-  for (const character of seed) hash = (hash * 31 + character.charCodeAt(0)) >>> 0
-  const hue = hash % 360
-  return `hsl(${hue} 24% 42%)`
 }

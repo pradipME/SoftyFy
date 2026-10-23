@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { usePlayer } from '../../context/PlayerContext'
 import { Cover } from '../song/Cover'
 import {
@@ -13,7 +14,9 @@ import {
 } from '../ui/icons'
 import { ProgressBar } from './ProgressBar'
 
-interface PlayerBarProps { onOpenSheet: () => void }
+type PlayerBarSource = 'desktop' | 'mobile'
+
+interface PlayerBarProps { onOpenSheet: (source: PlayerBarSource) => void }
 
 /** Persistent desktop transport and a compact mobile listening strip. */
 export function PlayerBar({ onOpenSheet }: PlayerBarProps) {
@@ -21,7 +24,6 @@ export function PlayerBar({ onOpenSheet }: PlayerBarProps) {
     currentSong, status, currentTime, duration, shuffle, repeat, error,
     togglePlay, next, previous, toggleShuffle, cycleRepeat,
   } = usePlayer()
-
   if (!currentSong) return null
 
   const isPlaying = status === 'playing'
@@ -33,9 +35,11 @@ export function PlayerBar({ onOpenSheet }: PlayerBarProps) {
 
   return (
     <>
-      <div className="sonic-playerbar hidden md:grid" style={{ '--play-progress': `${percent}%` } as CSSProperties} aria-label="Playback controls">
-        <button type="button" onClick={onOpenSheet} className="sonic-player-track" aria-label={`Open now playing: ${currentSong.title}`}>
-          <Cover src={currentSong.coverSrc} alt="" className="sonic-player-cover" />
+      <motion.div className="sonic-playerbar hidden md:grid" style={{ '--play-progress': `${percent}%` } as CSSProperties} aria-label="Playback controls" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ type: 'spring', stiffness: 360, damping: 32 }}>
+        <button type="button" onClick={() => onOpenSheet('desktop')} className="sonic-player-track" aria-label={`Open now playing: ${currentSong.title}`}>
+          <motion.span className="sonic-player-art-transition" layoutId={`desktop-player-art-${currentSong.id}`}>
+            <Cover src={currentSong.coverSrc} alt="" className="sonic-player-cover" />
+          </motion.span>
           <span className="sonic-player-info">
             <strong>{currentSong.title}</strong>
             <span className={error ? 'text-danger' : ''}>{error ? 'Unable to play this track' : currentSong.artist}</span>
@@ -56,17 +60,36 @@ export function PlayerBar({ onOpenSheet }: PlayerBarProps) {
         </div>
 
         <div className="sonic-player-tools">
-          <button type="button" className="sonic-expand-button" onClick={onOpenSheet} aria-label="Expand now playing"><ChevronUpIcon /></button>
+          <button type="button" className="sonic-expand-button" onClick={() => onOpenSheet('desktop')} aria-label="Expand now playing"><ChevronUpIcon /></button>
         </div>
-      </div>
+      </motion.div>
 
-      <div className="sonic-mobile-player md:hidden" style={{ '--play-progress': `${percent}%` } as CSSProperties}>
-        <button type="button" onClick={onOpenSheet} className="sonic-player-track" aria-label={`Open now playing: ${currentSong.title}`}>
-          <Cover src={currentSong.coverSrc} alt="" className="sonic-player-cover" />
+      <motion.div className="sonic-mobile-player md:hidden" style={{ '--play-progress': `${percent}%` } as CSSProperties} initial={{ opacity: 0, y: 18, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 380, damping: 32 }}>
+        <button type="button" onClick={() => onOpenSheet('mobile')} className="sonic-player-track" aria-label={`Open now playing: ${currentSong.title}`}>
+          <motion.span
+            className="sonic-player-art-transition"
+            layoutId={`mobile-player-art-${currentSong.id}`}
+            style={{ '--cover-progress': `${percent}%` } as CSSProperties}
+          >
+            <Cover src={currentSong.coverSrc} alt="" className="sonic-player-cover" />
+          </motion.span>
           <span className="sonic-player-info"><strong>{currentSong.title}</strong><span>{error ? 'Unable to play this track' : currentSong.artist}</span></span>
         </button>
-        <button type="button" onClick={togglePlay} aria-label={playLabel} className="sonic-play-button">{playIcon}</button>
-      </div>
+        <motion.button type="button" onClick={togglePlay} aria-label={playLabel} aria-pressed={isPlaying} className="metro-mini-action" whileTap={{ scale: 0.9 }}>
+          <AnimatePresence initial={false} mode="wait">
+            <motion.span
+              key={isLoading ? 'loading' : isPlaying ? 'pause' : 'play'}
+              className="metro-mini-action-icon"
+              initial={{ opacity: 0, scale: 0.72, rotate: -18 }}
+              animate={{ opacity: 1, scale: 1, rotate: 0 }}
+              exit={{ opacity: 0, scale: 0.72, rotate: 18 }}
+              transition={{ duration: 0.16, ease: 'easeOut' }}
+            >
+              {playIcon}
+            </motion.span>
+          </AnimatePresence>
+        </motion.button>
+      </motion.div>
     </>
   )
 }

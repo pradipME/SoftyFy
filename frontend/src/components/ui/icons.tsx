@@ -117,6 +117,55 @@ export const RepeatIcon = icon(
   </>,
 )
 
+export const HeartIcon = icon(
+  <path d="M20.8 8.8c0 5.5-8.8 11.2-8.8 11.2S3.2 14.3 3.2 8.8A4.7 4.7 0 0 1 12 6.2a4.7 4.7 0 0 1 8.8 2.6Z" />,
+)
+
+export const ShareIcon = icon(
+  <>
+    <path d="M12 16V4" />
+    <path d="m7 9 5-5 5 5" />
+    <path d="M5 13v6h14v-6" />
+  </>,
+)
+
+export const QueueIcon = icon(
+  <>
+    <path d="M4 6h12" /><path d="M4 11h12" /><path d="M4 16h7" />
+    <path d="m16 14 5 3-5 3v-6Z" />
+  </>,
+)
+
+export const MoreIcon = icon(
+  <>
+    <circle cx="12" cy="5" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="12" cy="19" r="1" />
+  </>,
+)
+
+export const HistoryIcon = icon(
+  <>
+    <path d="M3 12a9 9 0 1 0 2.6-6.4L3 8" /><path d="M3 3v5h5" /><path d="M12 7v5l3 2" />
+  </>,
+)
+
+export const TrendingIcon = icon(
+  <>
+    <path d="M4 17 10 11l4 4 6-8" /><path d="M14 7h6v6" />
+  </>,
+)
+
+export const PeopleIcon = icon(
+  <>
+    <circle cx="9" cy="8" r="3" /><path d="M3 20v-1a6 6 0 0 1 12 0v1Z" /><path d="M16 5.5a3 3 0 0 1 0 5.8M18 14a5 5 0 0 1 3 4.6V20" />
+  </>,
+)
+
+export const UserIcon = icon(
+  <>
+    <circle cx="12" cy="8" r="3.5" /><path d="M4.5 21a7.5 7.5 0 0 1 15 0" />
+  </>,
+)
+
 export const VolumeIcon = icon(
   <>
     <path d="M11 5 6 9H2v6h4l5 4V5Z" />
