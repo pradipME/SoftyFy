@@ -15,12 +15,12 @@ import { UpdateToast } from './UpdateToast'
  *
  * Already-open tabs can miss an update because Chromium only checks the SW
  * script for changes on load and then ~every 24 h. Two low-cost fixes:
- *   - `navigator.serviceWorker.getRegistration().update()` on a 30-minute
+ *   - `navigator.serviceWorker.getRegistration().update()` every 10 minutes
  *     interval covers long-lived sessions.
  *   - Re-probe on `visibilitychange → visible` so the banner appears
  *     shortly after the user switches back to the tab.
  */
-const UPDATE_CHECK_INTERVAL_MS = 30 * 60 * 1000
+const UPDATE_CHECK_INTERVAL_MS = 10 * 60 * 1000
 
 export function PwaUpdater() {
   const { status, togglePlay } = usePlayer()
