@@ -5,7 +5,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { SongList } from '../components/song/SongList'
 import { Cover } from '../components/song/Cover'
 import { ArrowLeftIcon, ArrowRightIcon, HeartIcon, MoreIcon, PlayIcon, SearchIcon } from '../components/ui/icons'
-import { SONGS } from '../data/songs'
+import { SONGS, SONGS_BY_LIBRARY } from '../data/songs'
 import { usePlayer } from '../context/PlayerContext'
 import type { Song } from '../types/song'
 import { formatPlaybackTime } from '../lib/format'
@@ -27,7 +27,7 @@ function sortSongs(songs: Song[], key: SortKey, ascending: boolean): Song[] {
 export function LibraryPage() {
   const [searchParams] = useSearchParams()
   const album = searchParams.get('album')
-  const songs = useMemo(() => album ? SONGS.filter((song) => song.library === album) : SONGS, [album])
+  const songs = album ? SONGS_BY_LIBRARY[album] ?? [] : SONGS
   return album ? <AlbumDetail title={album} songs={songs} /> : <AllTracks songs={songs} />
 }
 
@@ -51,7 +51,7 @@ function AlbumDetail({ title, songs }: { title: string; songs: Song[] }) {
       </div>
       <header className="metro-album-detail" style={{ '--album-accent': colorForCollection(title) } as CSSProperties}>
         <div className="metro-album-detail-art">
-          {cover && <Cover src={cover} alt={`${title} cover`} className="metro-album-detail-cover" />}
+          {cover && <Cover src={cover} alt={`${title} cover`} className="metro-album-detail-cover" width={800} priority />}
           <span>{title}</span>
         </div>
         <h1>{title}</h1>
@@ -74,7 +74,7 @@ function AlbumDetail({ title, songs }: { title: string; songs: Song[] }) {
             <article className="metro-album-track-row" key={song.id}>
               <button type="button" className="metro-album-track-main" onClick={() => playSong(song, sorted)}>
                 <motion.div className="metro-album-track-cover-transition" layoutId={`now-playing-art-${song.id}`}>
-                  <Cover src={song.coverSrc} alt="" className="metro-album-track-cover" />
+                  <Cover src={song.coverSrc} alt="" className="metro-album-track-cover" width={128} />
                 </motion.div>
                 <span><strong>{song.title}</strong><small>{song.artist}{song.durationSec > 0 ? ` · ${formatPlaybackTime(song.durationSec)}` : ''}</small></span>
               </button>

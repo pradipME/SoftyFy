@@ -48,7 +48,7 @@ export function HomePage() {
         <motion.div className="metro-albums-grid" variants={stagger} initial="hidden" animate="show">
           {collections.map(([name, songs]) => (
             <motion.button key={name} type="button" className="metro-album-tile" variants={cardReveal} whileTap={{ scale: 0.96 }} onClick={() => navigate(`/library?album=${encodeURIComponent(name)}`)}>
-              <Cover src={songs[0]?.coverSrc ?? ''} alt="" className="metro-album-tile-cover" />
+              <Cover src={songs[0]?.coverSrc ?? ''} alt="" className="metro-album-tile-cover" width={400} />
               <span className="metro-album-tile-title">{name}<small>{songs.length} songs</small></span>
             </motion.button>
           ))}
@@ -63,7 +63,7 @@ export function HomePage() {
           <motion.div className="metro-horizontal-list" variants={stagger} initial="hidden" animate="show">
             {collections.map(([name, songs]) => (
               <motion.button key={name} type="button" className="metro-album-card" variants={cardReveal} whileTap={{ scale: 0.96 }} onClick={() => playSong(songs[0], songs)}>
-                <span className="metro-album-cover-wrap"><Cover src={songs[0]?.coverSrc ?? ''} alt="" className="metro-album-cover" /><span className="metro-album-play"><PlayIcon /></span></span>
+                <span className="metro-album-cover-wrap"><Cover src={songs[0]?.coverSrc ?? ''} alt="" className="metro-album-cover" width={400} /><span className="metro-album-play"><PlayIcon /></span></span>
                 <strong>{name}</strong><span>{songs.length} songs</span>
               </motion.button>
             ))}
@@ -79,7 +79,7 @@ export function HomePage() {
         <motion.div className="metro-horizontal-list metro-song-shelf" variants={stagger} initial="hidden" animate="show">
           {quickPicks.map((song) => (
             <motion.button key={song.id} type="button" className="metro-song-card" variants={cardReveal} whileTap={{ scale: 0.96 }} onClick={() => playSong(song, SONGS)}>
-              <motion.span className="metro-song-card-art" layoutId={`now-playing-art-${song.id}`}><Cover src={song.coverSrc} alt="" className="metro-song-cover" />{currentSong?.id === song.id && status === 'playing' && <i className="metro-song-playing" />}</motion.span>
+              <motion.span className="metro-song-card-art" layoutId={`now-playing-art-${song.id}`}><Cover src={song.coverSrc} alt="" className="metro-song-cover" width={400} />{currentSong?.id === song.id && status === 'playing' && <i className="metro-song-playing" />}</motion.span>
               <strong>{song.title}</strong><span>{song.artist}{song.durationSec > 0 ? ` · ${formatPlaybackTime(song.durationSec)}` : ''}</span>
             </motion.button>
           ))}

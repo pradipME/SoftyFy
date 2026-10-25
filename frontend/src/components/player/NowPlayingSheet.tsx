@@ -144,7 +144,7 @@ export function NowPlayingSheet({ open, onClose, artworkLayoutId }: NowPlayingSh
                         animate="center"
                         exit="exit"
                       >
-                        <Cover src={currentSong.coverSrc} alt={`${currentSong.title} cover art`} className="sonic-now-art-image" />
+                        <Cover src={currentSong.coverSrc} alt={`${currentSong.title} cover art`} className="sonic-now-art-image" width={1000} priority />
                       </motion.div>
                     </AnimatePresence>
                   </motion.div>
@@ -214,7 +214,7 @@ export function NowPlayingSheet({ open, onClose, artworkLayoutId }: NowPlayingSh
                   <button type="button" className="metro-more-button" onClick={() => setMoreOpen(true)} aria-label="More playback options" aria-expanded={moreOpen}><MoreIcon /></button>
                 </div>
                 <AnimatePresence initial={false}>
-                  {queueOpen && <motion.section key="queue-panel" className="metro-queue-panel" aria-label="Upcoming songs" initial={{ opacity: 0, height: 0, y: 12 }} animate={{ opacity: 1, height: 'auto', y: 0 }} exit={{ opacity: 0, height: 0, y: 8 }} transition={{ duration: 0.22, ease: 'easeOut' }}><h3>Up next</h3>{upcomingSongs.length ? upcomingSongs.slice(0, 6).map((song) => <div className="metro-queue-item" key={song.id}><Cover src={song.coverSrc} alt="" /><span><strong>{song.title}</strong><small>{song.artist}</small></span></div>) : <p>No more songs in the queue.</p>}</motion.section>}
+                  {queueOpen && <motion.section key="queue-panel" className="metro-queue-panel" aria-label="Upcoming songs" initial={{ opacity: 0, height: 0, y: 12 }} animate={{ opacity: 1, height: 'auto', y: 0 }} exit={{ opacity: 0, height: 0, y: 8 }} transition={{ duration: 0.22, ease: 'easeOut' }}><h3>Up next</h3>{upcomingSongs.length ? upcomingSongs.slice(0, 6).map((song) => <div className="metro-queue-item" key={song.id}><Cover src={song.coverSrc} alt="" width={128} /><span><strong>{song.title}</strong><small>{song.artist}</small></span></div>) : <p>No more songs in the queue.</p>}</motion.section>}
                 </AnimatePresence>
               </motion.section>
             </div>
@@ -238,7 +238,7 @@ export function NowPlayingSheet({ open, onClose, artworkLayoutId }: NowPlayingSh
                   onClick={(event) => event.stopPropagation()}
                 >
                   <div className="metro-playback-sheet-handle" />
-                  <div className="metro-playback-sheet-track"><Cover src={currentSong.coverSrc} alt="" /><span><strong>{currentSong.title}</strong><small>{currentSong.artist}</small></span></div>
+                  <div className="metro-playback-sheet-track"><Cover src={currentSong.coverSrc} alt="" width={160} /><span><strong>{currentSong.title}</strong><small>{currentSong.artist}</small></span></div>
                   <div className="metro-sheet-volume">
                     <button type="button" onClick={toggleMute} aria-label={muted ? 'Unmute' : 'Mute'}>{muted ? <VolumeMuteIcon /> : <VolumeIcon />}</button>
                     <input aria-label="Volume" type="range" min="0" max="1" step="0.01" value={muted ? 0 : volume} onChange={(event) => { const nextVolume = Number(event.target.value); if (muted && nextVolume > 0) toggleMute(); setVolume(nextVolume) }} />

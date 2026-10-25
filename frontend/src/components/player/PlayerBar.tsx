@@ -38,7 +38,7 @@ export function PlayerBar({ onOpenSheet }: PlayerBarProps) {
       <motion.div className="sonic-playerbar hidden md:grid" style={{ '--play-progress': `${percent}%` } as CSSProperties} aria-label="Playback controls" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ type: 'spring', stiffness: 360, damping: 32 }}>
         <button type="button" onClick={() => onOpenSheet('desktop')} className="sonic-player-track" aria-label={`Open now playing: ${currentSong.title}`}>
           <motion.span className="sonic-player-art-transition" layoutId={`desktop-player-art-${currentSong.id}`}>
-            <Cover src={currentSong.coverSrc} alt="" className="sonic-player-cover" />
+            <Cover src={currentSong.coverSrc} alt="" className="sonic-player-cover" width={160} />
           </motion.span>
           <span className="sonic-player-info">
             <strong>{currentSong.title}</strong>
@@ -71,7 +71,7 @@ export function PlayerBar({ onOpenSheet }: PlayerBarProps) {
             layoutId={`mobile-player-art-${currentSong.id}`}
             style={{ '--cover-progress': `${percent}%` } as CSSProperties}
           >
-            <Cover src={currentSong.coverSrc} alt="" className="sonic-player-cover" />
+            <Cover src={currentSong.coverSrc} alt="" className="sonic-player-cover" width={160} priority />
           </motion.span>
           <span className="sonic-player-info"><strong>{currentSong.title}</strong><span>{error ? 'Unable to play this track' : currentSong.artist}</span></span>
         </button>

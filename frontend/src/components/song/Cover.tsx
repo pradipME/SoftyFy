@@ -5,16 +5,21 @@ interface CoverProps {
   src: string
   alt: string
   className?: string
+  /** Request a thumbnail close to its rendered size (Google Drive covers only). */
+  width?: number
+  /** Load immediately for the primary artwork at the top of a screen. */
+  priority?: boolean
 }
 
 /**
  * Renders a song's cover art. Falls back to a gradient placeholder whenever
  * the image is missing or fails to load, so the UI never breaks.
  */
-export function Cover({ src, alt, className = '' }: CoverProps) {
-  const [failed, setFailed] = useState(false)
+export function Cover({ src, alt, className = '', width, priority = false }: CoverProps) {
+  const [failedSrc, setFailedSrc] = useState<string | null>(null)
+  const imageSrc = thumbnailForWidth(src, width)
 
-  if (failed || !src) {
+  if (!src || failedSrc === src) {
     return (
       <div
         role="img"
@@ -28,11 +33,29 @@ export function Cover({ src, alt, className = '' }: CoverProps) {
 
   return (
     <img
-      src={src}
+      src={imageSrc}
       alt={alt}
-      loading="lazy"
+      loading={priority ? 'eager' : 'lazy'}
+      decoding="async"
+      fetchPriority={priority ? 'high' : 'auto'}
       className={`bg-elevated object-cover ${className}`}
-      onError={() => setFailed(true)}
+      onError={() => setFailedSrc(src)}
     />
   )
+}
+
+function thumbnailForWidth(src: string, width?: number): string {
+  if (!width) return src
+
+  try {
+    const url = new URL(src)
+    if (url.hostname === 'drive.google.com' && url.pathname === '/thumbnail') {
+      url.searchParams.set('sz', `w${Math.max(64, Math.min(1000, Math.round(width)))}`)
+      return url.toString()
+    }
+  } catch {
+    // Relative/local assets don't need URL resizing.
+  }
+
+  return src
 }

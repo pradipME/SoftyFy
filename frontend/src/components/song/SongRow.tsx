@@ -39,7 +39,7 @@ export function SongRow({ song, queue, index }: SongRowProps) {
             isPlaying ? <EqualizerBars /> : <PlayIcon />
         ) : index !== undefined ? <><span className="sonic-track-index">{index + 1}</span><PlayIcon className="sonic-row-hover-play" /></> : <PlayIcon />}
       </span>
-      <Cover src={song.coverSrc} alt="" className="sonic-track-cover" />
+      <Cover src={song.coverSrc} alt="" className="sonic-track-cover" width={128} />
       <span className="sonic-track-main">
         <strong>{song.title}</strong>
         <span>{song.artist}</span>
