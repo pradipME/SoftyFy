@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { registerSW } from 'virtual:pwa-register'
+import { usePlayer } from '../../context/PlayerContext'
 import { UpdateToast } from './UpdateToast'
 
 /**
@@ -22,10 +23,16 @@ import { UpdateToast } from './UpdateToast'
 const UPDATE_CHECK_INTERVAL_MS = 30 * 60 * 1000
 
 export function PwaUpdater() {
+  const { status, togglePlay } = usePlayer()
   const [needRefresh, setNeedRefresh] = useState(false)
   const [offlineReady, setOfflineReady] = useState(false)
+  const [updating, setUpdating] = useState(false)
   const updateSWRef = useRef<((reloadPage?: boolean) => Promise<void>) | null>(null)
   const offlineTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    if (needRefresh && status === 'playing') togglePlay()
+  }, [needRefresh, status, togglePlay])
 
   useEffect(() => {
     const updateSW = registerSW({
@@ -54,14 +61,20 @@ export function PwaUpdater() {
     }
   }, [])
 
+  const applyUpdate = () => {
+    const updateSW = updateSWRef.current
+    if (!updateSW || updating) return
+
+    setUpdating(true)
+    void updateSW(true).catch(() => setUpdating(false))
+  }
+
   return (
     <UpdateToast
       needRefresh={needRefresh}
       offlineReady={offlineReady}
-      onUpdate={() => {
-        setNeedRefresh(false)
-        void updateSWRef.current?.()
-      }}
+      updating={updating}
+      onUpdate={applyUpdate}
       onDismiss={() => setNeedRefresh(false)}
     />
   )
